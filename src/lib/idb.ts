@@ -23,11 +23,39 @@ db.version(1).stores({
   snapshots: 'id, seqAfter',
 })
 
+// ── Batched write queue ──
+// Buffers individual ops and flushes them in a single bulkPut after a short delay
+let _opBuffer: Op[] = []
+let _flushTimer: ReturnType<typeof setTimeout> | null = null
+let _flushPromise: Promise<void> | null = null
+const FLUSH_DELAY = 50 // ms
+
+function _scheduleFlush() {
+  if (_flushTimer) return
+  _flushTimer = setTimeout(() => {
+    _flushTimer = null
+    flushOpBuffer()
+  }, FLUSH_DELAY)
+}
+
+export function flushOpBuffer(): Promise<void> {
+  if (_opBuffer.length === 0) return Promise.resolve()
+  const batch = _opBuffer
+  _opBuffer = []
+  _flushPromise = db.ops.bulkPut(batch as OpRecord[]).then(() => {
+    _flushPromise = null
+  })
+  return _flushPromise
+}
+
 export async function saveOp(op: Op): Promise<void> {
-  await db.ops.put(op as OpRecord)
+  _opBuffer.push(op)
+  _scheduleFlush()
 }
 
 export async function saveOps(ops: Op[]): Promise<void> {
+  // For bulk saves (init, import), flush any pending buffer first then write directly
+  await flushOpBuffer()
   await db.ops.bulkPut(ops as OpRecord[])
 }
 

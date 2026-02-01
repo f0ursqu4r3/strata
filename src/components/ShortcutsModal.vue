@@ -55,7 +55,7 @@ const sections = [
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30" @mousedown.self="emit('close')">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" @mousedown.self="emit('close')">
     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
         <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Keyboard Shortcuts</h2>

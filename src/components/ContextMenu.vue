@@ -92,10 +92,13 @@ onUnmounted(() => {
   <div
     ref="menuRef"
     class="fixed z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-1 min-w-44 text-sm"
+    role="menu"
+    aria-label="Node actions"
     :style="{ left: x + 'px', top: y + 'px' }"
   >
     <button
       class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
+      role="menuitem"
       @click="onEdit"
     >
       <Pencil class="w-3.5 h-3.5 text-slate-400" />
@@ -110,6 +113,8 @@ onUnmounted(() => {
     >
       <button
         class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
+        role="menuitem"
+        aria-haspopup="true"
       >
         <CircleDot class="w-3.5 h-3.5 text-slate-400" />
         Set status
@@ -119,11 +124,14 @@ onUnmounted(() => {
       <div
         v-if="showStatusSub"
         class="absolute left-full top-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-1 min-w-36"
+        role="menu"
+        aria-label="Status options"
       >
         <button
           v-for="s in statuses"
           :key="s.key"
           class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
+          role="menuitem"
           @click="onSetStatus(s.key)"
         >
           <component :is="s.icon" class="w-3.5 h-3.5" :class="statusColors[s.key]" />
@@ -134,6 +142,7 @@ onUnmounted(() => {
 
     <button
       class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
+      role="menuitem"
       @click="onZoomIn"
     >
       <ZoomIn class="w-3.5 h-3.5 text-slate-400" />
@@ -142,6 +151,7 @@ onUnmounted(() => {
 
     <button
       class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
+      role="menuitem"
       @click="onDuplicate"
     >
       <Copy class="w-3.5 h-3.5 text-slate-400" />
@@ -152,6 +162,7 @@ onUnmounted(() => {
 
     <button
       class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-left text-red-600 dark:text-red-400"
+      role="menuitem"
       @click="onDelete"
     >
       <Trash2 class="w-3.5 h-3.5" />

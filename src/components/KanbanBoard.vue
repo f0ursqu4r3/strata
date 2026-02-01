@@ -85,11 +85,11 @@ function childCount(node: Node): number {
 </script>
 
 <template>
-  <div class="flex gap-3 h-full p-3 overflow-x-auto bg-white dark:bg-slate-900">
+  <div class="flex flex-col sm:flex-row gap-3 h-full p-3 overflow-x-auto overflow-y-auto bg-white dark:bg-slate-900" role="region" aria-label="Kanban board">
     <div
       v-for="col in columns"
       :key="col.key"
-      class="flex-1 min-w-50 max-w-80 bg-slate-50 dark:bg-slate-800/50 rounded-lg flex flex-col border-2 transition-colors"
+      class="flex-1 min-w-0 sm:min-w-50 max-w-full sm:max-w-80 bg-slate-50 dark:bg-slate-800/50 rounded-lg flex flex-col border-2 transition-colors"
       :class="
         dragOverColumn === col.key
           ? 'border-blue-300 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/20'

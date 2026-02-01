@@ -21,6 +21,7 @@ import type { ViewMode } from '@/types'
 
 const store = useDocStore()
 const showShortcuts = ref(false)
+const showMobileSearch = ref(false)
 const dark = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const outlineRef = ref<InstanceType<typeof OutlineView> | null>(null)
@@ -109,18 +110,18 @@ function onZoomRoot() {
 <template>
   <div v-if="store.ready" class="flex flex-col h-full bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
     <!-- Top bar -->
-    <header class="flex items-center h-12 px-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shrink-0">
-      <div class="flex-1 flex items-center gap-2">
+    <header class="flex flex-wrap items-center min-h-12 px-3 sm:px-4 gap-2 py-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shrink-0">
+      <div class="flex items-center gap-2">
         <Layers class="w-4.5 h-4.5 text-blue-500" />
         <span class="font-bold text-base text-slate-900 dark:text-white tracking-tight">Strata</span>
       </div>
 
-      <div class="flex-none flex items-center gap-2">
+      <div class="flex items-center gap-2 order-3 sm:order-0 sm:ml-auto sm:mr-auto">
         <div class="flex bg-slate-100 dark:bg-slate-800 rounded-md p-0.5">
           <button
             v-for="m in modes"
             :key="m.key"
-            class="border-none px-3.5 py-1 text-[13px] font-medium cursor-pointer rounded transition-all"
+            class="border-none px-3 sm:px-3.5 py-1 text-[13px] font-medium cursor-pointer rounded transition-all"
             :class="
               store.viewMode === m.key
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
@@ -133,12 +134,12 @@ function onZoomRoot() {
         </div>
       </div>
 
-      <div class="flex-1 flex items-center justify-end gap-1.5">
+      <div class="flex items-center gap-1.5 ml-auto">
         <!-- Search -->
-        <div class="relative">
+        <div class="relative hidden sm:block">
           <Search class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
-            class="w-44 py-1 pl-8 pr-2.5 border border-slate-200 dark:border-slate-600 rounded-md text-[13px] text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+            class="w-36 lg:w-44 py-1 pl-8 pr-2.5 border border-slate-200 dark:border-slate-600 rounded-md text-[13px] text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
             type="text"
             placeholder="Search..."
             :value="store.searchQuery"
@@ -147,30 +148,39 @@ function onZoomRoot() {
           />
         </div>
 
+        <!-- Mobile search toggle -->
+        <button
+          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 sm:hidden"
+          title="Search"
+          @click="showMobileSearch = !showMobileSearch"
+        >
+          <Search class="w-4 h-4" />
+        </button>
+
         <!-- Toolbar buttons -->
         <button
-          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hidden sm:block"
           title="Export JSON"
           @click="store.downloadExport()"
         >
           <Download class="w-4 h-4" />
         </button>
         <button
-          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hidden sm:block"
           title="Import JSON"
           @click="onImportClick"
         >
           <Upload class="w-4 h-4" />
         </button>
         <button
-          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hidden sm:block"
           title="Reset document"
           @click="onReset"
         >
           <RotateCcw class="w-4 h-4" />
         </button>
         <button
-          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hidden sm:block"
           title="Keyboard shortcuts (?)"
           @click="showShortcuts = true"
         >
@@ -194,6 +204,24 @@ function onZoomRoot() {
         />
       </div>
     </header>
+
+    <!-- Mobile search bar -->
+    <div
+      v-if="showMobileSearch"
+      class="flex items-center gap-2 px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sm:hidden"
+    >
+      <div class="relative flex-1">
+        <Search class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        <input
+          class="w-full py-1 pl-8 pr-2.5 border border-slate-200 dark:border-slate-600 rounded-md text-[13px] text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+          type="text"
+          placeholder="Search..."
+          :value="store.searchQuery"
+          @input="store.searchQuery = ($event.target as HTMLInputElement).value"
+          @keydown.escape="store.searchQuery = ''; showMobileSearch = false"
+        />
+      </div>
+    </div>
 
     <!-- Zoom breadcrumb bar -->
     <div

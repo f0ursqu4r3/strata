@@ -11,6 +11,7 @@ import {
   saveSnapshot,
   loadAllOps,
   clearAll,
+  flushOpBuffer,
 } from '@/lib/idb'
 
 const SNAPSHOT_INTERVAL = 200
@@ -289,6 +290,7 @@ export const useDocStore = defineStore('doc', () => {
   }
 
   async function takeSnapshot() {
+    await flushOpBuffer()
     const snap: Snapshot = {
       id: crypto.randomUUID(),
       nodes: Array.from(nodes.value.values()),
@@ -671,6 +673,7 @@ export const useDocStore = defineStore('doc', () => {
 
   function exportJSON(): string {
     flushTextDebounce()
+    // Note: flushOpBuffer is async but export is sync; the buffer will flush soon via timer
     const allNodes = Array.from(nodes.value.values())
     const doc = {
       version: 1,

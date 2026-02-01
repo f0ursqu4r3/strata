@@ -195,6 +195,8 @@ watch(
     class="h-full overflow-y-auto outline-none py-2 outline-focus-target"
     ref="containerRef"
     tabindex="0"
+    role="tree"
+    aria-label="Outline"
     @keydown="onKeydown"
   >
     <!-- Rows -->
@@ -204,19 +206,21 @@ watch(
       @dragleave="onContainerDragLeave"
       @drop="onContainerDrop"
     >
-      <template v-for="(row, idx) in store.visibleRows" :key="row.node.id">
-        <div
-          v-if="dropTargetIdx === idx"
-          class="h-0.5 bg-blue-500 rounded mx-2 my-px"
-        />
-        <div :data-row-idx="idx">
-          <OutlineRow
-            :node="row.node"
-            :depth="row.depth"
-            @contextmenu="onRowContextMenu"
+      <TransitionGroup name="outline-row">
+        <template v-for="(row, idx) in store.visibleRows" :key="row.node.id">
+          <div
+            v-if="dropTargetIdx === idx"
+            class="h-0.5 bg-blue-500 rounded mx-2 my-px"
           />
-        </div>
-      </template>
+          <div :data-row-idx="idx">
+            <OutlineRow
+              :node="row.node"
+              :depth="row.depth"
+              @contextmenu="onRowContextMenu"
+            />
+          </div>
+        </template>
+      </TransitionGroup>
       <div
         v-if="dropTargetIdx === store.visibleRows.length && store.visibleRows.length > 0"
         class="h-0.5 bg-blue-500 rounded mx-2 my-px"
@@ -239,3 +243,33 @@ watch(
     />
   </div>
 </template>
+
+<style scoped>
+.outline-row-enter-active,
+.outline-row-leave-active {
+  transition: all 0.15s ease;
+  overflow: hidden;
+}
+.outline-row-enter-from {
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(-4px);
+}
+.outline-row-enter-to {
+  opacity: 1;
+  max-height: 2rem;
+  transform: translateY(0);
+}
+.outline-row-leave-from {
+  opacity: 1;
+  max-height: 2rem;
+}
+.outline-row-leave-to {
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(-4px);
+}
+.outline-row-move {
+  transition: transform 0.15s ease;
+}
+</style>

@@ -175,6 +175,11 @@ function onStatusPickerBlur() {
       'ring-1 ring-amber-300 bg-amber-50 dark:ring-amber-500 dark:bg-amber-900/30': isSearchMatch && !isSelected && !isEditing,
     }"
     :style="{ paddingLeft: depth * 24 + 8 + 'px' }"
+    role="treeitem"
+    :aria-selected="isSelected"
+    :aria-expanded="hasChildren ? !node.collapsed : undefined"
+    :aria-level="depth + 1"
+    :aria-label="node.text || '(empty)'"
     draggable="true"
     @click="onClick"
     @dblclick="onDblClick"
@@ -186,6 +191,8 @@ function onStatusPickerBlur() {
     <span
       class="w-4 shrink-0 text-center text-slate-500 dark:text-slate-400 cursor-pointer flex items-center justify-center"
       :class="{ 'hover:text-slate-800 dark:hover:text-slate-200': hasChildren }"
+      role="button"
+      :aria-label="hasChildren ? (node.collapsed ? 'Expand' : 'Collapse') : 'Zoom into node'"
       @click="onBulletClick"
       @dblclick.stop="onBulletDblClick"
     >
@@ -199,7 +206,7 @@ function onStatusPickerBlur() {
     </span>
 
     <!-- Status dot (clickable picker) -->
-    <div class="relative shrink-0" @click="onStatusClick">
+    <div class="relative shrink-0" role="button" :aria-label="'Status: ' + node.status.replace('_', ' ')" @click="onStatusClick">
       <component
         :is="currentStatusIcon().icon"
         class="w-3.5 h-3.5 cursor-pointer hover:scale-125 transition-transform"
@@ -211,6 +218,8 @@ function onStatusPickerBlur() {
         v-if="showStatusPicker"
         ref="statusPickerRef"
         class="absolute left-0 top-5 z-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-1 min-w-32"
+        role="listbox"
+        aria-label="Select status"
         @blur="onStatusPickerBlur"
       >
         <button

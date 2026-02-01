@@ -22,7 +22,7 @@
 ## Phase 3: Persistence & reliability
 
 - [x] Export/import JSON (full document dump + restore)
-- [ ] Debounce IDB writes (batch multiple ops into single transaction)
+- [x] Debounce IDB writes (batch multiple ops into single transaction)
 - [x] Clear data / reset document action
 
 ## Phase 4: Polish & UX
@@ -30,11 +30,11 @@
 - [x] Dark mode (CSS custom properties, toggle in top bar)
 - [x] Keyboard shortcut overlay (`?` key shows cheat sheet modal)
 - [x] Breadcrumb nav bar for zoom path (clickable segments)
-- [ ] Collapse/expand animations
+- [x] Collapse/expand animations
 - [x] Focus management: auto-focus outline panel on view switch
-- [ ] Mobile layout improvements (better responsive design)
+- [x] Mobile layout improvements (better responsive design)
 - [ ] User settings panel (theme, font size, etc.)
-- [ ] Accessibility improvements (ARIA roles, keyboard nav, screen reader support)
+- [x] Accessibility improvements (ARIA roles, keyboard nav, screen reader support)
 - [ ] Performance optimizations for large documents (virtualized rendering)
 - [ ] Testing: unit tests for core logic, integration tests for UI flows
 - [ ] Documentation: user guide, developer setup instructions
