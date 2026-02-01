@@ -1,14 +1,47 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { useDocStore } from '@/stores/doc'
+import { rankBefore, rankBetween, rankAfter } from '@/lib/rank'
 import OutlineRow from './OutlineRow.vue'
 
 const store = useDocStore()
 const containerRef = ref<HTMLElement | null>(null)
+const dropTargetIdx = ref<number | null>(null)
 
 function onKeydown(e: KeyboardEvent) {
-  // Don't handle if editing (row handles its own keys)
+  // Undo/redo works even while editing
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    e.preventDefault()
+    if (e.shiftKey) {
+      store.redo()
+    } else {
+      store.flushTextDebounce()
+      store.undo()
+    }
+    return
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+    e.preventDefault()
+    store.redo()
+    return
+  }
+
   if (store.editingId) return
+
+  // Status shortcuts: Ctrl+1/2/3/4
+  if ((e.ctrlKey || e.metaKey) && store.selectedId) {
+    const statusMap: Record<string, import('@/types').Status> = {
+      '1': 'todo',
+      '2': 'in_progress',
+      '3': 'blocked',
+      '4': 'done',
+    }
+    if (statusMap[e.key]) {
+      store.setStatus(store.selectedId, statusMap[e.key]!)
+      e.preventDefault()
+      return
+    }
+  }
 
   switch (e.key) {
     case 'ArrowUp':
@@ -56,121 +89,153 @@ function onKeydown(e: KeyboardEvent) {
         }
       }
       break
-    case 'z':
-      if (e.ctrlKey || e.metaKey) {
-        // placeholder for undo
-        e.preventDefault()
-      }
+  }
+}
+
+// ── Drag reorder ──
+function onContainerDragOver(e: DragEvent) {
+  if (!e.dataTransfer?.types.includes('application/x-strata-node')) return
+  e.preventDefault()
+  e.dataTransfer!.dropEffect = 'move'
+
+  // Figure out which row index we're over
+  const rows = containerRef.value?.querySelectorAll('[data-row-idx]')
+  if (!rows) return
+  let targetIdx = -1
+  for (const row of rows) {
+    const rect = (row as HTMLElement).getBoundingClientRect()
+    if (e.clientY < rect.top + rect.height / 2) {
+      targetIdx = parseInt((row as HTMLElement).dataset.rowIdx!)
       break
+    }
+  }
+  if (targetIdx === -1) targetIdx = store.visibleRows.length
+  dropTargetIdx.value = targetIdx
+}
+
+function onContainerDragLeave() {
+  dropTargetIdx.value = null
+}
+
+function onContainerDrop(e: DragEvent) {
+  e.preventDefault()
+  const nodeId = e.dataTransfer?.getData('application/x-strata-node')
+  dropTargetIdx.value = null
+  if (!nodeId) return
+
+  const rows = store.visibleRows
+  // Find where in the visible list we want to place this
+  const rowEls = containerRef.value?.querySelectorAll('[data-row-idx]')
+  if (!rowEls) return
+
+  let targetIdx = rows.length
+  for (const row of rowEls) {
+    const rect = (row as HTMLElement).getBoundingClientRect()
+    if (e.clientY < rect.top + rect.height / 2) {
+      targetIdx = parseInt((row as HTMLElement).dataset.rowIdx!)
+      break
+    }
+  }
+
+  // Determine new parent + pos based on target location
+  const draggedNode = store.nodes.get(nodeId)
+  if (!draggedNode) return
+
+  if (targetIdx === 0) {
+    // Move to first child of effective zoom root
+    const siblings = store.getChildren(store.effectiveZoomId)
+    const firstSibling = siblings[0]
+    if (firstSibling && firstSibling.id !== nodeId) {
+      store.moveNode(nodeId, store.effectiveZoomId, rankBefore(firstSibling.pos))
+    }
+  } else if (targetIdx <= rows.length) {
+    // Place after the row at targetIdx - 1
+    const aboveRow = rows[targetIdx - 1]
+    if (!aboveRow || aboveRow.node.id === nodeId) return
+    const aboveNode = aboveRow.node
+
+    // Make it a sibling after aboveNode
+    const siblings = store.getChildren(aboveNode.parentId!)
+    const aboveIdx = siblings.findIndex((s) => s.id === aboveNode.id)
+    const nextSibling = siblings[aboveIdx + 1]
+
+    let pos: string
+    if (nextSibling && nextSibling.id !== nodeId) {
+      pos = rankBetween(aboveNode.pos, nextSibling.pos)
+    } else {
+      pos = rankAfter(aboveNode.pos)
+    }
+    store.moveNode(nodeId, aboveNode.parentId, pos)
   }
 }
 
 function scrollSelectedIntoView() {
   nextTick(() => {
-    const el = containerRef.value?.querySelector('.outline-row.selected')
+    const el = containerRef.value?.querySelector('.bg-slate-200, .bg-blue-100')
     el?.scrollIntoView({ block: 'nearest' })
   })
 }
 
-// Scroll into view when selectedId changes externally (e.g., from kanban click)
 watch(
   () => store.selectedId,
   () => {
     scrollSelectedIntoView()
   },
 )
-
-const zoomNode = ref<string | null>(null)
-watch(
-  () => store.zoomId,
-  (id) => {
-    zoomNode.value = id
-  },
-)
 </script>
 
 <template>
   <div
-    class="outline-view"
+    class="h-full overflow-y-auto outline-none py-2"
     ref="containerRef"
     tabindex="0"
     @keydown="onKeydown"
   >
     <!-- Zoom breadcrumb -->
-    <div v-if="store.zoomId" class="zoom-bar">
-      <button class="zoom-back" @click="store.zoomOut()">← Back</button>
-      <span class="zoom-path">
+    <div
+      v-if="store.zoomId"
+      class="flex items-center gap-2 px-3 pb-2 border-b border-slate-200 mb-1"
+    >
+      <button
+        class="bg-transparent border border-slate-300 rounded px-2 py-0.5 text-xs cursor-pointer text-slate-600 hover:bg-slate-100"
+        @click="store.zoomOut()"
+      >
+        &larr; Back
+      </button>
+      <span class="text-[13px] text-slate-500 font-medium">
         {{ store.nodes.get(store.zoomId)?.text ?? 'Zoomed' }}
       </span>
     </div>
 
     <!-- Rows -->
-    <div class="rows">
-      <OutlineRow
-        v-for="row in store.visibleRows"
-        :key="row.node.id"
-        :node="row.node"
-        :depth="row.depth"
+    <div
+      class="px-1"
+      @dragover="onContainerDragOver"
+      @dragleave="onContainerDragLeave"
+      @drop="onContainerDrop"
+    >
+      <template v-for="(row, idx) in store.visibleRows" :key="row.node.id">
+        <div
+          v-if="dropTargetIdx === idx"
+          class="h-0.5 bg-blue-500 rounded mx-2 my-px"
+        />
+        <div :data-row-idx="idx">
+          <OutlineRow
+            :node="row.node"
+            :depth="row.depth"
+          />
+        </div>
+      </template>
+      <div
+        v-if="dropTargetIdx === store.visibleRows.length && store.visibleRows.length > 0"
+        class="h-0.5 bg-blue-500 rounded mx-2 my-px"
       />
       <div
         v-if="store.visibleRows.length === 0"
-        class="empty-state"
+        class="p-6 text-center text-slate-400 text-sm"
       >
         No items. Press Enter to create one.
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.outline-view {
-  height: 100%;
-  overflow-y: auto;
-  outline: none;
-  padding: 8px 0;
-}
-
-.outline-view:focus-within {
-  /* subtle indicator */
-}
-
-.zoom-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px 8px;
-  border-bottom: 1px solid #e2e8f0;
-  margin-bottom: 4px;
-}
-
-.zoom-back {
-  background: none;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-size: 12px;
-  cursor: pointer;
-  color: #475569;
-}
-
-.zoom-back:hover {
-  background: #f1f5f9;
-}
-
-.zoom-path {
-  font-size: 13px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.rows {
-  padding: 0 4px;
-}
-
-.empty-state {
-  padding: 24px;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 14px;
-}
-</style>

@@ -24,10 +24,21 @@ export const useDocStore = defineStore('doc', () => {
   const editingId = ref<string | null>(null)
   const viewMode = ref<ViewMode>('split')
   const ready = ref(false)
+  const searchQuery = ref('')
 
   // Op tracking
   const opsSinceSnapshot = ref(0)
   const lastSeq = ref(0)
+
+  // ── Undo / Redo ──
+  interface UndoEntry {
+    op: Op
+    beforeSnapshots: Node[] // deep copies of affected nodes before op
+    selectedBefore: string
+  }
+  const undoStack: UndoEntry[] = []
+  const redoStack: UndoEntry[] = []
+  const MAX_UNDO = 200
 
   // ── Helpers: children lookup (cached per trigger) ──
   const childrenMap = computed(() => {
@@ -56,16 +67,40 @@ export const useDocStore = defineStore('doc', () => {
   // ── Visible rows (flattened DFS for outline) ──
   const effectiveZoomId = computed(() => zoomId.value ?? rootId.value)
 
+  // ── Search: set of matching node IDs + ancestors that should be visible ──
+  const searchMatchIds = computed(() => {
+    const q = searchQuery.value.trim().toLowerCase()
+    if (!q) return null
+    const matches = new Set<string>()
+    for (const node of nodes.value.values()) {
+      if (node.deleted) continue
+      if (node.text.toLowerCase().includes(q)) {
+        matches.add(node.id)
+        // Also mark all ancestors visible so the match is reachable
+        let cur = node
+        while (cur.parentId) {
+          matches.add(cur.parentId)
+          const parent = nodes.value.get(cur.parentId)
+          if (!parent) break
+          cur = parent
+        }
+      }
+    }
+    return matches
+  })
+
   const visibleRows = computed(() => {
     const rows: { node: Node; depth: number }[] = []
     const root = effectiveZoomId.value
     if (!root) return rows
+    const filter = searchMatchIds.value
 
     function walk(parentId: string, depth: number) {
       const children = getChildren(parentId)
       for (const child of children) {
+        if (filter && !filter.has(child.id)) continue
         rows.push({ node: child, depth })
-        if (!child.collapsed) {
+        if (!child.collapsed || filter) {
           walk(child.id, depth + 1)
         }
       }
@@ -122,7 +157,30 @@ export const useDocStore = defineStore('doc', () => {
   }
 
   // ── Op dispatch ──
-  async function dispatch(op: Op) {
+  function getAffectedIds(op: Op): string[] {
+    const p = op.payload as { id?: string }
+    return p.id ? [p.id] : []
+  }
+
+  async function dispatch(op: Op, recordUndo = true) {
+    if (recordUndo) {
+      // Snapshot affected nodes before mutation
+      const ids = getAffectedIds(op)
+      const beforeSnapshots: Node[] = []
+      for (const id of ids) {
+        const node = nodes.value.get(id)
+        if (node) beforeSnapshots.push({ ...node })
+      }
+      undoStack.push({
+        op,
+        beforeSnapshots,
+        selectedBefore: selectedId.value,
+      })
+      if (undoStack.length > MAX_UNDO) undoStack.shift()
+      // Clear redo on new action
+      redoStack.length = 0
+    }
+
     applyOp(nodes.value, op)
     triggerRef(nodes)
     lastSeq.value = op.seq
@@ -133,6 +191,100 @@ export const useDocStore = defineStore('doc', () => {
     if (opsSinceSnapshot.value >= SNAPSHOT_INTERVAL) {
       await takeSnapshot()
     }
+  }
+
+  function undo() {
+    const entry = undoStack.pop()
+    if (!entry) return
+
+    // Restore node snapshots
+    for (const snap of entry.beforeSnapshots) {
+      nodes.value.set(snap.id, { ...snap })
+    }
+    // Handle create undo: if the op created a node, remove it
+    if (entry.op.type === 'create') {
+      const id = (entry.op.payload as { id: string }).id
+      const node = nodes.value.get(id)
+      if (node) {
+        node.deleted = true
+      }
+    }
+    triggerRef(nodes)
+
+    // Persist a compensating op
+    if (entry.op.type === 'create') {
+      const id = (entry.op.payload as { id: string }).id
+      const compensate = makeOp('tombstone', { type: 'tombstone', id })
+      saveOp(compensate)
+      lastSeq.value = compensate.seq
+    } else {
+      // For other ops, write the restored state as new ops
+      for (const snap of entry.beforeSnapshots) {
+        if (entry.op.type === 'updateText') {
+          const compensate = makeOp('updateText', { type: 'updateText', id: snap.id, text: snap.text })
+          saveOp(compensate)
+          lastSeq.value = compensate.seq
+        } else if (entry.op.type === 'move') {
+          const compensate = makeOp('move', { type: 'move', id: snap.id, parentId: snap.parentId, pos: snap.pos })
+          saveOp(compensate)
+          lastSeq.value = compensate.seq
+        } else if (entry.op.type === 'setStatus') {
+          const compensate = makeOp('setStatus', { type: 'setStatus', id: snap.id, status: snap.status })
+          saveOp(compensate)
+          lastSeq.value = compensate.seq
+        } else if (entry.op.type === 'toggleCollapsed') {
+          const compensate = makeOp('toggleCollapsed', { type: 'toggleCollapsed', id: snap.id })
+          saveOp(compensate)
+          lastSeq.value = compensate.seq
+        } else if (entry.op.type === 'tombstone') {
+          // Restore: un-delete
+          const node = nodes.value.get(snap.id)
+          if (node) {
+            node.deleted = false
+            const compensate = makeOp('create', {
+              type: 'create',
+              id: snap.id,
+              parentId: snap.parentId,
+              pos: snap.pos,
+              text: snap.text,
+              status: snap.status,
+            })
+            saveOp(compensate)
+            lastSeq.value = compensate.seq
+          }
+        }
+      }
+    }
+
+    selectedId.value = entry.selectedBefore
+    redoStack.push(entry)
+  }
+
+  function redo() {
+    const entry = redoStack.pop()
+    if (!entry) return
+
+    // Re-apply the original op
+    const reOp = makeOp(entry.op.type, entry.op.payload)
+
+    // Capture current state for undo
+    const ids = getAffectedIds(reOp)
+    const beforeSnapshots: Node[] = []
+    for (const id of ids) {
+      const node = nodes.value.get(id)
+      if (node) beforeSnapshots.push({ ...node })
+    }
+    undoStack.push({
+      op: reOp,
+      beforeSnapshots,
+      selectedBefore: selectedId.value,
+    })
+
+    applyOp(nodes.value, reOp)
+    triggerRef(nodes)
+    lastSeq.value = reOp.seq
+    opsSinceSnapshot.value++
+    saveOp(reOp)
   }
 
   async function takeSnapshot() {
@@ -168,9 +320,50 @@ export const useDocStore = defineStore('doc', () => {
     return op
   }
 
+  // ── Debounced text update ──
+  // Immediate in-memory mutation for responsive UI; op emitted after 300ms pause
+  const _textDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
   function updateText(id: string, text: string) {
-    const op = makeOp('updateText', { type: 'updateText', id, text })
-    dispatch(op)
+    // Apply to memory immediately
+    const node = nodes.value.get(id)
+    if (node) {
+      node.text = text
+      triggerRef(nodes)
+    }
+
+    // Debounce the persistent op
+    const existing = _textDebounceTimers.get(id)
+    if (existing) clearTimeout(existing)
+    _textDebounceTimers.set(
+      id,
+      setTimeout(() => {
+        _textDebounceTimers.delete(id)
+        const op = makeOp('updateText', { type: 'updateText', id, text })
+        // Don't re-apply to memory (already done), just persist
+        lastSeq.value = op.seq
+        opsSinceSnapshot.value++
+        saveOp(op).then(() => {
+          if (opsSinceSnapshot.value >= SNAPSHOT_INTERVAL) {
+            takeSnapshot()
+          }
+        })
+      }, 300),
+    )
+  }
+
+  function flushTextDebounce() {
+    for (const [id, timer] of _textDebounceTimers) {
+      clearTimeout(timer)
+      _textDebounceTimers.delete(id)
+      const node = nodes.value.get(id)
+      if (node) {
+        const op = makeOp('updateText', { type: 'updateText', id, text: node.text })
+        lastSeq.value = op.seq
+        opsSinceSnapshot.value++
+        saveOp(op)
+      }
+    }
   }
 
   function moveNode(id: string, parentId: string | null, pos: string) {
@@ -435,8 +628,10 @@ export const useDocStore = defineStore('doc', () => {
     editingId,
     viewMode,
     ready,
+    searchQuery,
     // Computed
     childrenMap,
+    searchMatchIds,
     visibleRows,
     kanbanColumns,
     kanbanNodes,
@@ -447,6 +642,7 @@ export const useDocStore = defineStore('doc', () => {
     init,
     createNode,
     updateText,
+    flushTextDebounce,
     moveNode,
     setStatus,
     toggleCollapsed,
@@ -462,5 +658,7 @@ export const useDocStore = defineStore('doc', () => {
     setViewMode,
     zoomIn,
     zoomOut,
+    undo,
+    redo,
   }
 })

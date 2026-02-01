@@ -88,40 +88,80 @@ function onToggleCollapse(e: MouseEvent) {
   store.toggleCollapsed(props.node.id)
 }
 
-const statusDot: Record<string, string> = {
-  todo: '#94a3b8',
-  in_progress: '#3b82f6',
-  blocked: '#ef4444',
-  done: '#22c55e',
+const isSearchMatch = computed(() => {
+  const matches = store.searchMatchIds
+  if (!matches) return false
+  const q = store.searchQuery.trim().toLowerCase()
+  return q !== '' && props.node.text.toLowerCase().includes(q)
+})
+
+function onBulletClick(e: MouseEvent) {
+  e.stopPropagation()
+  if (hasChildren.value) {
+    store.toggleCollapsed(props.node.id)
+  } else {
+    store.zoomIn(props.node.id)
+  }
+}
+
+function onBulletDblClick(e: MouseEvent) {
+  e.stopPropagation()
+  store.zoomIn(props.node.id)
+}
+
+// ── Drag reorder ──
+function onDragStart(e: DragEvent) {
+  e.dataTransfer!.effectAllowed = 'move'
+  e.dataTransfer!.setData('application/x-strata-node', props.node.id)
+  ;(e.target as HTMLElement).classList.add('opacity-40')
+}
+
+function onDragEnd(e: DragEvent) {
+  ;(e.target as HTMLElement).classList.remove('opacity-40')
+}
+
+const statusColors: Record<string, string> = {
+  todo: 'bg-slate-400',
+  in_progress: 'bg-blue-500',
+  blocked: 'bg-red-500',
+  done: 'bg-green-500',
 }
 </script>
 
 <template>
   <div
-    class="outline-row"
-    :class="{ selected: isSelected, editing: isEditing }"
+    class="flex items-center h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-slate-100"
+    :class="{
+      'bg-slate-200': isSelected && !isEditing,
+      'bg-blue-100': isEditing,
+      'ring-1 ring-amber-300 bg-amber-50': isSearchMatch && !isSelected && !isEditing,
+    }"
     :style="{ paddingLeft: depth * 24 + 8 + 'px' }"
+    draggable="true"
     @click="onClick"
     @dblclick="onDblClick"
+    @dragstart="onDragStart"
+    @dragend="onDragEnd"
   >
-    <!-- Collapse toggle -->
+    <!-- Collapse toggle / bullet -->
     <span
-      class="collapse-toggle"
-      :class="{ 'has-children': hasChildren }"
-      @click="onToggleCollapse"
+      class="w-4 shrink-0 text-center text-xs text-slate-500 cursor-pointer"
+      :class="{ 'hover:text-slate-800': hasChildren }"
+      @click="onBulletClick"
+      @dblclick="onBulletDblClick"
     >
       <template v-if="hasChildren">
-        {{ node.collapsed ? '▸' : '▾' }}
+        {{ node.collapsed ? '&#x25B8;' : '&#x25BE;' }}
       </template>
       <template v-else>
-        <span class="bullet">•</span>
+        <span class="text-slate-400 text-sm">&bull;</span>
       </template>
     </span>
 
     <!-- Status dot -->
     <span
-      class="status-dot"
-      :style="{ backgroundColor: statusDot[node.status] }"
+      class="w-2 h-2 rounded-full shrink-0"
+      :class="statusColors[node.status]"
       :title="node.status"
     />
 
@@ -129,7 +169,7 @@ const statusDot: Record<string, string> = {
     <template v-if="isEditing">
       <input
         ref="inputRef"
-        class="row-input"
+        class="flex-1 border-none outline-none bg-transparent text-sm font-[inherit] text-slate-800 p-0"
         :value="localText"
         @input="onInput"
         @blur="onBlur"
@@ -138,83 +178,12 @@ const statusDot: Record<string, string> = {
       />
     </template>
     <template v-else>
-      <span class="row-text" :class="{ empty: !node.text }">
+      <span
+        class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm"
+        :class="node.text ? 'text-slate-800' : 'text-slate-400 italic'"
+      >
         {{ node.text || '(empty)' }}
       </span>
     </template>
   </div>
 </template>
-
-<style scoped>
-.outline-row {
-  display: flex;
-  align-items: center;
-  height: 32px;
-  cursor: pointer;
-  user-select: none;
-  border-radius: 4px;
-  gap: 6px;
-}
-
-.outline-row:hover {
-  background: #f1f5f9;
-}
-
-.outline-row.selected {
-  background: #e2e8f0;
-}
-
-.outline-row.editing {
-  background: #dbeafe;
-}
-
-.collapse-toggle {
-  width: 16px;
-  flex-shrink: 0;
-  text-align: center;
-  font-size: 12px;
-  color: #64748b;
-  cursor: pointer;
-}
-
-.collapse-toggle.has-children:hover {
-  color: #1e293b;
-}
-
-.bullet {
-  color: #94a3b8;
-  font-size: 14px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.row-text {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  color: #1e293b;
-}
-
-.row-text.empty {
-  color: #94a3b8;
-  font-style: italic;
-}
-
-.row-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 14px;
-  font-family: inherit;
-  color: #1e293b;
-  padding: 0;
-}
-</style>

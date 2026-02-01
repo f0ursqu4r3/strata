@@ -5,14 +5,13 @@ import type { Node, Status } from '@/types'
 
 const store = useDocStore()
 
-const columns: { key: Status; label: string; color: string }[] = [
-  { key: 'todo', label: 'Todo', color: '#94a3b8' },
-  { key: 'in_progress', label: 'In Progress', color: '#3b82f6' },
-  { key: 'blocked', label: 'Blocked', color: '#ef4444' },
-  { key: 'done', label: 'Done', color: '#22c55e' },
+const columns: { key: Status; label: string; dotClass: string }[] = [
+  { key: 'todo', label: 'Todo', dotClass: 'bg-slate-400' },
+  { key: 'in_progress', label: 'In Progress', dotClass: 'bg-blue-500' },
+  { key: 'blocked', label: 'Blocked', dotClass: 'bg-red-500' },
+  { key: 'done', label: 'Done', dotClass: 'bg-green-500' },
 ]
 
-// Drag state
 const dragNodeId = ref<string | null>(null)
 const dragOverColumn = ref<Status | null>(null)
 
@@ -59,45 +58,56 @@ function childCount(node: Node): number {
 </script>
 
 <template>
-  <div class="kanban-board">
+  <div class="flex gap-3 h-full p-3 overflow-x-auto">
     <div
       v-for="col in columns"
       :key="col.key"
-      class="kanban-column"
-      :class="{ 'drag-over': dragOverColumn === col.key }"
+      class="flex-1 min-w-50 max-w-[320px] bg-slate-50 rounded-lg flex flex-col border-2 transition-colors"
+      :class="
+        dragOverColumn === col.key
+          ? 'border-blue-300 bg-blue-50'
+          : 'border-transparent'
+      "
       @dragover="onDragOver($event, col.key)"
       @dragleave="onDragLeave($event, col.key)"
       @drop="onDrop($event, col.key)"
     >
-      <div class="column-header">
-        <span
-          class="column-dot"
-          :style="{ backgroundColor: col.color }"
-        />
-        <span class="column-title">{{ col.label }}</span>
-        <span class="column-count">{{ store.kanbanColumns[col.key].length }}</span>
+      <!-- Column header -->
+      <div class="flex items-center gap-2 px-3 pt-3 pb-2 text-[13px] font-semibold text-slate-600">
+        <span class="w-2.5 h-2.5 rounded-full" :class="col.dotClass" />
+        <span>{{ col.label }}</span>
+        <span class="ml-auto bg-slate-200 rounded-full px-2 py-px text-[11px] font-medium text-slate-500">
+          {{ store.kanbanColumns[col.key].length }}
+        </span>
       </div>
 
-      <div class="column-cards">
+      <!-- Cards -->
+      <div class="flex-1 overflow-y-auto px-2 pb-2 flex flex-col gap-1.5">
         <div
           v-for="node in store.kanbanColumns[col.key]"
           :key="node.id"
-          class="kanban-card"
+          class="bg-white border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color] hover:border-slate-300 hover:shadow-sm active:cursor-grabbing"
           :class="{
-            selected: store.selectedId === node.id,
-            dragging: dragNodeId === node.id,
+            'border-blue-500 shadow-[0_0_0_1px_#3b82f6]': store.selectedId === node.id,
+            'opacity-40': dragNodeId === node.id,
+            'border-slate-200': store.selectedId !== node.id,
           }"
           draggable="true"
           @dragstart="onDragStart($event, node)"
           @dragend="onDragEnd"
           @click="onCardClick(node)"
         >
-          <div class="card-title">{{ node.text || '(empty)' }}</div>
-          <div class="card-meta">
-            <span v-if="store.breadcrumb(node.id)" class="card-breadcrumb">
+          <div class="text-sm text-slate-800 leading-snug overflow-hidden text-ellipsis whitespace-nowrap">
+            {{ node.text || '(empty)' }}
+          </div>
+          <div class="flex gap-2 mt-1 text-[11px] text-slate-400">
+            <span
+              v-if="store.breadcrumb(node.id)"
+              class="overflow-hidden text-ellipsis whitespace-nowrap"
+            >
               {{ store.breadcrumb(node.id) }}
             </span>
-            <span v-if="childCount(node) > 0" class="card-children">
+            <span v-if="childCount(node) > 0">
               {{ childCount(node) }} children
             </span>
           </div>
@@ -106,115 +116,3 @@ function childCount(node: Node): number {
     </div>
   </div>
 </template>
-
-<style scoped>
-.kanban-board {
-  display: flex;
-  gap: 12px;
-  height: 100%;
-  padding: 12px;
-  overflow-x: auto;
-}
-
-.kanban-column {
-  flex: 1;
-  min-width: 200px;
-  max-width: 320px;
-  background: #f8fafc;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  border: 2px solid transparent;
-  transition: border-color 0.15s;
-}
-
-.kanban-column.drag-over {
-  border-color: #93c5fd;
-  background: #eff6ff;
-}
-
-.column-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 12px 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-}
-
-.column-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.column-count {
-  margin-left: auto;
-  background: #e2e8f0;
-  border-radius: 10px;
-  padding: 1px 8px;
-  font-size: 11px;
-  font-weight: 500;
-  color: #64748b;
-}
-
-.column-cards {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 8px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.kanban-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 10px 12px;
-  cursor: grab;
-  transition: box-shadow 0.15s, border-color 0.15s;
-}
-
-.kanban-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
-.kanban-card.selected {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 1px #3b82f6;
-}
-
-.kanban-card.dragging {
-  opacity: 0.4;
-}
-
-.kanban-card:active {
-  cursor: grabbing;
-}
-
-.card-title {
-  font-size: 14px;
-  color: #1e293b;
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-meta {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-  font-size: 11px;
-  color: #94a3b8;
-}
-
-.card-breadcrumb {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-</style>

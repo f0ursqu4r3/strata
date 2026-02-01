@@ -19,20 +19,24 @@ const modes: { key: ViewMode; label: string }[] = [
 </script>
 
 <template>
-  <div class="app-shell" v-if="store.ready">
+  <div v-if="store.ready" class="flex flex-col h-full">
     <!-- Top bar -->
-    <header class="top-bar">
-      <div class="top-left">
-        <span class="app-name">Strata</span>
+    <header class="flex items-center h-12 px-4 border-b border-slate-200 bg-white shrink-0">
+      <div class="flex-1">
+        <span class="font-bold text-base text-slate-900 tracking-tight">Strata</span>
       </div>
 
-      <div class="top-center">
-        <div class="view-toggle">
+      <div class="flex-none">
+        <div class="flex bg-slate-100 rounded-md p-0.5">
           <button
             v-for="m in modes"
             :key="m.key"
-            class="toggle-btn"
-            :class="{ active: store.viewMode === m.key }"
+            class="border-none px-3.5 py-1 text-[13px] font-medium cursor-pointer rounded transition-all"
+            :class="
+              store.viewMode === m.key
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'bg-transparent text-slate-500 hover:text-slate-700'
+            "
             @click="store.setViewMode(m.key)"
           >
             {{ m.label }}
@@ -40,179 +44,42 @@ const modes: { key: ViewMode; label: string }[] = [
         </div>
       </div>
 
-      <div class="top-right">
+      <div class="flex-1 flex justify-end">
         <input
-          class="search-box"
+          class="w-50 py-1 px-2.5 border border-slate-200 rounded-md text-[13px] text-slate-800 bg-slate-50 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
           type="text"
           placeholder="Search..."
-          disabled
+          :value="store.searchQuery"
+          @input="store.searchQuery = ($event.target as HTMLInputElement).value"
+          @keydown.escape="store.searchQuery = ''; ($event.target as HTMLInputElement).blur()"
         />
       </div>
     </header>
 
     <!-- Main content -->
-    <main class="main-content">
+    <main class="flex-1 flex overflow-hidden">
       <div
         v-if="store.viewMode === 'outline' || store.viewMode === 'split'"
-        class="panel outline-panel"
-        :class="{ full: store.viewMode === 'outline' }"
+        class="flex-1 overflow-hidden min-w-75"
       >
         <OutlineView />
       </div>
 
       <div
         v-if="store.viewMode === 'split'"
-        class="panel-divider"
+        class="w-px bg-slate-200 shrink-0"
       />
 
       <div
         v-if="store.viewMode === 'board' || store.viewMode === 'split'"
-        class="panel board-panel"
-        :class="{ full: store.viewMode === 'board' }"
+        class="flex-1 overflow-hidden min-w-100"
       >
         <KanbanBoard />
       </div>
     </main>
   </div>
 
-  <div v-else class="loading">
+  <div v-else class="flex items-center justify-center h-full text-slate-400 text-sm">
     Loading...
   </div>
 </template>
-
-<style>
-/* Global reset */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html,
-body,
-#app {
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
-  color: #1e293b;
-  background: #fff;
-}
-</style>
-
-<style scoped>
-.app-shell {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.top-bar {
-  display: flex;
-  align-items: center;
-  height: 48px;
-  padding: 0 16px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #fff;
-  flex-shrink: 0;
-}
-
-.top-left {
-  flex: 1;
-}
-
-.app-name {
-  font-weight: 700;
-  font-size: 16px;
-  color: #0f172a;
-  letter-spacing: -0.3px;
-}
-
-.top-center {
-  flex: 0 0 auto;
-}
-
-.view-toggle {
-  display: flex;
-  background: #f1f5f9;
-  border-radius: 6px;
-  padding: 2px;
-}
-
-.toggle-btn {
-  border: none;
-  background: transparent;
-  padding: 4px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748b;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.15s;
-}
-
-.toggle-btn.active {
-  background: #fff;
-  color: #0f172a;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
-.toggle-btn:hover:not(.active) {
-  color: #475569;
-}
-
-.top-right {
-  flex: 1;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.search-box {
-  width: 200px;
-  padding: 5px 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #94a3b8;
-  background: #f8fafc;
-}
-
-.main-content {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-.panel {
-  flex: 1;
-  overflow: hidden;
-}
-
-.panel.full {
-  flex: 1;
-}
-
-.outline-panel {
-  min-width: 300px;
-}
-
-.board-panel {
-  min-width: 400px;
-}
-
-.panel-divider {
-  width: 1px;
-  background: #e2e8f0;
-  flex-shrink: 0;
-}
-
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #94a3b8;
-  font-size: 14px;
-}
-</style>
