@@ -2,6 +2,7 @@
 import { ref, nextTick } from 'vue'
 import { useDocStore } from '@/stores/doc'
 import type { Node, Status } from '@/types'
+import ContextMenu from './ContextMenu.vue'
 
 const store = useDocStore()
 
@@ -82,6 +83,19 @@ function onCardEditKeydown(e: KeyboardEvent) {
 function childCount(node: Node): number {
   return store.getChildren(node.id).length
 }
+
+// Context menu
+const ctxMenu = ref<{ nodeId: string; x: number; y: number } | null>(null)
+
+function onCardContextMenu(e: MouseEvent, node: Node) {
+  e.preventDefault()
+  store.selectNode(node.id)
+  ctxMenu.value = { nodeId: node.id, x: e.clientX, y: e.clientY }
+}
+
+function closeContextMenu() {
+  ctxMenu.value = null
+}
 </script>
 
 <template>
@@ -124,6 +138,7 @@ function childCount(node: Node): number {
           @dragend="onDragEnd"
           @click="onCardClick(node)"
           @dblclick="onCardDblClick(node)"
+          @contextmenu="onCardContextMenu($event, node)"
         >
           <div v-if="editingCardId === node.id">
             <input
@@ -137,7 +152,7 @@ function childCount(node: Node): number {
             />
           </div>
           <div v-else class="text-slate-800 dark:text-slate-200 leading-snug overflow-hidden text-ellipsis whitespace-nowrap strata-text">
-            {{ node.text || '(empty)' }}
+            {{ (node.text || '(empty)').split('\n')[0] }}
           </div>
           <div class="flex gap-2 mt-1 text-[11px] text-slate-400 dark:text-slate-500">
             <span
@@ -161,5 +176,13 @@ function childCount(node: Node): number {
         </div>
       </div>
     </div>
+    <!-- Context menu -->
+    <ContextMenu
+      v-if="ctxMenu"
+      :node-id="ctxMenu.nodeId"
+      :x="ctxMenu.x"
+      :y="ctxMenu.y"
+      @close="closeContextMenu"
+    />
   </div>
 </template>

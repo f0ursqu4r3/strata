@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, computed } from 'vue'
+import { ref, watch, nextTick, computed, onMounted } from 'vue'
 import {
   ChevronRight,
   ChevronDown,
@@ -21,7 +21,7 @@ const emit = defineEmits<{
 }>()
 
 const store = useDocStore()
-const inputRef = ref<HTMLInputElement | null>(null)
+const inputRef = ref<HTMLTextAreaElement | null>(null)
 
 const isSelected = computed(() => store.selectedId === props.node.id)
 const isEditing = computed(() => store.editingId === props.node.id)
@@ -29,10 +29,23 @@ const hasChildren = computed(() => store.getChildren(props.node.id).length > 0)
 
 const localText = ref(props.node.text)
 
+onMounted(() => nextTick(autoResize))
+
+function autoResize() {
+  const el = inputRef.value
+  if (el) {
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }
+}
+
 watch(
   () => props.node.text,
   (v) => {
-    if (!isEditing.value) localText.value = v
+    if (!isEditing.value) {
+      localText.value = v
+      nextTick(autoResize)
+    }
   },
 )
 
@@ -40,13 +53,13 @@ watch(isEditing, async (editing) => {
   if (editing) {
     localText.value = props.node.text
     await nextTick()
+    autoResize()
     const input = inputRef.value
     if (input) {
-      input.focus()
-      if (store.editingTrigger === 'dblclick') {
-        input.select()
-      } else {
-        // Place cursor at end
+      if (document.activeElement !== input) {
+        input.focus()
+      }
+      if (store.editingTrigger === 'keyboard') {
         const len = input.value.length
         input.setSelectionRange(len, len)
       }
@@ -55,9 +68,10 @@ watch(isEditing, async (editing) => {
 })
 
 function onInput(e: Event) {
-  const val = (e.target as HTMLInputElement).value
+  const val = (e.target as HTMLTextAreaElement).value
   localText.value = val
   store.updateText(props.node.id, val)
+  autoResize()
 }
 
 function onBlur() {
@@ -68,31 +82,51 @@ function onBlur() {
 
 function onKeydown(e: KeyboardEvent) {
   const input = inputRef.value
+
+  // Status shortcuts work while editing: Ctrl+1/2/3/4
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+    const statusMap: Record<string, Status> = {
+      '1': 'todo',
+      '2': 'in_progress',
+      '3': 'blocked',
+      '4': 'done',
+    }
+    if (statusMap[e.key]) {
+      store.setStatus(props.node.id, statusMap[e.key]!)
+      e.preventDefault()
+      return
+    }
+  }
+
   if (e.key === 'Escape') {
     store.stopEditing()
+    ;(inputRef.value?.closest('.outline-focus-target') as HTMLElement)?.focus()
     e.preventDefault()
+  } else if (e.key === 'Enter' && e.shiftKey) {
+    // Shift+Enter: insert newline (default textarea behavior, let it through)
+    nextTick(autoResize)
   } else if (e.key === 'Enter' && !e.shiftKey) {
-    // Flush current text, then create sibling below and edit it
     store.flushTextDebounce()
     store.createSiblingBelowAndEdit()
     e.preventDefault()
   } else if (e.key === 'Backspace' && input && input.value === '') {
-    // Backspace on empty node: delete it and edit previous
     e.preventDefault()
     store.deleteNodeAndEditPrevious(props.node.id)
   } else if (e.key === 'ArrowUp' && !e.shiftKey && input) {
-    // Only navigate if cursor is at the very start
-    const atStart = input.selectionStart === 0 && input.selectionEnd === 0
-    if (atStart) {
+    // Only navigate to previous node if cursor is on the first line
+    const pos = input.selectionStart ?? 0
+    const onFirstLine = input.value.lastIndexOf('\n', pos - 1) === -1
+    if (onFirstLine && pos === 0 && input.selectionEnd === 0) {
       e.preventDefault()
       store.flushTextDebounce()
       store.editPreviousNode(props.node.id)
     }
   } else if (e.key === 'ArrowDown' && !e.shiftKey && input) {
-    // Only navigate if cursor is at the very end
+    // Only navigate to next node if cursor is on the last line
+    const pos = input.selectionStart ?? 0
     const len = input.value.length
-    const atEnd = input.selectionStart === len && input.selectionEnd === len
-    if (atEnd) {
+    const onLastLine = input.value.indexOf('\n', pos) === -1
+    if (onLastLine && pos === len && input.selectionEnd === len) {
       e.preventDefault()
       store.flushTextDebounce()
       store.editNextNode(props.node.id)
@@ -106,13 +140,19 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-function onClick() {
-  store.selectNode(props.node.id)
+function onFocus() {
+  if (!isEditing.value) {
+    store.selectNode(props.node.id)
+    store.startEditing(props.node.id, 'click')
+  }
 }
 
-function onDblClick() {
+function onClick(e: MouseEvent) {
   store.selectNode(props.node.id)
-  store.startEditing(props.node.id, 'dblclick')
+  // Clicking on row background (not the input): focus the input
+  if (e.target !== inputRef.value) {
+    store.startEditing(props.node.id, 'keyboard')
+  }
 }
 
 function onContextMenu(e: MouseEvent) {
@@ -188,7 +228,7 @@ function onStatusPickerBlur() {
 
 <template>
   <div
-    class="flex items-center h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
+    class="flex items-start min-h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
     :class="{
       'bg-slate-200 dark:bg-slate-700': isSelected && !isEditing,
       'bg-(--accent-100) dark:bg-[color-mix(in_srgb,var(--accent-700)_30%,transparent)]': isEditing,
@@ -202,14 +242,13 @@ function onStatusPickerBlur() {
     :aria-label="node.text || '(empty)'"
     draggable="true"
     @click="onClick"
-    @dblclick="onDblClick"
     @contextmenu="onContextMenu"
     @dragstart="onDragStart"
     @dragend="onDragEnd"
   >
     <!-- Collapse toggle / bullet -->
     <span
-      class="w-4 shrink-0 text-center text-slate-500 dark:text-slate-400 cursor-pointer flex items-center justify-center"
+      class="w-4 shrink-0 text-center text-slate-500 dark:text-slate-400 cursor-pointer flex items-center justify-center h-8"
       :class="{ 'hover:text-slate-800 dark:hover:text-slate-200': hasChildren }"
       role="button"
       :aria-label="hasChildren ? (node.collapsed ? 'Expand' : 'Collapse') : 'Zoom into node'"
@@ -226,7 +265,7 @@ function onStatusPickerBlur() {
     </span>
 
     <!-- Status dot (clickable picker) -->
-    <div class="relative shrink-0" role="button" :aria-label="'Status: ' + node.status.replace('_', ' ')" @click="onStatusClick">
+    <div class="relative shrink-0 h-8 flex items-center" role="button" :aria-label="'Status: ' + node.status.replace('_', ' ')" @click="onStatusClick">
       <component
         :is="currentStatusIcon().icon"
         class="w-3.5 h-3.5 cursor-pointer hover:scale-125 transition-transform"
@@ -255,25 +294,19 @@ function onStatusPickerBlur() {
       </div>
     </div>
 
-    <!-- Text -->
-    <template v-if="isEditing">
-      <input
-        ref="inputRef"
-        class="flex-1 border-none outline-none bg-transparent font-[inherit] text-slate-800 dark:text-slate-200 p-0 strata-text"
-        :value="localText"
-        @input="onInput"
-        @blur="onBlur"
-        @keydown="onKeydown"
-        spellcheck="false"
-      />
-    </template>
-    <template v-else>
-      <span
-        class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap strata-text"
-        :class="node.text ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500 italic'"
-      >
-        {{ node.text || '(empty)' }}
-      </span>
-    </template>
+    <!-- Text (always a textarea for seamless click-to-edit + multiline) -->
+    <textarea
+      ref="inputRef"
+      class="flex-1 border-none outline-none bg-transparent font-[inherit] text-slate-800 dark:text-slate-200 p-0 py-1.5 strata-text resize-none overflow-hidden leading-5 placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:italic select-text"
+      :value="localText"
+      placeholder="(empty)"
+      rows="1"
+      tabindex="-1"
+      spellcheck="false"
+      @focus="onFocus"
+      @input="onInput"
+      @blur="onBlur"
+      @keydown="onKeydown"
+    />
   </div>
 </template>
