@@ -1,11 +1,23 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
+import {
+  ChevronRight,
+  ChevronDown,
+  Circle,
+  CircleDot,
+  CircleAlert,
+  CircleCheckBig,
+} from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
-import type { Node } from '@/types'
+import type { Node, Status } from '@/types'
 
 const props = defineProps<{
   node: Node
   depth: number
+}>()
+
+const emit = defineEmits<{
+  contextmenu: [nodeId: string, x: number, y: number]
 }>()
 
 const store = useDocStore()
@@ -83,9 +95,10 @@ function onDblClick() {
   store.startEditing(props.node.id)
 }
 
-function onToggleCollapse(e: MouseEvent) {
-  e.stopPropagation()
-  store.toggleCollapsed(props.node.id)
+function onContextMenu(e: MouseEvent) {
+  e.preventDefault()
+  store.selectNode(props.node.id)
+  emit('contextmenu', props.node.id, e.clientX, e.clientY)
 }
 
 const isSearchMatch = computed(() => {
@@ -120,11 +133,36 @@ function onDragEnd(e: DragEvent) {
   ;(e.target as HTMLElement).classList.remove('opacity-40')
 }
 
-const statusColors: Record<string, string> = {
-  todo: 'bg-slate-400',
-  in_progress: 'bg-blue-500',
-  blocked: 'bg-red-500',
-  done: 'bg-green-500',
+// ── Inline status picker ──
+const showStatusPicker = ref(false)
+const statusPickerRef = ref<HTMLElement | null>(null)
+
+const statusOptions: { key: Status; label: string; icon: typeof Circle; color: string }[] = [
+  { key: 'todo', label: 'Todo', icon: Circle, color: 'text-slate-400' },
+  { key: 'in_progress', label: 'In Progress', icon: CircleDot, color: 'text-blue-500' },
+  { key: 'blocked', label: 'Blocked', icon: CircleAlert, color: 'text-red-500' },
+  { key: 'done', label: 'Done', icon: CircleCheckBig, color: 'text-green-500' },
+]
+
+function currentStatusIcon() {
+  return statusOptions.find((s) => s.key === props.node.status) ?? statusOptions[0]!
+}
+
+function onStatusClick(e: MouseEvent) {
+  e.stopPropagation()
+  showStatusPicker.value = !showStatusPicker.value
+}
+
+function onPickStatus(status: Status) {
+  store.setStatus(props.node.id, status)
+  showStatusPicker.value = false
+}
+
+function onStatusPickerBlur() {
+  // Delay to allow click to register
+  setTimeout(() => {
+    showStatusPicker.value = false
+  }, 150)
 }
 </script>
 
@@ -140,30 +178,53 @@ const statusColors: Record<string, string> = {
     draggable="true"
     @click="onClick"
     @dblclick="onDblClick"
+    @contextmenu="onContextMenu"
     @dragstart="onDragStart"
     @dragend="onDragEnd"
   >
     <!-- Collapse toggle / bullet -->
     <span
-      class="w-4 shrink-0 text-center text-xs text-slate-500 cursor-pointer"
+      class="w-4 shrink-0 text-center text-slate-500 cursor-pointer flex items-center justify-center"
       :class="{ 'hover:text-slate-800': hasChildren }"
       @click="onBulletClick"
-      @dblclick="onBulletDblClick"
+      @dblclick.stop="onBulletDblClick"
     >
       <template v-if="hasChildren">
-        {{ node.collapsed ? '&#x25B8;' : '&#x25BE;' }}
+        <ChevronDown v-if="!node.collapsed" class="w-3.5 h-3.5" />
+        <ChevronRight v-else class="w-3.5 h-3.5" />
       </template>
       <template v-else>
-        <span class="text-slate-400 text-sm">&bull;</span>
+        <span class="w-1.5 h-1.5 rounded-full bg-slate-300" />
       </template>
     </span>
 
-    <!-- Status dot -->
-    <span
-      class="w-2 h-2 rounded-full shrink-0"
-      :class="statusColors[node.status]"
-      :title="node.status"
-    />
+    <!-- Status dot (clickable picker) -->
+    <div class="relative shrink-0" @click="onStatusClick">
+      <component
+        :is="currentStatusIcon().icon"
+        class="w-3.5 h-3.5 cursor-pointer hover:scale-125 transition-transform"
+        :class="currentStatusIcon().color"
+      />
+
+      <!-- Inline status picker dropdown -->
+      <div
+        v-if="showStatusPicker"
+        ref="statusPickerRef"
+        class="absolute left-0 top-5 z-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-32"
+        @blur="onStatusPickerBlur"
+      >
+        <button
+          v-for="s in statusOptions"
+          :key="s.key"
+          class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-slate-100 text-left text-slate-700 text-xs"
+          :class="{ 'bg-slate-50 font-medium': node.status === s.key }"
+          @click.stop="onPickStatus(s.key)"
+        >
+          <component :is="s.icon" class="w-3.5 h-3.5" :class="s.color" />
+          {{ s.label }}
+        </button>
+      </div>
+    </div>
 
     <!-- Text -->
     <template v-if="isEditing">

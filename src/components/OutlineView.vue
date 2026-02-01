@@ -1,12 +1,25 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
+import { ArrowLeft } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { rankBefore, rankBetween, rankAfter } from '@/lib/rank'
 import OutlineRow from './OutlineRow.vue'
+import ContextMenu from './ContextMenu.vue'
 
 const store = useDocStore()
 const containerRef = ref<HTMLElement | null>(null)
 const dropTargetIdx = ref<number | null>(null)
+
+// Context menu state
+const ctxMenu = ref<{ nodeId: string; x: number; y: number } | null>(null)
+
+function onRowContextMenu(nodeId: string, x: number, y: number) {
+  ctxMenu.value = { nodeId, x, y }
+}
+
+function closeContextMenu() {
+  ctxMenu.value = null
+}
 
 function onKeydown(e: KeyboardEvent) {
   // Undo/redo works even while editing
@@ -98,7 +111,6 @@ function onContainerDragOver(e: DragEvent) {
   e.preventDefault()
   e.dataTransfer!.dropEffect = 'move'
 
-  // Figure out which row index we're over
   const rows = containerRef.value?.querySelectorAll('[data-row-idx]')
   if (!rows) return
   let targetIdx = -1
@@ -124,7 +136,6 @@ function onContainerDrop(e: DragEvent) {
   if (!nodeId) return
 
   const rows = store.visibleRows
-  // Find where in the visible list we want to place this
   const rowEls = containerRef.value?.querySelectorAll('[data-row-idx]')
   if (!rowEls) return
 
@@ -137,24 +148,20 @@ function onContainerDrop(e: DragEvent) {
     }
   }
 
-  // Determine new parent + pos based on target location
   const draggedNode = store.nodes.get(nodeId)
   if (!draggedNode) return
 
   if (targetIdx === 0) {
-    // Move to first child of effective zoom root
     const siblings = store.getChildren(store.effectiveZoomId)
     const firstSibling = siblings[0]
     if (firstSibling && firstSibling.id !== nodeId) {
       store.moveNode(nodeId, store.effectiveZoomId, rankBefore(firstSibling.pos))
     }
   } else if (targetIdx <= rows.length) {
-    // Place after the row at targetIdx - 1
     const aboveRow = rows[targetIdx - 1]
     if (!aboveRow || aboveRow.node.id === nodeId) return
     const aboveNode = aboveRow.node
 
-    // Make it a sibling after aboveNode
     const siblings = store.getChildren(aboveNode.parentId!)
     const aboveIdx = siblings.findIndex((s) => s.id === aboveNode.id)
     const nextSibling = siblings[aboveIdx + 1]
@@ -197,10 +204,11 @@ watch(
       class="flex items-center gap-2 px-3 pb-2 border-b border-slate-200 mb-1"
     >
       <button
-        class="bg-transparent border border-slate-300 rounded px-2 py-0.5 text-xs cursor-pointer text-slate-600 hover:bg-slate-100"
+        class="flex items-center gap-1 bg-transparent border border-slate-300 rounded px-2 py-0.5 text-xs cursor-pointer text-slate-600 hover:bg-slate-100"
         @click="store.zoomOut()"
       >
-        &larr; Back
+        <ArrowLeft class="w-3 h-3" />
+        Back
       </button>
       <span class="text-[13px] text-slate-500 font-medium">
         {{ store.nodes.get(store.zoomId)?.text ?? 'Zoomed' }}
@@ -223,6 +231,7 @@ watch(
           <OutlineRow
             :node="row.node"
             :depth="row.depth"
+            @contextmenu="onRowContextMenu"
           />
         </div>
       </template>
@@ -237,5 +246,14 @@ watch(
         No items. Press Enter to create one.
       </div>
     </div>
+
+    <!-- Context menu -->
+    <ContextMenu
+      v-if="ctxMenu"
+      :node-id="ctxMenu.nodeId"
+      :x="ctxMenu.x"
+      :y="ctxMenu.y"
+      @close="closeContextMenu"
+    />
   </div>
 </template>

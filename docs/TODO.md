@@ -12,10 +12,12 @@
 
 ## Phase 2: Views & projections
 
-- [ ] Right-click context menu on outline rows (set status, zoom, delete, duplicate)
-- [ ] Inline status picker dropdown on outline rows
-- [ ] Kanban card inline editing (click card title to edit text)
-- [ ] Empty-state improvements (better onboarding for new documents)
+- [x] Right-click context menu on outline rows (set status, zoom, delete, duplicate)
+- [x] Inline status picker dropdown on outline rows (click status icon)
+- [x] Kanban card inline editing (double-click card title to edit)
+- [x] Empty-state improvements (onboarding starter nodes + empty column labels)
+- [x] Lucide icons throughout (outline bullets, status icons, search, app logo)
+- [x] Splitpanes with resizable divider in split mode
 
 ## Phase 3: Persistence & reliability
 
@@ -30,9 +32,9 @@
 - [ ] Breadcrumb nav bar for zoom path (clickable segments)
 - [ ] Collapse/expand animations
 - [ ] Focus management: auto-focus outline panel on view switch
-- [ ] Lucide icons throughout the app
 - [ ] Mobile layout improvements (better responsive design)
 - [ ] User settings panel (theme, font size, etc.)
-- [ ] Proper Splitpanes implementation with resizable dividers
 - [ ] Accessibility improvements (ARIA roles, keyboard nav, screen reader support)
-  
+- [ ] Performance optimizations for large documents (virtualized rendering)
+- [ ] Testing: unit tests for core logic, integration tests for UI flows
+- [ ] Documentation: user guide, developer setup instructions

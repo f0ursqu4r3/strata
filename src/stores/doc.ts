@@ -10,6 +10,7 @@ import {
   loadLatestSnapshot,
   saveSnapshot,
   loadAllOps,
+  clearAll,
 } from '@/lib/idb'
 
 const SNAPSHOT_INTERVAL = 200
@@ -381,6 +382,26 @@ export const useDocStore = defineStore('doc', () => {
     dispatch(op)
   }
 
+  function duplicateNode(id: string) {
+    const node = nodes.value.get(id)
+    if (!node || !node.parentId) return
+
+    const siblings = getChildren(node.parentId)
+    const myIdx = siblings.findIndex((s) => s.id === node.id)
+    const nextSibling = siblings[myIdx + 1]
+
+    let pos: string
+    if (nextSibling) {
+      pos = rankBetween(node.pos, nextSibling.pos)
+    } else {
+      pos = rankAfter(node.pos)
+    }
+
+    const op = createNode(node.parentId, pos, node.text, node.status)
+    const newId = (op.payload as { id: string }).id
+    selectedId.value = newId
+  }
+
   function tombstone(id: string) {
     // Also tombstone descendants
     function deleteTree(nid: string) {
@@ -543,18 +564,32 @@ export const useDocStore = defineStore('doc', () => {
           deleted: false,
         })
 
-        // Create a few starter nodes
+        // Create starter nodes for onboarding
+        const starters = [
+          { text: 'Welcome to Strata', status: 'in_progress' as Status },
+          { text: 'Try pressing Enter to create a new item', status: 'todo' as Status },
+          { text: 'Use Tab to indent, Shift+Tab to outdent', status: 'todo' as Status },
+          { text: 'Ctrl+1/2/3/4 to change status', status: 'todo' as Status },
+          { text: 'Right-click for more options', status: 'todo' as Status },
+          { text: 'Drag cards between Kanban columns', status: 'done' as Status },
+        ]
+        let prevPos = ''
         const firstId = crypto.randomUUID()
-        const firstPos = initialRank()
-        nodeMap.set(firstId, {
-          id: firstId,
-          parentId: rId,
-          pos: firstPos,
-          text: 'First item',
-          collapsed: false,
-          status: 'todo',
-          deleted: false,
-        })
+        for (let i = 0; i < starters.length; i++) {
+          const s = starters[i]!
+          const id = i === 0 ? firstId : crypto.randomUUID()
+          const pos = prevPos ? rankAfter(prevPos) : initialRank()
+          prevPos = pos
+          nodeMap.set(id, {
+            id,
+            parentId: rId,
+            pos,
+            text: s.text,
+            collapsed: false,
+            status: s.status,
+            deleted: false,
+          })
+        }
 
         // Save initial ops
         const ops: Op[] = []
@@ -647,6 +682,7 @@ export const useDocStore = defineStore('doc', () => {
     setStatus,
     toggleCollapsed,
     tombstone,
+    duplicateNode,
     moveSelectionUp,
     moveSelectionDown,
     createSiblingBelow,

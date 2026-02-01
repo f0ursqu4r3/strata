@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useDocStore } from '@/stores/doc'
 import type { Node, Status } from '@/types'
 
@@ -14,6 +14,10 @@ const columns: { key: Status; label: string; dotClass: string }[] = [
 
 const dragNodeId = ref<string | null>(null)
 const dragOverColumn = ref<Status | null>(null)
+
+// Inline editing
+const editingCardId = ref<string | null>(null)
+const editInputRef = ref<HTMLInputElement | null>(null)
 
 function onDragStart(e: DragEvent, node: Node) {
   dragNodeId.value = node.id
@@ -52,6 +56,29 @@ function onCardClick(node: Node) {
   store.selectNode(node.id)
 }
 
+function onCardDblClick(node: Node) {
+  editingCardId.value = node.id
+  nextTick(() => {
+    editInputRef.value?.focus()
+    editInputRef.value?.select()
+  })
+}
+
+function onCardInput(e: Event, node: Node) {
+  store.updateText(node.id, (e.target as HTMLInputElement).value)
+}
+
+function onCardEditBlur() {
+  editingCardId.value = null
+}
+
+function onCardEditKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' || e.key === 'Enter') {
+    editingCardId.value = null
+    e.preventDefault()
+  }
+}
+
 function childCount(node: Node): number {
   return store.getChildren(node.id).length
 }
@@ -62,7 +89,7 @@ function childCount(node: Node): number {
     <div
       v-for="col in columns"
       :key="col.key"
-      class="flex-1 min-w-50 max-w-[320px] bg-slate-50 rounded-lg flex flex-col border-2 transition-colors"
+      class="flex-1 min-w-50 max-w-80 bg-slate-50 rounded-lg flex flex-col border-2 transition-colors"
       :class="
         dragOverColumn === col.key
           ? 'border-blue-300 bg-blue-50'
@@ -96,8 +123,20 @@ function childCount(node: Node): number {
           @dragstart="onDragStart($event, node)"
           @dragend="onDragEnd"
           @click="onCardClick(node)"
+          @dblclick="onCardDblClick(node)"
         >
-          <div class="text-sm text-slate-800 leading-snug overflow-hidden text-ellipsis whitespace-nowrap">
+          <div v-if="editingCardId === node.id">
+            <input
+              ref="editInputRef"
+              class="w-full text-sm text-slate-800 leading-snug border-none outline-none bg-transparent p-0 font-[inherit]"
+              :value="node.text"
+              @input="onCardInput($event, node)"
+              @blur="onCardEditBlur"
+              @keydown="onCardEditKeydown"
+              spellcheck="false"
+            />
+          </div>
+          <div v-else class="text-sm text-slate-800 leading-snug overflow-hidden text-ellipsis whitespace-nowrap">
             {{ node.text || '(empty)' }}
           </div>
           <div class="flex gap-2 mt-1 text-[11px] text-slate-400">
@@ -111,6 +150,14 @@ function childCount(node: Node): number {
               {{ childCount(node) }} children
             </span>
           </div>
+        </div>
+
+        <!-- Empty column state -->
+        <div
+          v-if="store.kanbanColumns[col.key].length === 0"
+          class="text-center text-slate-300 text-xs py-6"
+        >
+          No items
         </div>
       </div>
     </div>
