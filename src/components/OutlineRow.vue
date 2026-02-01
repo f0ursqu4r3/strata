@@ -75,7 +75,10 @@ function onInput(e: Event) {
 }
 
 function onBlur() {
-  if (isEditing.value) {
+  // Only stop editing if this node is still the one being edited.
+  // When Enter creates a sibling, editingId moves to the new node
+  // before this blur fires — don't clear it.
+  if (store.editingId === props.node.id) {
     store.stopEditing()
   }
 }
@@ -198,10 +201,10 @@ const showStatusPicker = ref(false)
 const statusPickerRef = ref<HTMLElement | null>(null)
 
 const statusOptions: { key: Status; label: string; icon: typeof Circle; color: string }[] = [
-  { key: 'todo', label: 'Todo', icon: Circle, color: 'text-slate-400' },
-  { key: 'in_progress', label: 'In Progress', icon: CircleDot, color: 'text-blue-500' },
-  { key: 'blocked', label: 'Blocked', icon: CircleAlert, color: 'text-red-500' },
-  { key: 'done', label: 'Done', icon: CircleCheckBig, color: 'text-green-500' },
+  { key: 'todo', label: 'Todo', icon: Circle, color: 'text-(--status-todo)' },
+  { key: 'in_progress', label: 'In Progress', icon: CircleDot, color: 'text-(--status-in-progress)' },
+  { key: 'blocked', label: 'Blocked', icon: CircleAlert, color: 'text-(--status-blocked)' },
+  { key: 'done', label: 'Done', icon: CircleCheckBig, color: 'text-(--status-done)' },
 ]
 
 function currentStatusIcon() {
@@ -228,11 +231,11 @@ function onStatusPickerBlur() {
 
 <template>
   <div
-    class="flex items-start min-h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
+    class="flex items-start min-h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-(--bg-hover)"
     :class="{
-      'bg-slate-200 dark:bg-slate-700': isSelected && !isEditing,
-      'bg-(--accent-100) dark:bg-[color-mix(in_srgb,var(--accent-700)_30%,transparent)]': isEditing,
-      'ring-1 ring-amber-300 bg-amber-50 dark:ring-amber-500 dark:bg-amber-900/30': isSearchMatch && !isSelected && !isEditing,
+      'bg-(--bg-active)': isSelected && !isEditing,
+      'bg-(--bg-editing)': isEditing,
+      'ring-1 ring-(--highlight-search-ring) bg-(--highlight-search-bg)': isSearchMatch && !isSelected && !isEditing,
     }"
     :style="{ paddingLeft: depth * 24 + 8 + 'px' }"
     role="treeitem"
@@ -248,8 +251,8 @@ function onStatusPickerBlur() {
   >
     <!-- Collapse toggle / bullet -->
     <span
-      class="w-4 shrink-0 text-center text-slate-500 dark:text-slate-400 cursor-pointer flex items-center justify-center h-8"
-      :class="{ 'hover:text-slate-800 dark:hover:text-slate-200': hasChildren }"
+      class="w-4 shrink-0 text-center text-(--text-muted) cursor-pointer flex items-center justify-center h-8"
+      :class="{ 'hover:text-(--text-primary)': hasChildren }"
       role="button"
       :aria-label="hasChildren ? (node.collapsed ? 'Expand' : 'Collapse') : 'Zoom into node'"
       @click="onBulletClick"
@@ -260,7 +263,7 @@ function onStatusPickerBlur() {
         <ChevronRight v-else class="w-3.5 h-3.5" />
       </template>
       <template v-else>
-        <span class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+        <span class="w-1.5 h-1.5 rounded-full bg-(--border-hover)" />
       </template>
     </span>
 
@@ -276,7 +279,7 @@ function onStatusPickerBlur() {
       <div
         v-if="showStatusPicker"
         ref="statusPickerRef"
-        class="absolute left-0 top-5 z-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-1 min-w-32"
+        class="absolute left-0 top-5 z-40 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg py-1 min-w-32"
         role="listbox"
         aria-label="Select status"
         @blur="onStatusPickerBlur"
@@ -284,8 +287,8 @@ function onStatusPickerBlur() {
         <button
           v-for="s in statusOptions"
           :key="s.key"
-          class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300 text-xs"
-          :class="{ 'bg-slate-50 dark:bg-slate-700 font-medium': node.status === s.key }"
+          class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary) text-xs"
+          :class="{ 'bg-(--bg-tertiary) font-medium': node.status === s.key }"
           @click.stop="onPickStatus(s.key)"
         >
           <component :is="s.icon" class="w-3.5 h-3.5" :class="s.color" />
@@ -297,7 +300,7 @@ function onStatusPickerBlur() {
     <!-- Text (always a textarea for seamless click-to-edit + multiline) -->
     <textarea
       ref="inputRef"
-      class="flex-1 border-none outline-none bg-transparent font-[inherit] text-slate-800 dark:text-slate-200 p-0 py-1.5 strata-text resize-none overflow-hidden leading-5 placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:italic select-text"
+      class="flex-1 border-none outline-none bg-transparent font-[inherit] text-(--text-secondary) p-0 py-1.5 strata-text resize-none overflow-hidden leading-5 placeholder:text-(--text-faint) placeholder:italic select-text"
       :value="localText"
       placeholder="(empty)"
       rows="1"

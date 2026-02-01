@@ -16,3 +16,5 @@
 ## Remaining
 
 - [ ] Documentation: user guide, developer setup instructions
+- [ ] "Proper", whole app themes with design tokens, CSS variables
+- [ ] Rich text editing via Markdown or similar

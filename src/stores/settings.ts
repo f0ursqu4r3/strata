@@ -1,73 +1,77 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
-
-export type ThemeName =
-  | 'default'
-  | 'ocean'
-  | 'forest'
-  | 'rose'
-  | 'amber'
-  | 'violet'
-  | 'monochrome'
-
-export interface ThemePreset {
-  key: ThemeName
-  label: string
-  accent: string // preview swatch color
-}
-
-export const themes: ThemePreset[] = [
-  { key: 'default', label: 'Slate Blue', accent: '#3b82f6' },
-  { key: 'ocean', label: 'Ocean', accent: '#06b6d4' },
-  { key: 'forest', label: 'Forest', accent: '#10b981' },
-  { key: 'rose', label: 'Rose', accent: '#f43f5e' },
-  { key: 'amber', label: 'Amber', accent: '#f59e0b' },
-  { key: 'violet', label: 'Violet', accent: '#8b5cf6' },
-  { key: 'monochrome', label: 'Mono', accent: '#64748b' },
-]
+import { ref, computed, watch } from 'vue'
+import { themeRegistry, getTheme, getPairedTheme } from '@/data/theme-registry'
+import type { ThemeKey } from '@/data/theme-registry'
 
 const STORAGE_KEY = 'strata-settings'
 
-interface PersistedSettings {
-  theme: ThemeName
-  fontSize: number
-  dark: boolean
+// Map old accent-only theme keys to new full themes
+const LEGACY_THEME_MAP: Record<string, string> = {
+  default: 'github-light',
+  ocean: 'github-light',
+  forest: 'github-light',
+  rose: 'github-light',
+  amber: 'github-light',
+  violet: 'github-light',
+  monochrome: 'github-light',
 }
 
-function loadSettings(): PersistedSettings {
+interface PersistedSettings {
+  theme: string
+  fontSize: number
+  dark?: boolean // legacy field, used for migration only
+}
+
+function loadSettings(): { theme: string; fontSize: number } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const parsed: PersistedSettings = JSON.parse(raw)
+      let themeKey = parsed.theme
+
+      // Migrate old theme keys
+      if (LEGACY_THEME_MAP[themeKey]) {
+        themeKey = LEGACY_THEME_MAP[themeKey]!
+        // If user had dark mode on, pick the dark variant
+        if (parsed.dark) {
+          themeKey = getPairedTheme(themeKey).key
+        }
+      }
+
+      // Validate that the theme key actually exists
+      const valid = themeRegistry.some((t) => t.key === themeKey)
+      if (!valid) themeKey = 'github-light'
+
+      return { theme: themeKey, fontSize: parsed.fontSize ?? 14 }
+    }
   } catch {
     // ignore
   }
-  // Also migrate old dark mode key
-  const oldDark = localStorage.getItem('strata-dark')
+
+  // Fresh install: respect system preference
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
   return {
-    theme: 'default',
+    theme: prefersDark ? 'github-dark' : 'github-light',
     fontSize: 14,
-    dark: oldDark === 'true' || (!oldDark && window.matchMedia('(prefers-color-scheme: dark)').matches),
   }
 }
 
 export const useSettingsStore = defineStore('settings', () => {
   const saved = loadSettings()
-  const theme = ref<ThemeName>(saved.theme)
+  const theme = ref<ThemeKey>(saved.theme)
   const fontSize = ref(saved.fontSize)
-  const dark = ref(saved.dark)
+
+  const dark = computed(() => getTheme(theme.value).appearance === 'dark')
 
   function persist() {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ theme: theme.value, fontSize: fontSize.value, dark: dark.value }),
+      JSON.stringify({ theme: theme.value, fontSize: fontSize.value }),
     )
   }
 
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', theme.value)
-  }
-
-  function applyDark() {
     document.documentElement.classList.toggle('dark', dark.value)
   }
 
@@ -75,13 +79,14 @@ export const useSettingsStore = defineStore('settings', () => {
     document.documentElement.style.setProperty('--strata-font-size', fontSize.value + 'px')
   }
 
-  function toggleDark() {
-    dark.value = !dark.value
-    applyDark()
+  function toggleAppearance() {
+    const paired = getPairedTheme(theme.value)
+    theme.value = paired.key
+    applyTheme()
     persist()
   }
 
-  function setTheme(t: ThemeName) {
+  function setTheme(t: ThemeKey) {
     theme.value = t
     applyTheme()
     persist()
@@ -95,18 +100,16 @@ export const useSettingsStore = defineStore('settings', () => {
 
   function init() {
     applyTheme()
-    applyDark()
     applyFontSize()
   }
 
-  // Watch for changes and persist
-  watch([theme, fontSize, dark], persist)
+  watch([theme, fontSize], persist)
 
   return {
     theme,
     fontSize,
     dark,
-    toggleDark,
+    toggleAppearance,
     setTheme,
     setFontSize,
     init,

@@ -7,10 +7,10 @@ import ContextMenu from './ContextMenu.vue'
 const store = useDocStore()
 
 const columns: { key: Status; label: string; dotClass: string }[] = [
-  { key: 'todo', label: 'Todo', dotClass: 'bg-slate-400' },
-  { key: 'in_progress', label: 'In Progress', dotClass: 'bg-blue-500' },
-  { key: 'blocked', label: 'Blocked', dotClass: 'bg-red-500' },
-  { key: 'done', label: 'Done', dotClass: 'bg-green-500' },
+  { key: 'todo', label: 'Todo', dotClass: 'bg-(--status-todo)' },
+  { key: 'in_progress', label: 'In Progress', dotClass: 'bg-(--status-in-progress)' },
+  { key: 'blocked', label: 'Blocked', dotClass: 'bg-(--status-blocked)' },
+  { key: 'done', label: 'Done', dotClass: 'bg-(--status-done)' },
 ]
 
 const dragNodeId = ref<string | null>(null)
@@ -99,14 +99,14 @@ function closeContextMenu() {
 </script>
 
 <template>
-  <div class="flex flex-col sm:flex-row gap-3 h-full p-3 overflow-x-auto overflow-y-auto bg-white dark:bg-slate-900" role="region" aria-label="Kanban board">
+  <div class="flex flex-col sm:flex-row gap-3 h-full p-3 overflow-x-auto overflow-y-auto bg-(--bg-primary)" role="region" aria-label="Kanban board">
     <div
       v-for="col in columns"
       :key="col.key"
-      class="flex-1 min-w-0 sm:min-w-50 max-w-full sm:max-w-80 bg-slate-50 dark:bg-slate-800/50 rounded-lg flex flex-col border-2 transition-colors"
+      class="flex-1 min-w-0 sm:min-w-50 max-w-full sm:max-w-80 bg-(--bg-tertiary) rounded-lg flex flex-col border-2 transition-colors"
       :class="
         dragOverColumn === col.key
-          ? 'border-blue-300 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/20'
+          ? 'border-(--highlight-drag-border) bg-(--highlight-drag-bg)'
           : 'border-transparent'
       "
       @dragover="onDragOver($event, col.key)"
@@ -114,10 +114,10 @@ function closeContextMenu() {
       @drop="onDrop($event, col.key)"
     >
       <!-- Column header -->
-      <div class="flex items-center gap-2 px-3 pt-3 pb-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
+      <div class="flex items-center gap-2 px-3 pt-3 pb-2 text-[13px] font-semibold text-(--text-tertiary)">
         <span class="w-2.5 h-2.5 rounded-full" :class="col.dotClass" />
         <span>{{ col.label }}</span>
-        <span class="ml-auto bg-slate-200 dark:bg-slate-700 rounded-full px-2 py-px text-[11px] font-medium text-slate-500 dark:text-slate-400">
+        <span class="ml-auto bg-(--bg-active) rounded-full px-2 py-px text-[11px] font-medium text-(--text-muted)">
           {{ store.kanbanColumns[col.key].length }}
         </span>
       </div>
@@ -127,11 +127,11 @@ function closeContextMenu() {
         <div
           v-for="node in store.kanbanColumns[col.key]"
           :key="node.id"
-          class="bg-white dark:bg-slate-800 border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color] hover:border-slate-300 dark:hover:border-slate-500 hover:shadow-sm active:cursor-grabbing"
+          class="bg-(--bg-secondary) border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color] hover:border-(--border-hover) hover:shadow-sm active:cursor-grabbing"
           :class="{
             'border-(--accent-500) shadow-[0_0_0_1px_var(--accent-500)]': store.selectedId === node.id,
             'opacity-40': dragNodeId === node.id,
-            'border-slate-200 dark:border-slate-700': store.selectedId !== node.id,
+            'border-(--border-primary)': store.selectedId !== node.id,
           }"
           draggable="true"
           @dragstart="onDragStart($event, node)"
@@ -143,7 +143,7 @@ function closeContextMenu() {
           <div v-if="editingCardId === node.id">
             <input
               ref="editInputRef"
-              class="w-full text-slate-800 dark:text-slate-200 leading-snug border-none outline-none bg-transparent p-0 font-[inherit] strata-text"
+              class="w-full text-(--text-secondary) leading-snug border-none outline-none bg-transparent p-0 font-[inherit] strata-text"
               :value="node.text"
               @input="onCardInput($event, node)"
               @blur="onCardEditBlur"
@@ -151,10 +151,10 @@ function closeContextMenu() {
               spellcheck="false"
             />
           </div>
-          <div v-else class="text-slate-800 dark:text-slate-200 leading-snug overflow-hidden text-ellipsis whitespace-nowrap strata-text">
+          <div v-else class="text-(--text-secondary) leading-snug overflow-hidden text-ellipsis whitespace-nowrap strata-text">
             {{ (node.text || '(empty)').split('\n')[0] }}
           </div>
-          <div class="flex gap-2 mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+          <div class="flex gap-2 mt-1 text-[11px] text-(--text-faint)">
             <span
               v-if="store.breadcrumb(node.id)"
               class="overflow-hidden text-ellipsis whitespace-nowrap"
@@ -170,7 +170,7 @@ function closeContextMenu() {
         <!-- Empty column state -->
         <div
           v-if="store.kanbanColumns[col.key].length === 0"
-          class="text-center text-slate-300 dark:text-slate-600 text-xs py-6"
+          class="text-center text-(--text-faint) text-xs py-6"
         >
           No items
         </div>

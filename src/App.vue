@@ -100,24 +100,24 @@ function onZoomRoot() {
 </script>
 
 <template>
-  <div v-if="store.ready" class="flex flex-col h-full bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+  <div v-if="store.ready" class="flex flex-col h-full bg-(--bg-primary) text-(--text-secondary)">
     <!-- Top bar -->
-    <header class="flex flex-wrap items-center min-h-12 px-3 sm:px-4 gap-2 py-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shrink-0">
+    <header class="flex flex-wrap items-center min-h-12 px-3 sm:px-4 gap-2 py-2 border-b border-(--border-primary) bg-(--bg-primary) shrink-0">
       <div class="flex items-center gap-2">
         <Layers class="w-4.5 h-4.5" style="color: var(--accent-500)" />
-        <span class="font-bold text-base text-slate-900 dark:text-white tracking-tight">Strata</span>
+        <span class="font-bold text-base text-(--text-primary) tracking-tight">Strata</span>
       </div>
 
       <div class="flex items-center gap-2 order-3 sm:order-0 sm:ml-auto sm:mr-auto">
-        <div class="flex bg-slate-100 dark:bg-slate-800 rounded-md p-0.5">
+        <div class="flex bg-(--bg-hover) rounded-md p-0.5">
           <button
             v-for="m in modes"
             :key="m.key"
             class="border-none px-3 sm:px-3.5 py-1 text-[13px] font-medium cursor-pointer rounded transition-all"
             :class="
               store.viewMode === m.key
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm ring-1 ring-(--accent-200) dark:ring-(--accent-700)'
-                : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                ? 'bg-(--bg-secondary) text-(--text-primary) shadow-sm ring-1 ring-(--accent-200)'
+                : 'bg-transparent text-(--text-muted) hover:text-(--text-secondary)'
             "
             @click="store.setViewMode(m.key)"
           >
@@ -129,9 +129,9 @@ function onZoomRoot() {
       <div class="flex items-center gap-1.5 ml-auto">
         <!-- Search -->
         <div class="relative hidden sm:block">
-          <Search class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-(--text-faint) pointer-events-none" />
           <input
-            class="w-36 lg:w-44 py-1 pl-8 pr-2.5 border border-slate-200 dark:border-slate-600 rounded-md text-[13px] text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-(--accent-400) focus:border-(--accent-400)"
+            class="w-36 lg:w-44 py-1 pl-8 pr-2.5 border border-(--border-secondary) rounded-md text-[13px] text-(--text-secondary) bg-(--bg-tertiary) placeholder:text-(--text-placeholder) focus:outline-none focus:ring-1 focus:ring-(--accent-400) focus:border-(--accent-400)"
             type="text"
             placeholder="Search..."
             :value="store.searchQuery"
@@ -142,7 +142,7 @@ function onZoomRoot() {
 
         <!-- Mobile search toggle -->
         <button
-          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 sm:hidden"
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) sm:hidden"
           title="Search"
           @click="showMobileSearch = !showMobileSearch"
         >
@@ -151,44 +151,44 @@ function onZoomRoot() {
 
         <!-- Toolbar buttons -->
         <button
-          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hidden sm:block"
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) hidden sm:block"
           title="Export JSON"
           @click="store.downloadExport()"
         >
           <Download class="w-4 h-4" />
         </button>
         <button
-          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hidden sm:block"
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) hidden sm:block"
           title="Import JSON"
           @click="onImportClick"
         >
           <Upload class="w-4 h-4" />
         </button>
         <button
-          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hidden sm:block"
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) hidden sm:block"
           title="Reset document"
           @click="onReset"
         >
           <RotateCcw class="w-4 h-4" />
         </button>
         <button
-          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hidden sm:block"
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) hidden sm:block"
           title="Keyboard shortcuts (?)"
           @click="showShortcuts = true"
         >
           <Keyboard class="w-4 h-4" />
         </button>
         <button
-          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary)"
           title="Settings"
           @click="showSettings = true"
         >
           <Settings class="w-4 h-4" />
         </button>
         <button
-          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary)"
           title="Toggle dark mode"
-          @click="settings.toggleDark()"
+          @click="settings.toggleAppearance()"
         >
           <Moon v-if="!settings.dark" class="w-4 h-4" />
           <Sun v-else class="w-4 h-4" />
@@ -207,12 +207,12 @@ function onZoomRoot() {
     <!-- Mobile search bar -->
     <div
       v-if="showMobileSearch"
-      class="flex items-center gap-2 px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sm:hidden"
+      class="flex items-center gap-2 px-3 py-2 border-b border-(--border-primary) bg-(--bg-tertiary) sm:hidden"
     >
       <div class="relative flex-1">
-        <Search class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        <Search class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-(--text-faint) pointer-events-none" />
         <input
-          class="w-full py-1 pl-8 pr-2.5 border border-slate-200 dark:border-slate-600 rounded-md text-[13px] text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-(--accent-400) focus:border-(--accent-400)"
+          class="w-full py-1 pl-8 pr-2.5 border border-(--border-secondary) rounded-md text-[13px] text-(--text-secondary) bg-(--bg-secondary) placeholder:text-(--text-placeholder) focus:outline-none focus:ring-1 focus:ring-(--accent-400) focus:border-(--accent-400)"
           type="text"
           placeholder="Search..."
           :value="store.searchQuery"
@@ -225,7 +225,7 @@ function onZoomRoot() {
     <!-- Zoom breadcrumb bar -->
     <div
       v-if="store.zoomId"
-      class="flex items-center gap-1 px-4 py-1.5 text-xs border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50"
+      class="flex items-center gap-1 px-4 py-1.5 text-xs border-b border-(--border-primary) bg-(--bg-tertiary)"
     >
       <button
         class="hover:underline"
@@ -235,10 +235,10 @@ function onZoomRoot() {
         Root
       </button>
       <template v-for="crumb in store.zoomBreadcrumbs" :key="crumb.id">
-        <ChevronRight class="w-3 h-3 text-slate-400 shrink-0" />
+        <ChevronRight class="w-3 h-3 text-(--text-faint) shrink-0" />
         <button
-          class="text-slate-500 dark:text-slate-400 hover:text-blue-500 hover:underline truncate max-w-32"
-          :class="{ 'font-medium text-slate-700 dark:text-slate-200': crumb.id === store.zoomId }"
+          class="text-(--text-muted) hover:text-(--accent-500) hover:underline truncate max-w-32"
+          :class="{ 'font-medium text-(--text-secondary)': crumb.id === store.zoomId }"
           @click="onZoomCrumb(crumb.id)"
         >
           {{ crumb.text }}
@@ -266,7 +266,7 @@ function onZoomRoot() {
     </main>
   </div>
 
-  <div v-else class="flex items-center justify-center h-full text-slate-400 text-sm">
+  <div v-else class="flex items-center justify-center h-full text-(--text-faint) text-sm">
     Loading...
   </div>
 
@@ -280,17 +280,11 @@ function onZoomRoot() {
 <style>
 /* Splitpanes overrides */
 .splitpanes__splitter {
-  background: #e2e8f0 !important;
+  background: var(--border-primary) !important;
   min-width: 3px !important;
   min-height: 3px !important;
 }
 .splitpanes__splitter:hover {
   background: var(--accent-300) !important;
-}
-.dark .splitpanes__splitter {
-  background: #334155 !important;
-}
-.dark .splitpanes__splitter:hover {
-  background: var(--accent-400) !important;
 }
 </style>

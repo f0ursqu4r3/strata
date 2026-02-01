@@ -318,7 +318,7 @@ watch(
       />
       <div
         v-if="store.visibleRows.length === 0"
-        class="p-6 text-center text-slate-400 dark:text-slate-500 text-sm"
+        class="p-6 text-center text-(--text-faint) text-sm"
       >
         No items. Press Enter to create one.
       </div>

@@ -36,10 +36,10 @@ const statuses: { key: Status; label: string; icon: typeof Circle }[] = [
 ]
 
 const statusColors: Record<Status, string> = {
-  todo: 'text-slate-400',
-  in_progress: 'text-blue-500',
-  blocked: 'text-red-500',
-  done: 'text-green-500',
+  todo: 'text-(--status-todo)',
+  in_progress: 'text-(--status-in-progress)',
+  blocked: 'text-(--status-blocked)',
+  done: 'text-(--status-done)',
 }
 
 function onEdit() {
@@ -91,17 +91,17 @@ onUnmounted(() => {
 <template>
   <div
     ref="menuRef"
-    class="fixed z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-1 min-w-44 text-sm"
+    class="fixed z-50 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg py-1 min-w-44 text-sm"
     role="menu"
     aria-label="Node actions"
     :style="{ left: x + 'px', top: y + 'px' }"
   >
     <button
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
+      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
       role="menuitem"
       @click="onEdit"
     >
-      <Pencil class="w-3.5 h-3.5 text-slate-400" />
+      <Pencil class="w-3.5 h-3.5 text-(--text-faint)" />
       Edit
     </button>
 
@@ -112,25 +112,25 @@ onUnmounted(() => {
       @mouseleave="showStatusSub = false"
     >
       <button
-        class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
+        class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
         role="menuitem"
         aria-haspopup="true"
       >
-        <CircleDot class="w-3.5 h-3.5 text-slate-400" />
+        <CircleDot class="w-3.5 h-3.5 text-(--text-faint)" />
         Set status
-        <ChevronRight class="w-3.5 h-3.5 text-slate-400 ml-auto" />
+        <ChevronRight class="w-3.5 h-3.5 text-(--text-faint) ml-auto" />
       </button>
 
       <div
         v-if="showStatusSub"
-        class="absolute left-full top-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-1 min-w-36"
+        class="absolute left-full top-0 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg py-1 min-w-36"
         role="menu"
         aria-label="Status options"
       >
         <button
           v-for="s in statuses"
           :key="s.key"
-          class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
+          class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
           role="menuitem"
           @click="onSetStatus(s.key)"
         >
@@ -141,27 +141,27 @@ onUnmounted(() => {
     </div>
 
     <button
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
+      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
       role="menuitem"
       @click="onZoomIn"
     >
-      <ZoomIn class="w-3.5 h-3.5 text-slate-400" />
+      <ZoomIn class="w-3.5 h-3.5 text-(--text-faint)" />
       Zoom in
     </button>
 
     <button
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
+      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
       role="menuitem"
       @click="onDuplicate"
     >
-      <Copy class="w-3.5 h-3.5 text-slate-400" />
+      <Copy class="w-3.5 h-3.5 text-(--text-faint)" />
       Duplicate
     </button>
 
-    <div class="border-t border-slate-100 dark:border-slate-700 my-1" />
+    <div class="border-t border-(--border-primary) my-1" />
 
     <button
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-left text-red-600 dark:text-red-400"
+      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--color-danger-bg) text-left text-(--color-danger)"
       role="menuitem"
       @click="onDelete"
     >
