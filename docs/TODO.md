@@ -12,9 +12,23 @@
 - Natural text editing (click-to-edit, arrow/backspace/tab/enter navigation, multiline via Shift+Enter)
 - Lucide icons, mobile layout, accessibility (ARIA), virtualized rendering, unit tests
 - Onboarding starter nodes, empty-state labels, keyboard shortcut overlay, focus management
+- Full design token migration: all components use CSS custom properties
+- 11 developer code-editor themes (GitHub Light/Dark, Monokai, Nord, Dracula, Solarized Light/Dark, One Dark, Catppuccin Mocha, Gruvbox Dark, Tokyo Night)
+- Theme pairing with light/dark appearance toggle
+- Legacy theme migration for existing users
+- Bug fix: cursor now moves to newly created items on Enter
+- Bug fix: outline status icons update immediately when cards dragged on Kanban board
 
 ## Remaining
 
 - [ ] Documentation: user guide, developer setup instructions
-- [ ] "Proper", whole app themes with design tokens, CSS variables
 - [ ] Rich text editing via Markdown or similar
+- [ ] Multi-device sync (CRDTs or server-based merge)
+- [ ] Collaboration: real-time multi-user editing
+- [ ] Due dates, reminders, and date-based filtering
+- [ ] Multiple documents / workspaces
+- [ ] Full-text search across all documents
+- [ ] Tags / labels with filtering
+- [ ] Trash / archive with restore
+- [ ] Keyboard shortcut customization
+- [ ] Export to more formats (OPML, plain text, CSV)
