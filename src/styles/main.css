@@ -92,3 +92,30 @@ body,
 .strata-text {
   font-size: var(--strata-font-size);
 }
+
+/* ── Inline markdown styles ── */
+.strata-md-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  background: var(--bg-hover);
+  color: var(--accent-600);
+}
+
+.strata-md-link {
+  color: var(--accent-500);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.strata-md-link:hover {
+  color: var(--accent-600);
+}
+
+.strata-md-img {
+  display: inline;
+  max-height: 1.4em;
+  vertical-align: text-bottom;
+  border-radius: 2px;
+}

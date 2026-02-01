@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
-import { X, Minus, Plus } from 'lucide-vue-next'
+import { X, Minus, Plus, Settings2 } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
 import { themeRegistry } from '@/data/theme-registry'
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; openStatusEditor: [] }>()
 const settings = useSettingsStore()
 
 function onKeydown(e: KeyboardEvent) {
@@ -103,6 +103,20 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
           <p class="text-[11px] text-(--text-faint) mt-1.5">
             Applies to outline rows and kanban cards
           </p>
+        </div>
+
+        <!-- Statuses -->
+        <div>
+          <h3 class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide mb-3">
+            Statuses
+          </h3>
+          <button
+            class="flex items-center gap-2 text-sm text-(--accent-600) hover:text-(--accent-700) cursor-pointer"
+            @click="emit('openStatusEditor')"
+          >
+            <Settings2 class="w-4 h-4" />
+            Manage Statuses
+          </button>
         </div>
 
         <!-- Display -->

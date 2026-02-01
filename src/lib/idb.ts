@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { Op, Snapshot, Node } from '@/types'
+import type { Op, Snapshot, Node, StatusDef } from '@/types'
 
 interface OpRecord extends Op {
   // seq is also the primary key
@@ -13,9 +13,15 @@ interface SnapshotRecord {
   ts: number
 }
 
+interface MetaRecord {
+  key: string
+  value: unknown
+}
+
 type StrataDB = Dexie & {
   ops: EntityTable<OpRecord, 'opId'>
   snapshots: EntityTable<SnapshotRecord, 'id'>
+  meta: EntityTable<MetaRecord, 'key'>
 }
 
 // ── Database cache ──
@@ -30,6 +36,11 @@ function openDocDB(docId: string): StrataDB {
   db.version(1).stores({
     ops: 'opId, seq, ts',
     snapshots: 'id, seqAfter',
+  })
+  db.version(2).stores({
+    ops: 'opId, seq, ts',
+    snapshots: 'id, seqAfter',
+    meta: 'key',
   })
   dbCache.set(docId, db)
   return db
@@ -113,6 +124,16 @@ export async function saveSnapshot(snapshot: Snapshot): Promise<void> {
 export async function loadLatestSnapshot(): Promise<Snapshot | undefined> {
   const all = await db().snapshots.orderBy('seqAfter').reverse().limit(1).toArray()
   return all[0] as Snapshot | undefined
+}
+
+export async function loadStatusConfig(): Promise<StatusDef[] | null> {
+  const row = await db().meta.get('statusConfig')
+  if (!row || !Array.isArray(row.value)) return null
+  return row.value as StatusDef[]
+}
+
+export async function saveStatusConfig(statuses: StatusDef[]): Promise<void> {
+  await db().meta.put({ key: 'statusConfig', value: statuses })
 }
 
 export async function clearAll(): Promise<void> {

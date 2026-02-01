@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { X } from 'lucide-vue-next'
+import { useDocStore } from '@/stores/doc'
 
 const emit = defineEmits<{ close: [] }>()
+const store = useDocStore()
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' || e.key === '?') {
@@ -14,7 +16,7 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', onKeydown))
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
-const sections = [
+const sections = computed(() => [
   {
     title: 'Navigation',
     shortcuts: [
@@ -36,12 +38,10 @@ const sections = [
   },
   {
     title: 'Status',
-    shortcuts: [
-      { keys: ['Ctrl', '1'], desc: 'Set Todo' },
-      { keys: ['Ctrl', '2'], desc: 'Set In Progress' },
-      { keys: ['Ctrl', '3'], desc: 'Set Blocked' },
-      { keys: ['Ctrl', '4'], desc: 'Set Done' },
-    ],
+    shortcuts: store.statusDefs.map((s, i) => ({
+      keys: ['Ctrl', String(i + 1)],
+      desc: `Set ${s.label}`,
+    })),
   },
   {
     title: 'General',
@@ -51,7 +51,7 @@ const sections = [
       { keys: ['?'], desc: 'Toggle this panel' },
     ],
   },
-]
+])
 </script>
 
 <template>

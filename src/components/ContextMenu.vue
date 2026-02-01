@@ -7,13 +7,10 @@ import {
   ZoomIn,
   Tag,
   ChevronRight,
-  Circle,
   CircleDot,
-  CircleAlert,
-  CircleCheckBig,
 } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
-import type { Status } from '@/types'
+import { resolveStatusIcon } from '@/lib/status-icons'
 
 const props = defineProps<{
   nodeId: string
@@ -28,20 +25,6 @@ const emit = defineEmits<{
 const store = useDocStore()
 const menuRef = ref<HTMLElement | null>(null)
 const showStatusSub = ref(false)
-
-const statuses: { key: Status; label: string; icon: typeof Circle }[] = [
-  { key: 'todo', label: 'Todo', icon: Circle },
-  { key: 'in_progress', label: 'In Progress', icon: CircleDot },
-  { key: 'blocked', label: 'Blocked', icon: CircleAlert },
-  { key: 'done', label: 'Done', icon: CircleCheckBig },
-]
-
-const statusColors: Record<Status, string> = {
-  todo: 'text-(--status-todo)',
-  in_progress: 'text-(--status-in-progress)',
-  blocked: 'text-(--status-blocked)',
-  done: 'text-(--status-done)',
-}
 
 function onEdit() {
   store.selectNode(props.nodeId)
@@ -136,13 +119,13 @@ onUnmounted(() => {
         aria-label="Status options"
       >
         <button
-          v-for="s in statuses"
-          :key="s.key"
+          v-for="s in store.statusDefs"
+          :key="s.id"
           class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
           role="menuitem"
-          @click="onSetStatus(s.key)"
+          @click="onSetStatus(s.id)"
         >
-          <component :is="s.icon" class="w-3.5 h-3.5" :class="statusColors[s.key]" />
+          <component :is="resolveStatusIcon(s.icon)" class="w-3.5 h-3.5" :style="{ color: s.color }" />
           {{ s.label }}
         </button>
       </div>

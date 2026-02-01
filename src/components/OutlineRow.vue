@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed, onMounted } from 'vue'
-import {
-  ChevronRight,
-  ChevronDown,
-  Circle,
-  CircleDot,
-  CircleAlert,
-  CircleCheckBig,
-} from 'lucide-vue-next'
+import { ChevronRight, ChevronDown } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
 import TagPicker from '@/components/TagPicker.vue'
+import { renderInlineMarkdown } from '@/lib/inline-markdown'
+import { resolveStatusIcon } from '@/lib/status-icons'
 import type { Node, Status } from '@/types'
 
 const props = defineProps<{
@@ -32,6 +27,17 @@ const isEditing = computed(() => store.editingId === props.node.id)
 const hasChildren = computed(() => store.getChildren(props.node.id).length > 0)
 
 const localText = ref(props.node.text)
+
+// Rendered HTML lines for read-only display (first line + rest with gap)
+const renderedLines = computed(() => {
+  const text = localText.value
+  if (!text) return null
+  const lines = text.split('\n')
+  return {
+    first: renderInlineMarkdown(lines[0]!),
+    rest: lines.length > 1 ? lines.slice(1).map(l => renderInlineMarkdown(l)) : null,
+  }
+})
 
 onMounted(async () => {
   await nextTick()
@@ -108,16 +114,11 @@ function onBlur() {
 function onKeydown(e: KeyboardEvent) {
   const input = inputRef.value
 
-  // Status shortcuts work while editing: Ctrl+1/2/3/4
+  // Status shortcuts work while editing: Ctrl+1..N
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-    const statusMap: Record<string, Status> = {
-      '1': 'todo',
-      '2': 'in_progress',
-      '3': 'blocked',
-      '4': 'done',
-    }
-    if (statusMap[e.key]) {
-      store.setStatus(props.node.id, statusMap[e.key]!)
+    const idx = parseInt(e.key) - 1
+    if (idx >= 0 && idx < store.statusDefs.length) {
+      store.setStatus(props.node.id, store.statusDefs[idx]!.id)
       e.preventDefault()
       return
     }
@@ -174,10 +175,11 @@ function onFocus() {
 }
 
 function onClick(e: MouseEvent) {
+  // Don't start editing when clicking a rendered link
+  if ((e.target as HTMLElement).closest?.('a')) return
   store.selectNode(props.node.id)
-  // Clicking on row background (not the input): focus the input
-  if (e.target !== inputRef.value) {
-    store.startEditing(props.node.id, 'keyboard')
+  if (!isEditing.value) {
+    store.startEditing(props.node.id, 'click')
   }
 }
 
@@ -223,16 +225,9 @@ function onDragEnd(e: DragEvent) {
 const showStatusPicker = ref(false)
 const statusPickerRef = ref<HTMLElement | null>(null)
 
-const statusOptions: { key: Status; label: string; icon: typeof Circle; color: string }[] = [
-  { key: 'todo', label: 'Todo', icon: Circle, color: 'text-(--status-todo)' },
-  { key: 'in_progress', label: 'In Progress', icon: CircleDot, color: 'text-(--status-in-progress)' },
-  { key: 'blocked', label: 'Blocked', icon: CircleAlert, color: 'text-(--status-blocked)' },
-  { key: 'done', label: 'Done', icon: CircleCheckBig, color: 'text-(--status-done)' },
-]
-
-function currentStatusIcon() {
-  return statusOptions.find((s) => s.key === props.node.status) ?? statusOptions[0]!
-}
+const currentStatusDef = computed(() =>
+  store.statusMap.get(props.node.status) ?? store.statusDefs[0]
+)
 
 function onStatusClick(e: MouseEvent) {
   e.stopPropagation()
@@ -293,9 +288,10 @@ function onStatusPickerBlur() {
     <!-- Status dot (clickable picker) -->
     <div class="relative shrink-0 h-8 flex items-center" role="button" :aria-label="'Status: ' + node.status.replace('_', ' ')" @click="onStatusClick">
       <component
-        :is="currentStatusIcon().icon"
+        v-if="currentStatusDef"
+        :is="resolveStatusIcon(currentStatusDef.icon)"
         class="w-3.5 h-3.5 cursor-pointer hover:scale-125 transition-transform"
-        :class="currentStatusIcon().color"
+        :style="{ color: currentStatusDef.color }"
       />
 
       <!-- Inline status picker dropdown -->
@@ -308,20 +304,21 @@ function onStatusPickerBlur() {
         @blur="onStatusPickerBlur"
       >
         <button
-          v-for="s in statusOptions"
-          :key="s.key"
+          v-for="s in store.statusDefs"
+          :key="s.id"
           class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary) text-xs"
-          :class="{ 'bg-(--bg-tertiary) font-medium': node.status === s.key }"
-          @click.stop="onPickStatus(s.key)"
+          :class="{ 'bg-(--bg-tertiary) font-medium': node.status === s.id }"
+          @click.stop="onPickStatus(s.id)"
         >
-          <component :is="s.icon" class="w-3.5 h-3.5" :class="s.color" />
+          <component :is="resolveStatusIcon(s.icon)" class="w-3.5 h-3.5" :style="{ color: s.color }" />
           {{ s.label }}
         </button>
       </div>
     </div>
 
-    <!-- Text (always a textarea for seamless click-to-edit + multiline) -->
+    <!-- Text: read-only display or editable textarea -->
     <textarea
+      v-if="isEditing"
       ref="inputRef"
       class="flex-1 border-none outline-none bg-transparent font-[inherit] text-(--text-secondary) p-0 py-1.5 strata-text resize-none overflow-hidden leading-5 placeholder:text-(--text-faint) placeholder:italic select-text"
       :value="localText"
@@ -334,6 +331,22 @@ function onStatusPickerBlur() {
       @blur="onBlur"
       @keydown="onKeydown"
     />
+    <div
+      v-else
+      class="flex-1 py-1.5 strata-text leading-5 min-h-5 select-text"
+      :class="localText ? 'text-(--text-secondary)' : 'text-(--text-faint) italic'"
+    >
+      <template v-if="renderedLines">
+        <!-- eslint-disable vue/no-v-html -->
+        <div v-html="renderedLines.first" />
+        <div
+          v-if="renderedLines.rest"
+          class="mt-1.5 text-(--text-muted) leading-5 whitespace-pre-wrap"
+          v-html="renderedLines.rest.join('\n')"
+        />
+      </template>
+      <template v-else>(empty)</template>
+    </div>
 
     <!-- Tag pills -->
     <div

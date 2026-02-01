@@ -25,6 +25,7 @@ import SettingsPanel from "@/components/SettingsPanel.vue";
 import DocumentSidebar from "@/components/DocumentSidebar.vue";
 import TrashPanel from "@/components/TrashPanel.vue";
 import ExportMenu from "@/components/ExportMenu.vue";
+import StatusEditor from "@/components/StatusEditor.vue";
 import type { ViewMode } from "@/types";
 
 const store = useDocStore();
@@ -33,6 +34,7 @@ const docsStore = useDocumentsStore();
 const showShortcuts = ref(false);
 const showSettings = ref(false);
 const showTrash = ref(false);
+const showStatusEditor = ref(false);
 const showMobileSearch = ref(false);
 const showTagFilter = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -323,7 +325,7 @@ function onZoomRoot() {
             <OutlineView ref="outlineRef" />
           </Pane>
           <Pane :min-size="20" :size="50">
-            <KanbanBoard />
+            <KanbanBoard @open-status-editor="showStatusEditor = true" />
           </Pane>
         </Splitpanes>
 
@@ -331,7 +333,7 @@ function onZoomRoot() {
           <OutlineView ref="outlineRef" />
         </div>
         <div v-else class="h-full">
-          <KanbanBoard />
+          <KanbanBoard @open-status-editor="showStatusEditor = true" />
         </div>
       </main>
     </div>
@@ -345,10 +347,13 @@ function onZoomRoot() {
   <ShortcutsModal v-if="showShortcuts" @close="showShortcuts = false" />
 
   <!-- Settings panel -->
-  <SettingsPanel v-if="showSettings" @close="showSettings = false" />
+  <SettingsPanel v-if="showSettings" @close="showSettings = false" @open-status-editor="showSettings = false; showStatusEditor = true" />
 
   <!-- Trash panel -->
   <TrashPanel v-if="showTrash" @close="showTrash = false" />
+
+  <!-- Status editor -->
+  <StatusEditor v-if="showStatusEditor" @close="showStatusEditor = false" />
 </template>
 
 <style>

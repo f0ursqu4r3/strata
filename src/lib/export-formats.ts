@@ -1,4 +1,4 @@
-import type { Node, Status } from '@/types'
+import type { Node, StatusDef } from '@/types'
 
 function getOrderedChildren(nodes: Map<string, Node>, parentId: string): Node[] {
   const children: Node[] = []
@@ -10,18 +10,14 @@ function getOrderedChildren(nodes: Map<string, Node>, parentId: string): Node[] 
   return children.sort((a, b) => (a.pos < b.pos ? -1 : a.pos > b.pos ? 1 : 0))
 }
 
-const statusEmoji: Record<Status, string> = {
-  todo: '[ ]',
-  in_progress: '[~]',
-  blocked: '[!]',
-  done: '[x]',
+function getStatusLabel(statusId: string, statusMap: Map<string, StatusDef>): string {
+  return statusMap.get(statusId)?.label ?? statusId
 }
 
-const statusLabel: Record<Status, string> = {
-  todo: 'Todo',
-  in_progress: 'In Progress',
-  blocked: 'Blocked',
-  done: 'Done',
+function getStatusEmoji(statusId: string, statusMap: Map<string, StatusDef>): string {
+  const label = getStatusLabel(statusId, statusMap)
+  // Use first char in brackets for compact display
+  return `[${label.charAt(0)}]`
 }
 
 // ── Markdown ──
@@ -29,6 +25,7 @@ const statusLabel: Record<Status, string> = {
 export function exportToMarkdown(
   nodes: Map<string, Node>,
   rootId: string,
+  statusMap: Map<string, StatusDef>,
   zoomId?: string | null,
 ): string {
   const lines: string[] = []
@@ -38,7 +35,7 @@ export function exportToMarkdown(
     const children = getOrderedChildren(nodes, parentId)
     for (const child of children) {
       const indent = '  '.repeat(depth)
-      const status = statusEmoji[child.status]
+      const status = getStatusEmoji(child.status, statusMap)
       const text = child.text || '(empty)'
       const firstLine = text.split('\n')[0]!
       const tags = child.tags?.length ? ' ' + child.tags.map((t) => `#${t}`).join(' ') : ''
@@ -72,6 +69,7 @@ function escapeXml(s: string): string {
 export function exportToOPML(
   nodes: Map<string, Node>,
   rootId: string,
+  statusMap: Map<string, StatusDef>,
   zoomId?: string | null,
 ): string {
   const lines: string[] = []
@@ -116,6 +114,7 @@ export function exportToOPML(
 export function exportToPlaintext(
   nodes: Map<string, Node>,
   rootId: string,
+  statusMap: Map<string, StatusDef>,
   zoomId?: string | null,
 ): string {
   const lines: string[] = []
@@ -125,7 +124,7 @@ export function exportToPlaintext(
     const children = getOrderedChildren(nodes, parentId)
     for (const child of children) {
       const indent = '  '.repeat(depth)
-      const status = `[${statusLabel[child.status]}]`
+      const status = `[${getStatusLabel(child.status, statusMap)}]`
       const text = child.text || '(empty)'
       const firstLine = text.split('\n')[0]!
       lines.push(`${indent}${status} ${firstLine}`)

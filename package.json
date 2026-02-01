@@ -19,6 +19,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "dexie": "^4.3.0",
     "lucide-vue-next": "^0.563.0",
+    "markdown-it": "^14.1.0",
     "pinia": "^3.0.4",
     "splitpanes": "^4.0.4",
     "tailwindcss": "^4.1.18",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@tsconfig/node24": "^24.0.4",
     "@types/jsdom": "^27.0.0",
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^24.10.9",
     "@vitejs/plugin-vue": "^6.0.3",
     "@vitest/eslint-plugin": "^1.6.6",

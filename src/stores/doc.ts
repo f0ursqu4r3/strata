@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, shallowRef, triggerRef } from 'vue'
-import type { Node, Op, Status, ViewMode, Snapshot } from '@/types'
+import type { Node, Op, Status, ViewMode, Snapshot, StatusDef } from '@/types'
+import { DEFAULT_STATUSES } from '@/types'
 import { makeOp, applyOp, rebuildState, setSeq } from '@/lib/ops'
 import { rankBetween, rankAfter, rankBefore, initialRank } from '@/lib/rank'
 import { exportToMarkdown, exportToOPML, exportToPlaintext } from '@/lib/export-formats'
@@ -14,6 +15,8 @@ import {
   clearAll,
   flushOpBuffer,
   setCurrentDocId,
+  loadStatusConfig,
+  saveStatusConfig,
 } from '@/lib/idb'
 
 const SNAPSHOT_INTERVAL = 200
@@ -31,6 +34,19 @@ export const useDocStore = defineStore('doc', () => {
   const ready = ref(false)
   const searchQuery = ref('')
   const tagFilter = ref<string | null>(null)
+
+  // ── Status configuration (per-document) ──
+  const statusConfig = ref<StatusDef[]>([...DEFAULT_STATUSES])
+
+  const statusDefs = computed(() => statusConfig.value)
+
+  const statusMap = computed(() => {
+    const map = new Map<string, StatusDef>()
+    for (const def of statusConfig.value) {
+      map.set(def.id, def)
+    }
+    return map
+  })
 
   // Op tracking
   const opsSinceSnapshot = ref(0)
@@ -174,14 +190,12 @@ export const useDocStore = defineStore('doc', () => {
   })
 
   const kanbanColumns = computed(() => {
-    const cols: Record<Status, Node[]> = {
-      todo: [],
-      in_progress: [],
-      blocked: [],
-      done: [],
-    }
+    const cols = statusConfig.value.map((def) => ({ def, nodes: [] as Node[] }))
+    const colMap = new Map(cols.map((c) => [c.def.id, c]))
     for (const node of kanbanNodes.value) {
-      cols[node.status].push(node)
+      const col = colMap.get(node.status)
+      if (col) col.nodes.push(node)
+      else if (cols.length > 0) cols[0]!.nodes.push(node)
     }
     return cols
   })
@@ -386,7 +400,7 @@ export const useDocStore = defineStore('doc', () => {
     parentId: string | null,
     pos: string,
     text: string = '',
-    status: Status = 'todo',
+    status: Status = statusConfig.value[0]?.id ?? 'todo',
   ): Op {
     const id = crypto.randomUUID()
     const op = makeOp('create', {
@@ -544,6 +558,38 @@ export const useDocStore = defineStore('doc', () => {
     }
     const op = makeOp('restore', { type: 'restore', id })
     dispatch(op)
+  }
+
+  // ── Status config CRUD ──
+
+  async function addStatus(def: StatusDef) {
+    statusConfig.value = [...statusConfig.value, def]
+    await saveStatusConfig(statusConfig.value)
+  }
+
+  async function removeStatus(statusId: string, replacementId: string) {
+    // Bulk-reassign nodes with the removed status
+    for (const node of nodes.value.values()) {
+      if (!node.deleted && node.status === statusId) {
+        const op = makeOp('setStatus', { type: 'setStatus', id: node.id, status: replacementId })
+        dispatch(op, false)
+      }
+    }
+    statusConfig.value = statusConfig.value.filter((s) => s.id !== statusId)
+    await saveStatusConfig(statusConfig.value)
+  }
+
+  async function updateStatus(statusId: string, updates: Partial<Omit<StatusDef, 'id'>>) {
+    statusConfig.value = statusConfig.value.map((s) =>
+      s.id === statusId ? { ...s, ...updates } : s,
+    )
+    await saveStatusConfig(statusConfig.value)
+  }
+
+  async function reorderStatuses(orderedIds: string[]) {
+    const byId = new Map(statusConfig.value.map((s) => [s.id, s]))
+    statusConfig.value = orderedIds.map((id) => byId.get(id)!).filter(Boolean)
+    await saveStatusConfig(statusConfig.value)
   }
 
   const trashedNodes = computed(() => {
@@ -855,6 +901,14 @@ export const useDocStore = defineStore('doc', () => {
       if (!node.tags) node.tags = []
     }
 
+    // Load per-document status config
+    const savedStatuses = await loadStatusConfig()
+    if (savedStatuses && savedStatuses.length > 0) {
+      statusConfig.value = savedStatuses
+    } else {
+      statusConfig.value = [...DEFAULT_STATUSES]
+    }
+
     nodes.value = nodeMap
 
     // Set selection to first visible if not set
@@ -920,9 +974,10 @@ export const useDocStore = defineStore('doc', () => {
     // Note: flushOpBuffer is async but export is sync; the buffer will flush soon via timer
     const allNodes = Array.from(nodes.value.values())
     const doc = {
-      version: 1,
+      version: 2,
       rootId: rootId.value,
       nodes: allNodes,
+      statusConfig: statusConfig.value,
       exportedAt: new Date().toISOString(),
     }
     return JSON.stringify(doc, null, 2)
@@ -936,19 +991,20 @@ export const useDocStore = defineStore('doc', () => {
     let ext: string
     let mime: string
 
+    const sMap = statusMap.value
     switch (format) {
       case 'markdown':
-        content = exportToMarkdown(nodes.value, rootId.value, zoomId.value)
+        content = exportToMarkdown(nodes.value, rootId.value, sMap, zoomId.value)
         ext = 'md'
         mime = 'text/markdown'
         break
       case 'opml':
-        content = exportToOPML(nodes.value, rootId.value, zoomId.value)
+        content = exportToOPML(nodes.value, rootId.value, sMap, zoomId.value)
         ext = 'opml'
         mime = 'application/xml'
         break
       case 'plaintext':
-        content = exportToPlaintext(nodes.value, rootId.value, zoomId.value)
+        content = exportToPlaintext(nodes.value, rootId.value, sMap, zoomId.value)
         ext = 'txt'
         mime = 'text/plain'
         break
@@ -1002,6 +1058,14 @@ export const useDocStore = defineStore('doc', () => {
     }
     await saveOps(ops)
 
+    // Import status config
+    if (Array.isArray(doc.statusConfig) && doc.statusConfig.length > 0) {
+      statusConfig.value = doc.statusConfig as StatusDef[]
+    } else {
+      statusConfig.value = [...DEFAULT_STATUSES]
+    }
+    await saveStatusConfig(statusConfig.value)
+
     // Update state
     rootId.value = doc.rootId
     nodes.value = nodeMap
@@ -1040,7 +1104,10 @@ export const useDocStore = defineStore('doc', () => {
     ready,
     searchQuery,
     tagFilter,
+    statusConfig,
     // Computed
+    statusDefs,
+    statusMap,
     childrenMap,
     searchMatchIds,
     visibleRows,
@@ -1064,6 +1131,10 @@ export const useDocStore = defineStore('doc', () => {
     addTag,
     removeTag,
     restoreNode,
+    addStatus,
+    removeStatus,
+    updateStatus,
+    reorderStatuses,
     duplicateNode,
     moveSelectionUp,
     moveSelectionDown,

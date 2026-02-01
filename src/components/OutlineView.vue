@@ -95,16 +95,12 @@ function onKeydown(e: KeyboardEvent) {
 
   if (store.editingId) return
 
-  // Status shortcuts: Ctrl+1/2/3/4
-  if ((e.ctrlKey || e.metaKey) && store.selectedId) {
-    const statusMap: Record<string, import('@/types').Status> = {
-      '1': 'todo',
-      '2': 'in_progress',
-      '3': 'blocked',
-      '4': 'done',
-    }
-    if (statusMap[e.key]) {
-      store.setStatus(store.selectedId, statusMap[e.key]!)
+  // Status shortcuts: Ctrl+1..9 → dynamic from statusDefs
+  if ((e.ctrlKey || e.metaKey) && store.selectedId && e.key >= '1' && e.key <= '9') {
+    const idx = parseInt(e.key) - 1
+    const def = store.statusDefs[idx]
+    if (def) {
+      store.setStatus(store.selectedId, def.id)
       e.preventDefault()
       return
     }
