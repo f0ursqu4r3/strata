@@ -8,6 +8,9 @@ import type {
   MovePayload,
   SetStatusPayload,
   TombstonePayload,
+  AddTagPayload,
+  RemoveTagPayload,
+  RestorePayload,
 } from '@/types'
 
 let clientId: string | null = null
@@ -57,6 +60,7 @@ export function applyOp(nodes: Map<string, Node>, op: Op): string | null {
         collapsed: false,
         status: cp.status,
         deleted: false,
+        tags: [],
       })
       return cp.id
     }
@@ -102,7 +106,39 @@ export function applyOp(nodes: Map<string, Node>, op: Op): string | null {
       const node = nodes.get(tp.id)
       if (node) {
         node.deleted = true
+        node.deletedAt = Date.now()
         return tp.id
+      }
+      return null
+    }
+    case 'addTag': {
+      const atp = p as AddTagPayload
+      const node = nodes.get(atp.id)
+      if (node) {
+        if (!node.tags) node.tags = []
+        if (!node.tags.includes(atp.tag)) {
+          node.tags.push(atp.tag)
+        }
+        return atp.id
+      }
+      return null
+    }
+    case 'removeTag': {
+      const rtp = p as RemoveTagPayload
+      const node = nodes.get(rtp.id)
+      if (node) {
+        node.tags = (node.tags || []).filter((t) => t !== rtp.tag)
+        return rtp.id
+      }
+      return null
+    }
+    case 'restore': {
+      const rp = p as RestorePayload
+      const node = nodes.get(rp.id)
+      if (node) {
+        node.deleted = false
+        node.deletedAt = undefined
+        return rp.id
       }
       return null
     }

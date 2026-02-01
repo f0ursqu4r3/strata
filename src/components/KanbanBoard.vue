@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
 import { useDocStore } from '@/stores/doc'
+import { useSettingsStore } from '@/stores/settings'
 import type { Node, Status } from '@/types'
 import ContextMenu from './ContextMenu.vue'
 
 const store = useDocStore()
+const settings = useSettingsStore()
 
 const columns: { key: Status; label: string; dotClass: string }[] = [
   { key: 'todo', label: 'Todo', dotClass: 'bg-(--status-todo)' },
@@ -163,6 +165,21 @@ function closeContextMenu() {
             </span>
             <span v-if="childCount(node) > 0">
               {{ childCount(node) }} children
+            </span>
+          </div>
+          <div v-if="settings.showTags && node.tags?.length > 0" class="flex flex-wrap gap-1 mt-1.5">
+            <span
+              v-for="tag in node.tags.slice(0, 3)"
+              :key="tag"
+              class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-(--accent-100) text-(--accent-700)"
+            >
+              {{ tag }}
+            </span>
+            <span
+              v-if="node.tags.length > 3"
+              class="text-[10px] text-(--text-faint)"
+            >
+              +{{ node.tags.length - 3 }}
             </span>
           </div>
         </div>

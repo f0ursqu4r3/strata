@@ -20,9 +20,11 @@ interface PersistedSettings {
   theme: string
   fontSize: number
   dark?: boolean // legacy field, used for migration only
+  showTags?: boolean
+  sidebarOpen?: boolean
 }
 
-function loadSettings(): { theme: string; fontSize: number } {
+function loadSettings(): { theme: string; fontSize: number; showTags: boolean; sidebarOpen: boolean } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
@@ -42,7 +44,7 @@ function loadSettings(): { theme: string; fontSize: number } {
       const valid = themeRegistry.some((t) => t.key === themeKey)
       if (!valid) themeKey = 'github-light'
 
-      return { theme: themeKey, fontSize: parsed.fontSize ?? 14 }
+      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false }
     }
   } catch {
     // ignore
@@ -53,6 +55,8 @@ function loadSettings(): { theme: string; fontSize: number } {
   return {
     theme: prefersDark ? 'github-dark' : 'github-light',
     fontSize: 14,
+    showTags: true,
+    sidebarOpen: false,
   }
 }
 
@@ -60,13 +64,20 @@ export const useSettingsStore = defineStore('settings', () => {
   const saved = loadSettings()
   const theme = ref<ThemeKey>(saved.theme)
   const fontSize = ref(saved.fontSize)
+  const showTags = ref(saved.showTags)
+  const sidebarOpen = ref(saved.sidebarOpen)
 
   const dark = computed(() => getTheme(theme.value).appearance === 'dark')
 
   function persist() {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ theme: theme.value, fontSize: fontSize.value }),
+      JSON.stringify({
+        theme: theme.value,
+        fontSize: fontSize.value,
+        showTags: showTags.value,
+        sidebarOpen: sidebarOpen.value,
+      }),
     )
   }
 
@@ -98,20 +109,34 @@ export const useSettingsStore = defineStore('settings', () => {
     persist()
   }
 
+  function setShowTags(v: boolean) {
+    showTags.value = v
+    persist()
+  }
+
+  function setSidebarOpen(v: boolean) {
+    sidebarOpen.value = v
+    persist()
+  }
+
   function init() {
     applyTheme()
     applyFontSize()
   }
 
-  watch([theme, fontSize], persist)
+  watch([theme, fontSize, showTags, sidebarOpen], persist)
 
   return {
     theme,
     fontSize,
+    showTags,
+    sidebarOpen,
     dark,
     toggleAppearance,
     setTheme,
     setFontSize,
+    setShowTags,
+    setSidebarOpen,
     init,
   }
 })

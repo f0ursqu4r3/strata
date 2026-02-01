@@ -8,6 +8,8 @@ export interface Node {
   collapsed: boolean
   status: Status
   deleted: boolean
+  tags: string[]
+  deletedAt?: number
 }
 
 export interface Op {
@@ -26,6 +28,9 @@ export type OpType =
   | 'setStatus'
   | 'toggleCollapsed'
   | 'tombstone'
+  | 'addTag'
+  | 'removeTag'
+  | 'restore'
 
 export type OpPayload =
   | CreatePayload
@@ -34,6 +39,9 @@ export type OpPayload =
   | SetStatusPayload
   | ToggleCollapsedPayload
   | TombstonePayload
+  | AddTagPayload
+  | RemoveTagPayload
+  | RestorePayload
 
 export interface CreatePayload {
   type: 'create'
@@ -70,6 +78,23 @@ export interface ToggleCollapsedPayload {
 
 export interface TombstonePayload {
   type: 'tombstone'
+  id: string
+}
+
+export interface AddTagPayload {
+  type: 'addTag'
+  id: string
+  tag: string
+}
+
+export interface RemoveTagPayload {
+  type: 'removeTag'
+  id: string
+  tag: string
+}
+
+export interface RestorePayload {
+  type: 'restore'
   id: string
 }
 

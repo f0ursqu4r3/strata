@@ -9,6 +9,8 @@ import {
   CircleCheckBig,
 } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
+import { useSettingsStore } from '@/stores/settings'
+import TagPicker from '@/components/TagPicker.vue'
 import type { Node, Status } from '@/types'
 
 const props = defineProps<{
@@ -21,7 +23,9 @@ const emit = defineEmits<{
 }>()
 
 const store = useDocStore()
+const settings = useSettingsStore()
 const inputRef = ref<HTMLTextAreaElement | null>(null)
+const showTagPicker = ref(false)
 
 const isSelected = computed(() => store.selectedId === props.node.id)
 const isEditing = computed(() => store.editingId === props.node.id)
@@ -65,6 +69,9 @@ watch(
 )
 
 watch(isEditing, async (editing) => {
+  if (!editing) {
+    showTagPicker.value = false
+  }
   if (editing) {
     localText.value = props.node.text
     await nextTick()
@@ -327,5 +334,37 @@ function onStatusPickerBlur() {
       @blur="onBlur"
       @keydown="onKeydown"
     />
+
+    <!-- Tag pills -->
+    <div
+      v-if="settings.showTags && (node.tags?.length > 0 || showTagPicker)"
+      class="flex items-center gap-1 shrink-0 pr-2 self-center"
+      @click.stop
+    >
+      <template v-if="!showTagPicker">
+        <span
+          v-for="tag in node.tags"
+          :key="tag"
+          class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-(--accent-100) text-(--accent-700) cursor-pointer hover:bg-(--accent-200)"
+          @click.stop="showTagPicker = true"
+        >
+          {{ tag }}
+        </span>
+      </template>
+      <TagPicker
+        v-if="showTagPicker"
+        :node-id="node.id"
+        :tags="node.tags ?? []"
+      />
+    </div>
+
+    <!-- Add tag button (when no tags and showTags is on) -->
+    <button
+      v-if="settings.showTags && !showTagPicker && (!node.tags || node.tags.length === 0) && isEditing"
+      class="shrink-0 pr-2 self-center text-[10px] text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+      @click.stop="showTagPicker = true"
+    >
+      + tag
+    </button>
   </div>
 </template>

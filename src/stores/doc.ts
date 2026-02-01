@@ -3,6 +3,7 @@ import { ref, computed, shallowRef, triggerRef } from 'vue'
 import type { Node, Op, Status, ViewMode, Snapshot } from '@/types'
 import { makeOp, applyOp, rebuildState, setSeq } from '@/lib/ops'
 import { rankBetween, rankAfter, rankBefore, initialRank } from '@/lib/rank'
+import { exportToMarkdown, exportToOPML, exportToPlaintext } from '@/lib/export-formats'
 import {
   saveOp,
   saveOps,
@@ -12,6 +13,7 @@ import {
   loadAllOps,
   clearAll,
   flushOpBuffer,
+  setCurrentDocId,
 } from '@/lib/idb'
 
 const SNAPSHOT_INTERVAL = 200
@@ -28,6 +30,7 @@ export const useDocStore = defineStore('doc', () => {
   const viewMode = ref<ViewMode>('split')
   const ready = ref(false)
   const searchQuery = ref('')
+  const tagFilter = ref<string | null>(null)
 
   // Op tracking
   const opsSinceSnapshot = ref(0)
@@ -92,18 +95,53 @@ export const useDocStore = defineStore('doc', () => {
     return matches
   })
 
+  const allTags = computed(() => {
+    const tagSet = new Set<string>()
+    for (const node of nodes.value.values()) {
+      if (node.deleted) continue
+      if (node.tags) {
+        for (const tag of node.tags) tagSet.add(tag)
+      }
+    }
+    return Array.from(tagSet).sort()
+  })
+
+  const tagMatchIds = computed(() => {
+    const tag = tagFilter.value
+    if (!tag) return null
+    const matches = new Set<string>()
+    for (const node of nodes.value.values()) {
+      if (node.deleted) continue
+      if (node.tags && node.tags.includes(tag)) {
+        matches.add(node.id)
+        // Mark ancestors visible
+        let cur = node
+        while (cur.parentId) {
+          matches.add(cur.parentId)
+          const parent = nodes.value.get(cur.parentId)
+          if (!parent) break
+          cur = parent
+        }
+      }
+    }
+    return matches
+  })
+
   const visibleRows = computed(() => {
     const rows: { node: Node; depth: number }[] = []
     const root = effectiveZoomId.value
     if (!root) return rows
-    const filter = searchMatchIds.value
+    const searchFilter = searchMatchIds.value
+    const tagF = tagMatchIds.value
 
     function walk(parentId: string, depth: number) {
       const children = getChildren(parentId)
       for (const child of children) {
-        if (filter && !filter.has(child.id)) continue
+        if (searchFilter && !searchFilter.has(child.id)) continue
+        if (tagF && !tagF.has(child.id)) continue
         rows.push({ node: child, depth })
-        if (!child.collapsed || filter) {
+        const isFiltering = searchFilter || tagF
+        if (!child.collapsed || isFiltering) {
           walk(child.id, depth + 1)
         }
       }
@@ -129,7 +167,10 @@ export const useDocStore = defineStore('doc', () => {
   const kanbanNodes = computed(() => {
     const root = effectiveZoomId.value
     if (!root) return []
-    return subtreeNodes(root)
+    const all = subtreeNodes(root)
+    const tag = tagFilter.value
+    if (!tag) return all
+    return all.filter((n) => n.tags && n.tags.includes(tag))
   })
 
   const kanbanColumns = computed(() => {
@@ -252,6 +293,7 @@ export const useDocStore = defineStore('doc', () => {
           const node = nodes.value.get(snap.id)
           if (node) {
             node.deleted = false
+            node.deletedAt = undefined
             const compensate = makeOp('create', {
               type: 'create',
               id: snap.id,
@@ -260,6 +302,33 @@ export const useDocStore = defineStore('doc', () => {
               text: snap.text,
               status: snap.status,
             })
+            saveOp(compensate)
+            lastSeq.value = compensate.seq
+          }
+        } else if (entry.op.type === 'addTag') {
+          const node = nodes.value.get(snap.id)
+          if (node) {
+            node.tags = snap.tags ? [...snap.tags] : []
+            const tag = (entry.op.payload as { tag: string }).tag
+            const compensate = makeOp('removeTag', { type: 'removeTag', id: snap.id, tag })
+            saveOp(compensate)
+            lastSeq.value = compensate.seq
+          }
+        } else if (entry.op.type === 'removeTag') {
+          const node = nodes.value.get(snap.id)
+          if (node) {
+            node.tags = snap.tags ? [...snap.tags] : []
+            const tag = (entry.op.payload as { tag: string }).tag
+            const compensate = makeOp('addTag', { type: 'addTag', id: snap.id, tag })
+            saveOp(compensate)
+            lastSeq.value = compensate.seq
+          }
+        } else if (entry.op.type === 'restore') {
+          const node = nodes.value.get(snap.id)
+          if (node) {
+            node.deleted = snap.deleted
+            node.deletedAt = snap.deletedAt
+            const compensate = makeOp('tombstone', { type: 'tombstone', id: snap.id })
             saveOp(compensate)
             lastSeq.value = compensate.seq
           }
@@ -335,14 +404,21 @@ export const useDocStore = defineStore('doc', () => {
   // ── Debounced text update ──
   // Immediate in-memory mutation for responsive UI; op emitted after 300ms pause
   const _textDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  // Snapshots captured on first keystroke per node, used for undo
+  const _textBeforeSnapshots = new Map<string, Node>()
 
   function updateText(id: string, text: string) {
-    // Apply to memory immediately
     const node = nodes.value.get(id)
-    if (node) {
-      node.text = text
-      triggerRef(nodes)
+    if (!node) return
+
+    // Capture before-snapshot on first change for this node
+    if (!_textBeforeSnapshots.has(id)) {
+      _textBeforeSnapshots.set(id, { ...node })
     }
+
+    // Apply to memory immediately
+    node.text = text
+    triggerRef(nodes)
 
     // Debounce the persistent op
     const existing = _textDebounceTimers.get(id)
@@ -350,30 +426,44 @@ export const useDocStore = defineStore('doc', () => {
     _textDebounceTimers.set(
       id,
       setTimeout(() => {
-        _textDebounceTimers.delete(id)
-        const op = makeOp('updateText', { type: 'updateText', id, text })
-        // Don't re-apply to memory (already done), just persist
-        lastSeq.value = op.seq
-        opsSinceSnapshot.value++
-        saveOp(op).then(() => {
-          if (opsSinceSnapshot.value >= SNAPSHOT_INTERVAL) {
-            takeSnapshot()
-          }
-        })
+        _commitTextOp(id, text)
       }, 300),
     )
+  }
+
+  function _commitTextOp(id: string, text: string) {
+    _textDebounceTimers.delete(id)
+    const op = makeOp('updateText', { type: 'updateText', id, text })
+
+    // Push undo entry with the before-snapshot
+    const beforeSnap = _textBeforeSnapshots.get(id)
+    if (beforeSnap) {
+      undoStack.push({
+        op,
+        beforeSnapshots: [beforeSnap],
+        selectedBefore: selectedId.value,
+      })
+      if (undoStack.length > MAX_UNDO) undoStack.shift()
+      redoStack.length = 0
+      _textBeforeSnapshots.delete(id)
+    }
+
+    // Persist (don't re-apply to memory, already done)
+    lastSeq.value = op.seq
+    opsSinceSnapshot.value++
+    saveOp(op).then(() => {
+      if (opsSinceSnapshot.value >= SNAPSHOT_INTERVAL) {
+        takeSnapshot()
+      }
+    })
   }
 
   function flushTextDebounce() {
     for (const [id, timer] of _textDebounceTimers) {
       clearTimeout(timer)
-      _textDebounceTimers.delete(id)
       const node = nodes.value.get(id)
       if (node) {
-        const op = makeOp('updateText', { type: 'updateText', id, text: node.text })
-        lastSeq.value = op.seq
-        opsSinceSnapshot.value++
-        saveOp(op)
+        _commitTextOp(id, node.text)
       }
     }
   }
@@ -425,6 +515,46 @@ export const useDocStore = defineStore('doc', () => {
     }
     deleteTree(id)
   }
+
+  function addTag(nodeId: string, tag: string) {
+    const trimmed = tag.trim()
+    if (!trimmed) return
+    const node = nodes.value.get(nodeId)
+    if (!node) return
+    if (node.tags && node.tags.includes(trimmed)) return
+    const op = makeOp('addTag', { type: 'addTag', id: nodeId, tag: trimmed })
+    dispatch(op)
+  }
+
+  function removeTag(nodeId: string, tag: string) {
+    const op = makeOp('removeTag', { type: 'removeTag', id: nodeId, tag })
+    dispatch(op)
+  }
+
+  function restoreNode(id: string) {
+    const node = nodes.value.get(id)
+    if (!node || !node.deleted) return
+    // If parent is also deleted, reparent to root
+    const parent = node.parentId ? nodes.value.get(node.parentId) : null
+    if (parent && parent.deleted) {
+      const children = getChildren(rootId.value)
+      const pos = children.length > 0 ? rankAfter(children[children.length - 1]!.pos) : initialRank()
+      const moveOp = makeOp('move', { type: 'move', id, parentId: rootId.value, pos })
+      dispatch(moveOp, false)
+    }
+    const op = makeOp('restore', { type: 'restore', id })
+    dispatch(op)
+  }
+
+  const trashedNodes = computed(() => {
+    const result: Node[] = []
+    for (const node of nodes.value.values()) {
+      if (node.deleted && node.parentId !== null) {
+        result.push(node)
+      }
+    }
+    return result.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0))
+  })
 
   // ── Outline keyboard actions ──
 
@@ -601,6 +731,25 @@ export const useDocStore = defineStore('doc', () => {
 
   // ── Init / Load ──
 
+  async function loadDocument(docId: string) {
+    flushTextDebounce()
+    await flushOpBuffer()
+    setCurrentDocId(docId)
+
+    // Reset state
+    undoStack.length = 0
+    redoStack.length = 0
+    zoomId.value = null
+    searchQuery.value = ''
+    tagFilter.value = null
+    editingId.value = null
+    editingTrigger.value = null
+    ready.value = false
+    setSeq(0)
+
+    await init()
+  }
+
   async function init() {
     const snapshot = await loadLatestSnapshot()
 
@@ -650,6 +799,7 @@ export const useDocStore = defineStore('doc', () => {
           collapsed: false,
           status: 'todo',
           deleted: false,
+          tags: [],
         })
 
         // Create starter nodes for onboarding
@@ -676,6 +826,7 @@ export const useDocStore = defineStore('doc', () => {
             collapsed: false,
             status: s.status,
             deleted: false,
+            tags: [],
           })
         }
 
@@ -697,6 +848,11 @@ export const useDocStore = defineStore('doc', () => {
         lastSeq.value = ops[ops.length - 1]?.seq ?? 0
         selectedId.value = firstId
       }
+    }
+
+    // Migrate: ensure all nodes have tags array
+    for (const node of nodeMap.values()) {
+      if (!node.tags) node.tags = []
     }
 
     nodes.value = nodeMap
@@ -772,13 +928,42 @@ export const useDocStore = defineStore('doc', () => {
     return JSON.stringify(doc, null, 2)
   }
 
-  function downloadExport() {
-    const json = exportJSON()
-    const blob = new Blob([json], { type: 'application/json' })
+  type ExportFormat = 'json' | 'markdown' | 'opml' | 'plaintext'
+
+  function downloadExport(format: ExportFormat = 'json') {
+    flushTextDebounce()
+    let content: string
+    let ext: string
+    let mime: string
+
+    switch (format) {
+      case 'markdown':
+        content = exportToMarkdown(nodes.value, rootId.value, zoomId.value)
+        ext = 'md'
+        mime = 'text/markdown'
+        break
+      case 'opml':
+        content = exportToOPML(nodes.value, rootId.value, zoomId.value)
+        ext = 'opml'
+        mime = 'application/xml'
+        break
+      case 'plaintext':
+        content = exportToPlaintext(nodes.value, rootId.value, zoomId.value)
+        ext = 'txt'
+        mime = 'text/plain'
+        break
+      default:
+        content = exportJSON()
+        ext = 'json'
+        mime = 'application/json'
+        break
+    }
+
+    const blob = new Blob([content], { type: mime })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `strata-export-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `strata-export-${new Date().toISOString().slice(0, 10)}.${ext}`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -854,6 +1039,7 @@ export const useDocStore = defineStore('doc', () => {
     viewMode,
     ready,
     searchQuery,
+    tagFilter,
     // Computed
     childrenMap,
     searchMatchIds,
@@ -861,10 +1047,13 @@ export const useDocStore = defineStore('doc', () => {
     kanbanColumns,
     kanbanNodes,
     effectiveZoomId,
+    allTags,
+    trashedNodes,
     // Methods
     getChildren,
     breadcrumb,
     init,
+    loadDocument,
     createNode,
     updateText,
     flushTextDebounce,
@@ -872,6 +1061,9 @@ export const useDocStore = defineStore('doc', () => {
     setStatus,
     toggleCollapsed,
     tombstone,
+    addTag,
+    removeTag,
+    restoreNode,
     duplicateNode,
     moveSelectionUp,
     moveSelectionDown,

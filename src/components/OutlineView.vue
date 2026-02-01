@@ -78,6 +78,7 @@ function onKeydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
     e.preventDefault()
     if (e.shiftKey) {
+      store.flushTextDebounce()
       store.redo()
     } else {
       store.flushTextDebounce()
@@ -87,6 +88,7 @@ function onKeydown(e: KeyboardEvent) {
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
     e.preventDefault()
+    store.flushTextDebounce()
     store.redo()
     return
   }

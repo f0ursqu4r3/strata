@@ -3,36 +3,45 @@ import { ref, onMounted, watch, nextTick } from "vue";
 import {
   Layers,
   Search,
-  Sun,
-  Moon,
-  Download,
   Upload,
   RotateCcw,
   Keyboard,
   Settings,
   ChevronRight,
+  Tag,
+  X,
+  PanelLeft,
+  Trash2,
 } from "lucide-vue-next";
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
 import { useDocStore } from "@/stores/doc";
 import { useSettingsStore } from "@/stores/settings";
+import { useDocumentsStore } from "@/stores/documents";
 import OutlineView from "@/components/OutlineView.vue";
 import KanbanBoard from "@/components/KanbanBoard.vue";
 import ShortcutsModal from "@/components/ShortcutsModal.vue";
 import SettingsPanel from "@/components/SettingsPanel.vue";
+import DocumentSidebar from "@/components/DocumentSidebar.vue";
+import TrashPanel from "@/components/TrashPanel.vue";
+import ExportMenu from "@/components/ExportMenu.vue";
 import type { ViewMode } from "@/types";
 
 const store = useDocStore();
 const settings = useSettingsStore();
+const docsStore = useDocumentsStore();
 const showShortcuts = ref(false);
 const showSettings = ref(false);
+const showTrash = ref(false);
 const showMobileSearch = ref(false);
+const showTagFilter = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const outlineRef = ref<InstanceType<typeof OutlineView> | null>(null);
 
-onMounted(() => {
+onMounted(async () => {
   settings.init();
-  store.init();
+  await docsStore.init();
+  await store.init();
 
   // Global ? shortcut
   document.addEventListener("keydown", onGlobalKeydown);
@@ -106,6 +115,13 @@ function onZoomRoot() {
       class="flex flex-wrap items-center min-h-12 px-3 sm:px-4 gap-2 py-2 border-b border-(--border-primary) bg-(--bg-primary) shrink-0"
     >
       <div class="flex items-center gap-2">
+        <button
+          class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
+          title="Toggle sidebar"
+          @click="settings.setSidebarOpen(!settings.sidebarOpen)"
+        >
+          <PanelLeft class="w-4 h-4" />
+        </button>
         <Layers class="w-4.5 h-4.5" style="color: var(--accent-500)" />
         <span class="font-bold text-base text-(--text-primary) tracking-tight">Strata</span>
       </div>
@@ -147,6 +163,51 @@ function onZoomRoot() {
           />
         </div>
 
+        <!-- Tag filter -->
+        <div v-if="store.allTags.length > 0" class="relative hidden sm:block">
+          <button
+            class="flex items-center gap-1 px-2 py-1 rounded-md border text-[13px] cursor-pointer"
+            :class="
+              store.tagFilter
+                ? 'border-(--accent-500) bg-(--accent-50) text-(--accent-700)'
+                : 'border-(--border-secondary) text-(--text-muted) hover:text-(--text-secondary) bg-(--bg-tertiary)'
+            "
+            @click="showTagFilter = !showTagFilter"
+          >
+            <Tag class="w-3.5 h-3.5" />
+            <span v-if="store.tagFilter">{{ store.tagFilter }}</span>
+            <span v-else>Tags</span>
+            <button
+              v-if="store.tagFilter"
+              class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
+              @click.stop="store.tagFilter = null; showTagFilter = false"
+            >
+              <X class="w-3 h-3" />
+            </button>
+          </button>
+          <div
+            v-if="showTagFilter"
+            class="absolute right-0 top-full z-50 mt-1 w-48 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg py-1 max-h-60 overflow-y-auto"
+          >
+            <button
+              class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
+              :class="!store.tagFilter ? 'text-(--accent-600) font-medium' : 'text-(--text-secondary)'"
+              @click="store.tagFilter = null; showTagFilter = false"
+            >
+              All
+            </button>
+            <button
+              v-for="tag in store.allTags"
+              :key="tag"
+              class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
+              :class="store.tagFilter === tag ? 'text-(--accent-600) font-medium bg-(--bg-hover)' : 'text-(--text-secondary)'"
+              @click="store.tagFilter = tag; showTagFilter = false"
+            >
+              {{ tag }}
+            </button>
+          </div>
+        </div>
+
         <!-- Mobile search toggle -->
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) sm:hidden"
@@ -157,13 +218,9 @@ function onZoomRoot() {
         </button>
 
         <!-- Toolbar buttons -->
-        <button
-          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) hidden sm:block"
-          title="Export JSON"
-          @click="store.downloadExport()"
-        >
-          <Download class="w-4 h-4" />
-        </button>
+        <div class="hidden sm:block">
+          <ExportMenu />
+        </div>
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) hidden sm:block"
           title="Import JSON"
@@ -177,6 +234,13 @@ function onZoomRoot() {
           @click="onReset"
         >
           <RotateCcw class="w-4 h-4" />
+        </button>
+        <button
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
+          title="Trash"
+          @click="showTrash = true"
+        >
+          <Trash2 class="w-4 h-4" />
         </button>
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) hidden sm:block"
@@ -245,24 +309,32 @@ function onZoomRoot() {
       </template>
     </div>
 
-    <!-- Main content -->
-    <main class="flex-1 overflow-hidden">
-      <Splitpanes v-if="store.viewMode === 'split'" class="h-full">
-        <Pane :min-size="20" :size="50">
-          <OutlineView ref="outlineRef" />
-        </Pane>
-        <Pane :min-size="20" :size="50">
-          <KanbanBoard />
-        </Pane>
-      </Splitpanes>
+    <!-- Main content with optional sidebar -->
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Document sidebar -->
+      <DocumentSidebar
+        v-if="settings.sidebarOpen"
+        @close="settings.setSidebarOpen(false)"
+      />
 
-      <div v-else-if="store.viewMode === 'outline'" class="h-full">
-        <OutlineView ref="outlineRef" />
-      </div>
-      <div v-else class="h-full">
-        <KanbanBoard />
-      </div>
-    </main>
+      <main class="flex-1 overflow-hidden">
+        <Splitpanes v-if="store.viewMode === 'split'" class="h-full">
+          <Pane :min-size="20" :size="50">
+            <OutlineView ref="outlineRef" />
+          </Pane>
+          <Pane :min-size="20" :size="50">
+            <KanbanBoard />
+          </Pane>
+        </Splitpanes>
+
+        <div v-else-if="store.viewMode === 'outline'" class="h-full">
+          <OutlineView ref="outlineRef" />
+        </div>
+        <div v-else class="h-full">
+          <KanbanBoard />
+        </div>
+      </main>
+    </div>
   </div>
 
   <div v-else class="flex items-center justify-center h-full text-(--text-faint) text-sm">
@@ -274,6 +346,9 @@ function onZoomRoot() {
 
   <!-- Settings panel -->
   <SettingsPanel v-if="showSettings" @close="showSettings = false" />
+
+  <!-- Trash panel -->
+  <TrashPanel v-if="showTrash" @close="showTrash = false" />
 </template>
 
 <style>

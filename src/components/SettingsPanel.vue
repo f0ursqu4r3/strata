@@ -104,6 +104,28 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
             Applies to outline rows and kanban cards
           </p>
         </div>
+
+        <!-- Display -->
+        <div>
+          <h3 class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide mb-3">
+            Display
+          </h3>
+          <label class="flex items-center justify-between cursor-pointer">
+            <span class="text-sm text-(--text-secondary)">Show tags on rows</span>
+            <button
+              class="relative w-9 h-5 rounded-full transition-colors cursor-pointer"
+              :class="settings.showTags ? 'bg-(--accent-500)' : 'bg-(--bg-active)'"
+              role="switch"
+              :aria-checked="settings.showTags"
+              @click="settings.setShowTags(!settings.showTags)"
+            >
+              <span
+                class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+                :class="{ 'translate-x-4': settings.showTags }"
+              />
+            </button>
+          </label>
+        </div>
       </div>
     </div>
   </div>

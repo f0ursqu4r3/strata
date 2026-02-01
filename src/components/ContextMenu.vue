@@ -5,6 +5,7 @@ import {
   Trash2,
   Copy,
   ZoomIn,
+  Tag,
   ChevronRight,
   Circle,
   CircleDot,
@@ -45,6 +46,13 @@ const statusColors: Record<Status, string> = {
 function onEdit() {
   store.selectNode(props.nodeId)
   store.startEditing(props.nodeId)
+  emit('close')
+}
+
+function onTags() {
+  store.selectNode(props.nodeId)
+  store.startEditing(props.nodeId)
+  // The OutlineRow will show the tag picker when editing starts
   emit('close')
 }
 
@@ -139,6 +147,15 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
+
+    <button
+      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
+      role="menuitem"
+      @click="onTags"
+    >
+      <Tag class="w-3.5 h-3.5 text-(--text-faint)" />
+      Tags
+    </button>
 
     <button
       class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
