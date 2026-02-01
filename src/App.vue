@@ -1,45 +1,130 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { Layers, Search } from 'lucide-vue-next'
+import { ref, onMounted, watch, nextTick } from 'vue'
+import {
+  Layers,
+  Search,
+  Sun,
+  Moon,
+  Download,
+  Upload,
+  RotateCcw,
+  Keyboard,
+  ChevronRight,
+} from 'lucide-vue-next'
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import { useDocStore } from '@/stores/doc'
 import OutlineView from '@/components/OutlineView.vue'
 import KanbanBoard from '@/components/KanbanBoard.vue'
+import ShortcutsModal from '@/components/ShortcutsModal.vue'
 import type { ViewMode } from '@/types'
 
 const store = useDocStore()
+const showShortcuts = ref(false)
+const dark = ref(false)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const outlineRef = ref<InstanceType<typeof OutlineView> | null>(null)
 
 onMounted(() => {
+  // Load dark mode preference
+  const saved = localStorage.getItem('strata-dark')
+  if (saved === 'true' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    dark.value = true
+    document.documentElement.classList.add('dark')
+  }
+
   store.init()
+
+  // Global ? shortcut
+  document.addEventListener('keydown', onGlobalKeydown)
 })
+
+function onGlobalKeydown(e: KeyboardEvent) {
+  if (e.key === '?' && !store.editingId && !(e.target instanceof HTMLInputElement)) {
+    showShortcuts.value = !showShortcuts.value
+    e.preventDefault()
+  }
+}
+
+function toggleDark() {
+  dark.value = !dark.value
+  document.documentElement.classList.toggle('dark', dark.value)
+  localStorage.setItem('strata-dark', String(dark.value))
+}
 
 const modes: { key: ViewMode; label: string }[] = [
   { key: 'outline', label: 'Outline' },
   { key: 'board', label: 'Board' },
   { key: 'split', label: 'Split' },
 ]
+
+// Focus management: focus outline when switching to outline/split
+watch(
+  () => store.viewMode,
+  async () => {
+    if (store.viewMode === 'outline' || store.viewMode === 'split') {
+      await nextTick()
+      const el = document.querySelector('.outline-focus-target') as HTMLElement | null
+      el?.focus()
+    }
+  },
+)
+
+// Import
+function onImportClick() {
+  fileInputRef.value?.click()
+}
+
+async function onFileSelected(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const text = await file.text()
+  try {
+    await store.importJSON(text)
+  } catch (err) {
+    alert('Failed to import: ' + (err as Error).message)
+  }
+  // Reset input
+  if (fileInputRef.value) fileInputRef.value.value = ''
+}
+
+async function onReset() {
+  if (!confirm('Reset document? This will delete all data and start fresh.')) return
+  await store.resetDocument()
+}
+
+function onZoomCrumb(id: string) {
+  store.zoomIn(id)
+}
+
+function onZoomRoot() {
+  store.zoomIn(store.rootId)
+  // Actually just clear zoom
+  store.zoomOut()
+  // Force clear
+  while (store.zoomId) store.zoomOut()
+}
 </script>
 
 <template>
-  <div v-if="store.ready" class="flex flex-col h-full">
+  <div v-if="store.ready" class="flex flex-col h-full bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
     <!-- Top bar -->
-    <header class="flex items-center h-12 px-4 border-b border-slate-200 bg-white shrink-0">
+    <header class="flex items-center h-12 px-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shrink-0">
       <div class="flex-1 flex items-center gap-2">
         <Layers class="w-4.5 h-4.5 text-blue-500" />
-        <span class="font-bold text-base text-slate-900 tracking-tight">Strata</span>
+        <span class="font-bold text-base text-slate-900 dark:text-white tracking-tight">Strata</span>
       </div>
 
-      <div class="flex-none">
-        <div class="flex bg-slate-100 rounded-md p-0.5">
+      <div class="flex-none flex items-center gap-2">
+        <div class="flex bg-slate-100 dark:bg-slate-800 rounded-md p-0.5">
           <button
             v-for="m in modes"
             :key="m.key"
             class="border-none px-3.5 py-1 text-[13px] font-medium cursor-pointer rounded transition-all"
             :class="
               store.viewMode === m.key
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'bg-transparent text-slate-500 hover:text-slate-700'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
             "
             @click="store.setViewMode(m.key)"
           >
@@ -48,11 +133,12 @@ const modes: { key: ViewMode; label: string }[] = [
         </div>
       </div>
 
-      <div class="flex-1 flex justify-end">
+      <div class="flex-1 flex items-center justify-end gap-1.5">
+        <!-- Search -->
         <div class="relative">
           <Search class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
-            class="w-50 py-1 pl-8 pr-2.5 border border-slate-200 rounded-md text-[13px] text-slate-800 bg-slate-50 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+            class="w-44 py-1 pl-8 pr-2.5 border border-slate-200 dark:border-slate-600 rounded-md text-[13px] text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
             type="text"
             placeholder="Search..."
             :value="store.searchQuery"
@@ -60,24 +146,91 @@ const modes: { key: ViewMode; label: string }[] = [
             @keydown.escape="store.searchQuery = ''; ($event.target as HTMLInputElement).blur()"
           />
         </div>
+
+        <!-- Toolbar buttons -->
+        <button
+          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          title="Export JSON"
+          @click="store.downloadExport()"
+        >
+          <Download class="w-4 h-4" />
+        </button>
+        <button
+          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          title="Import JSON"
+          @click="onImportClick"
+        >
+          <Upload class="w-4 h-4" />
+        </button>
+        <button
+          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          title="Reset document"
+          @click="onReset"
+        >
+          <RotateCcw class="w-4 h-4" />
+        </button>
+        <button
+          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          title="Keyboard shortcuts (?)"
+          @click="showShortcuts = true"
+        >
+          <Keyboard class="w-4 h-4" />
+        </button>
+        <button
+          class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          title="Toggle dark mode"
+          @click="toggleDark"
+        >
+          <Moon v-if="!dark" class="w-4 h-4" />
+          <Sun v-else class="w-4 h-4" />
+        </button>
+
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept=".json"
+          class="hidden"
+          @change="onFileSelected"
+        />
       </div>
     </header>
 
+    <!-- Zoom breadcrumb bar -->
+    <div
+      v-if="store.zoomId"
+      class="flex items-center gap-1 px-4 py-1.5 text-xs border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50"
+    >
+      <button
+        class="text-blue-500 hover:text-blue-600 hover:underline"
+        @click="onZoomRoot"
+      >
+        Root
+      </button>
+      <template v-for="crumb in store.zoomBreadcrumbs" :key="crumb.id">
+        <ChevronRight class="w-3 h-3 text-slate-400 shrink-0" />
+        <button
+          class="text-slate-500 dark:text-slate-400 hover:text-blue-500 hover:underline truncate max-w-32"
+          :class="{ 'font-medium text-slate-700 dark:text-slate-200': crumb.id === store.zoomId }"
+          @click="onZoomCrumb(crumb.id)"
+        >
+          {{ crumb.text }}
+        </button>
+      </template>
+    </div>
+
     <!-- Main content -->
     <main class="flex-1 overflow-hidden">
-      <!-- Split mode with resizable panes -->
       <Splitpanes v-if="store.viewMode === 'split'" class="h-full">
         <Pane :min-size="20" :size="50">
-          <OutlineView />
+          <OutlineView ref="outlineRef" />
         </Pane>
         <Pane :min-size="20" :size="50">
           <KanbanBoard />
         </Pane>
       </Splitpanes>
 
-      <!-- Single pane modes -->
       <div v-else-if="store.viewMode === 'outline'" class="h-full">
-        <OutlineView />
+        <OutlineView ref="outlineRef" />
       </div>
       <div v-else class="h-full">
         <KanbanBoard />
@@ -88,10 +241,13 @@ const modes: { key: ViewMode; label: string }[] = [
   <div v-else class="flex items-center justify-center h-full text-slate-400 text-sm">
     Loading...
   </div>
+
+  <!-- Shortcuts modal -->
+  <ShortcutsModal v-if="showShortcuts" @close="showShortcuts = false" />
 </template>
 
 <style>
-/* Splitpanes overrides for clean look */
+/* Splitpanes overrides */
 .splitpanes__splitter {
   background: #e2e8f0 !important;
   min-width: 3px !important;
@@ -99,5 +255,11 @@ const modes: { key: ViewMode; label: string }[] = [
 }
 .splitpanes__splitter:hover {
   background: #93c5fd !important;
+}
+.dark .splitpanes__splitter {
+  background: #334155 !important;
+}
+.dark .splitpanes__splitter:hover {
+  background: #60a5fa !important;
 }
 </style>

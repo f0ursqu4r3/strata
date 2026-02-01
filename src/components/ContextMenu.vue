@@ -91,11 +91,11 @@ onUnmounted(() => {
 <template>
   <div
     ref="menuRef"
-    class="fixed z-50 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-44 text-sm"
+    class="fixed z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-1 min-w-44 text-sm"
     :style="{ left: x + 'px', top: y + 'px' }"
   >
     <button
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 text-left text-slate-700"
+      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
       @click="onEdit"
     >
       <Pencil class="w-3.5 h-3.5 text-slate-400" />
@@ -109,7 +109,7 @@ onUnmounted(() => {
       @mouseleave="showStatusSub = false"
     >
       <button
-        class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 text-left text-slate-700"
+        class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
       >
         <CircleDot class="w-3.5 h-3.5 text-slate-400" />
         Set status
@@ -118,12 +118,12 @@ onUnmounted(() => {
 
       <div
         v-if="showStatusSub"
-        class="absolute left-full top-0 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-36"
+        class="absolute left-full top-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-1 min-w-36"
       >
         <button
           v-for="s in statuses"
           :key="s.key"
-          class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 text-left text-slate-700"
+          class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
           @click="onSetStatus(s.key)"
         >
           <component :is="s.icon" class="w-3.5 h-3.5" :class="statusColors[s.key]" />
@@ -133,7 +133,7 @@ onUnmounted(() => {
     </div>
 
     <button
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 text-left text-slate-700"
+      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
       @click="onZoomIn"
     >
       <ZoomIn class="w-3.5 h-3.5 text-slate-400" />
@@ -141,17 +141,17 @@ onUnmounted(() => {
     </button>
 
     <button
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 text-left text-slate-700"
+      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300"
       @click="onDuplicate"
     >
       <Copy class="w-3.5 h-3.5 text-slate-400" />
       Duplicate
     </button>
 
-    <div class="border-t border-slate-100 my-1" />
+    <div class="border-t border-slate-100 dark:border-slate-700 my-1" />
 
     <button
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-red-50 text-left text-red-600"
+      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-left text-red-600 dark:text-red-400"
       @click="onDelete"
     >
       <Trash2 class="w-3.5 h-3.5" />

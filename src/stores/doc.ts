@@ -654,6 +654,104 @@ export const useDocStore = defineStore('doc', () => {
     }
   }
 
+  // ── Zoom breadcrumb path ──
+  const zoomBreadcrumbs = computed(() => {
+    const crumbs: { id: string; text: string }[] = []
+    if (!zoomId.value) return crumbs
+    let cur = nodes.value.get(zoomId.value)
+    while (cur && cur.id !== rootId.value) {
+      crumbs.unshift({ id: cur.id, text: cur.text || '(empty)' })
+      if (!cur.parentId) break
+      cur = nodes.value.get(cur.parentId)
+    }
+    return crumbs
+  })
+
+  // ── Export / Import / Reset ──
+
+  function exportJSON(): string {
+    flushTextDebounce()
+    const allNodes = Array.from(nodes.value.values())
+    const doc = {
+      version: 1,
+      rootId: rootId.value,
+      nodes: allNodes,
+      exportedAt: new Date().toISOString(),
+    }
+    return JSON.stringify(doc, null, 2)
+  }
+
+  function downloadExport() {
+    const json = exportJSON()
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `strata-export-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function importJSON(json: string) {
+    const doc = JSON.parse(json)
+    if (!doc.version || !doc.rootId || !Array.isArray(doc.nodes)) {
+      throw new Error('Invalid Strata export file')
+    }
+
+    // Clear existing data
+    await clearAll()
+    undoStack.length = 0
+    redoStack.length = 0
+
+    // Build new node map
+    const nodeMap = new Map<string, Node>()
+    for (const n of doc.nodes as Node[]) {
+      nodeMap.set(n.id, { ...n })
+    }
+
+    // Persist as ops
+    setSeq(0)
+    const ops: Op[] = []
+    for (const node of nodeMap.values()) {
+      ops.push(
+        makeOp('create', {
+          type: 'create',
+          id: node.id,
+          parentId: node.parentId,
+          pos: node.pos,
+          text: node.text,
+          status: node.status,
+        }),
+      )
+    }
+    await saveOps(ops)
+
+    // Update state
+    rootId.value = doc.rootId
+    nodes.value = nodeMap
+    zoomId.value = null
+    lastSeq.value = ops[ops.length - 1]?.seq ?? 0
+    opsSinceSnapshot.value = ops.length
+
+    // Select first child
+    const firstChild = getChildren(rootId.value)
+    if (firstChild.length > 0) {
+      selectedId.value = firstChild[0]!.id
+    }
+    editingId.value = null
+  }
+
+  async function resetDocument() {
+    await clearAll()
+    undoStack.length = 0
+    redoStack.length = 0
+    ready.value = false
+    zoomId.value = null
+    searchQuery.value = ''
+    setSeq(0)
+    await init()
+  }
+
   return {
     // State
     nodes,
@@ -696,5 +794,10 @@ export const useDocStore = defineStore('doc', () => {
     zoomOut,
     undo,
     redo,
+    zoomBreadcrumbs,
+    exportJSON,
+    downloadExport,
+    importJSON,
+    resetDocument,
   }
 })

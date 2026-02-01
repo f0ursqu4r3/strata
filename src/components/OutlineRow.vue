@@ -168,11 +168,11 @@ function onStatusPickerBlur() {
 
 <template>
   <div
-    class="flex items-center h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-slate-100"
+    class="flex items-center h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
     :class="{
-      'bg-slate-200': isSelected && !isEditing,
-      'bg-blue-100': isEditing,
-      'ring-1 ring-amber-300 bg-amber-50': isSearchMatch && !isSelected && !isEditing,
+      'bg-slate-200 dark:bg-slate-700': isSelected && !isEditing,
+      'bg-blue-100 dark:bg-blue-900/40': isEditing,
+      'ring-1 ring-amber-300 bg-amber-50 dark:ring-amber-500 dark:bg-amber-900/30': isSearchMatch && !isSelected && !isEditing,
     }"
     :style="{ paddingLeft: depth * 24 + 8 + 'px' }"
     draggable="true"
@@ -184,8 +184,8 @@ function onStatusPickerBlur() {
   >
     <!-- Collapse toggle / bullet -->
     <span
-      class="w-4 shrink-0 text-center text-slate-500 cursor-pointer flex items-center justify-center"
-      :class="{ 'hover:text-slate-800': hasChildren }"
+      class="w-4 shrink-0 text-center text-slate-500 dark:text-slate-400 cursor-pointer flex items-center justify-center"
+      :class="{ 'hover:text-slate-800 dark:hover:text-slate-200': hasChildren }"
       @click="onBulletClick"
       @dblclick.stop="onBulletDblClick"
     >
@@ -194,7 +194,7 @@ function onStatusPickerBlur() {
         <ChevronRight v-else class="w-3.5 h-3.5" />
       </template>
       <template v-else>
-        <span class="w-1.5 h-1.5 rounded-full bg-slate-300" />
+        <span class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
       </template>
     </span>
 
@@ -210,14 +210,14 @@ function onStatusPickerBlur() {
       <div
         v-if="showStatusPicker"
         ref="statusPickerRef"
-        class="absolute left-0 top-5 z-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-32"
+        class="absolute left-0 top-5 z-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-1 min-w-32"
         @blur="onStatusPickerBlur"
       >
         <button
           v-for="s in statusOptions"
           :key="s.key"
-          class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-slate-100 text-left text-slate-700 text-xs"
-          :class="{ 'bg-slate-50 font-medium': node.status === s.key }"
+          class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-left text-slate-700 dark:text-slate-300 text-xs"
+          :class="{ 'bg-slate-50 dark:bg-slate-700 font-medium': node.status === s.key }"
           @click.stop="onPickStatus(s.key)"
         >
           <component :is="s.icon" class="w-3.5 h-3.5" :class="s.color" />
@@ -230,7 +230,7 @@ function onStatusPickerBlur() {
     <template v-if="isEditing">
       <input
         ref="inputRef"
-        class="flex-1 border-none outline-none bg-transparent text-sm font-[inherit] text-slate-800 p-0"
+        class="flex-1 border-none outline-none bg-transparent text-sm font-[inherit] text-slate-800 dark:text-slate-200 p-0"
         :value="localText"
         @input="onInput"
         @blur="onBlur"
@@ -241,7 +241,7 @@ function onStatusPickerBlur() {
     <template v-else>
       <span
         class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm"
-        :class="node.text ? 'text-slate-800' : 'text-slate-400 italic'"
+        :class="node.text ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500 italic'"
       >
         {{ node.text || '(empty)' }}
       </span>

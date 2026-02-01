@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
-import { ArrowLeft } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { rankBefore, rankBetween, rankAfter } from '@/lib/rank'
 import OutlineRow from './OutlineRow.vue'
@@ -193,28 +192,11 @@ watch(
 
 <template>
   <div
-    class="h-full overflow-y-auto outline-none py-2"
+    class="h-full overflow-y-auto outline-none py-2 outline-focus-target"
     ref="containerRef"
     tabindex="0"
     @keydown="onKeydown"
   >
-    <!-- Zoom breadcrumb -->
-    <div
-      v-if="store.zoomId"
-      class="flex items-center gap-2 px-3 pb-2 border-b border-slate-200 mb-1"
-    >
-      <button
-        class="flex items-center gap-1 bg-transparent border border-slate-300 rounded px-2 py-0.5 text-xs cursor-pointer text-slate-600 hover:bg-slate-100"
-        @click="store.zoomOut()"
-      >
-        <ArrowLeft class="w-3 h-3" />
-        Back
-      </button>
-      <span class="text-[13px] text-slate-500 font-medium">
-        {{ store.nodes.get(store.zoomId)?.text ?? 'Zoomed' }}
-      </span>
-    </div>
-
     <!-- Rows -->
     <div
       class="px-1"
@@ -241,7 +223,7 @@ watch(
       />
       <div
         v-if="store.visibleRows.length === 0"
-        class="p-6 text-center text-slate-400 text-sm"
+        class="p-6 text-center text-slate-400 dark:text-slate-500 text-sm"
       >
         No items. Press Enter to create one.
       </div>

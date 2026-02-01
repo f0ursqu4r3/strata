@@ -85,14 +85,14 @@ function childCount(node: Node): number {
 </script>
 
 <template>
-  <div class="flex gap-3 h-full p-3 overflow-x-auto">
+  <div class="flex gap-3 h-full p-3 overflow-x-auto bg-white dark:bg-slate-900">
     <div
       v-for="col in columns"
       :key="col.key"
-      class="flex-1 min-w-50 max-w-80 bg-slate-50 rounded-lg flex flex-col border-2 transition-colors"
+      class="flex-1 min-w-50 max-w-80 bg-slate-50 dark:bg-slate-800/50 rounded-lg flex flex-col border-2 transition-colors"
       :class="
         dragOverColumn === col.key
-          ? 'border-blue-300 bg-blue-50'
+          ? 'border-blue-300 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/20'
           : 'border-transparent'
       "
       @dragover="onDragOver($event, col.key)"
@@ -100,10 +100,10 @@ function childCount(node: Node): number {
       @drop="onDrop($event, col.key)"
     >
       <!-- Column header -->
-      <div class="flex items-center gap-2 px-3 pt-3 pb-2 text-[13px] font-semibold text-slate-600">
+      <div class="flex items-center gap-2 px-3 pt-3 pb-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
         <span class="w-2.5 h-2.5 rounded-full" :class="col.dotClass" />
         <span>{{ col.label }}</span>
-        <span class="ml-auto bg-slate-200 rounded-full px-2 py-px text-[11px] font-medium text-slate-500">
+        <span class="ml-auto bg-slate-200 dark:bg-slate-700 rounded-full px-2 py-px text-[11px] font-medium text-slate-500 dark:text-slate-400">
           {{ store.kanbanColumns[col.key].length }}
         </span>
       </div>
@@ -113,11 +113,11 @@ function childCount(node: Node): number {
         <div
           v-for="node in store.kanbanColumns[col.key]"
           :key="node.id"
-          class="bg-white border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color] hover:border-slate-300 hover:shadow-sm active:cursor-grabbing"
+          class="bg-white dark:bg-slate-800 border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color] hover:border-slate-300 dark:hover:border-slate-500 hover:shadow-sm active:cursor-grabbing"
           :class="{
             'border-blue-500 shadow-[0_0_0_1px_#3b82f6]': store.selectedId === node.id,
             'opacity-40': dragNodeId === node.id,
-            'border-slate-200': store.selectedId !== node.id,
+            'border-slate-200 dark:border-slate-700': store.selectedId !== node.id,
           }"
           draggable="true"
           @dragstart="onDragStart($event, node)"
@@ -128,7 +128,7 @@ function childCount(node: Node): number {
           <div v-if="editingCardId === node.id">
             <input
               ref="editInputRef"
-              class="w-full text-sm text-slate-800 leading-snug border-none outline-none bg-transparent p-0 font-[inherit]"
+              class="w-full text-sm text-slate-800 dark:text-slate-200 leading-snug border-none outline-none bg-transparent p-0 font-[inherit]"
               :value="node.text"
               @input="onCardInput($event, node)"
               @blur="onCardEditBlur"
@@ -136,10 +136,10 @@ function childCount(node: Node): number {
               spellcheck="false"
             />
           </div>
-          <div v-else class="text-sm text-slate-800 leading-snug overflow-hidden text-ellipsis whitespace-nowrap">
+          <div v-else class="text-sm text-slate-800 dark:text-slate-200 leading-snug overflow-hidden text-ellipsis whitespace-nowrap">
             {{ node.text || '(empty)' }}
           </div>
-          <div class="flex gap-2 mt-1 text-[11px] text-slate-400">
+          <div class="flex gap-2 mt-1 text-[11px] text-slate-400 dark:text-slate-500">
             <span
               v-if="store.breadcrumb(node.id)"
               class="overflow-hidden text-ellipsis whitespace-nowrap"
@@ -155,7 +155,7 @@ function childCount(node: Node): number {
         <!-- Empty column state -->
         <div
           v-if="store.kanbanColumns[col.key].length === 0"
-          class="text-center text-slate-300 text-xs py-6"
+          class="text-center text-slate-300 dark:text-slate-600 text-xs py-6"
         >
           No items
         </div>
