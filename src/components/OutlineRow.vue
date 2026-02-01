@@ -29,7 +29,22 @@ const hasChildren = computed(() => store.getChildren(props.node.id).length > 0)
 
 const localText = ref(props.node.text)
 
-onMounted(() => nextTick(autoResize))
+onMounted(async () => {
+  await nextTick()
+  autoResize()
+  // If this row is already in editing state when mounted (e.g. Enter created
+  // a new sibling), the watch won't fire so we need to focus here.
+  if (isEditing.value) {
+    const input = inputRef.value
+    if (input && document.activeElement !== input) {
+      input.focus()
+      if (store.editingTrigger === 'keyboard') {
+        const len = input.value.length
+        input.setSelectionRange(len, len)
+      }
+    }
+  }
+})
 
 function autoResize() {
   const el = inputRef.value

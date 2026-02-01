@@ -185,6 +185,14 @@ export const useDocStore = defineStore('doc', () => {
     }
 
     applyOp(nodes.value, op)
+    // Replace affected nodes with new object references so child components
+    // (which receive node as a prop) detect the change and re-render.
+    // shallowRef + triggerRef alone won't help because the Map values are
+    // the same object references after in-place mutation.
+    for (const id of getAffectedIds(op)) {
+      const node = nodes.value.get(id)
+      if (node) nodes.value.set(id, { ...node })
+    }
     triggerRef(nodes)
     lastSeq.value = op.seq
     opsSinceSnapshot.value++
