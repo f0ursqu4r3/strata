@@ -115,7 +115,7 @@ function childCount(node: Node): number {
           :key="node.id"
           class="bg-white dark:bg-slate-800 border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color] hover:border-slate-300 dark:hover:border-slate-500 hover:shadow-sm active:cursor-grabbing"
           :class="{
-            'border-blue-500 shadow-[0_0_0_1px_#3b82f6]': store.selectedId === node.id,
+            'border-(--accent-500) shadow-[0_0_0_1px_var(--accent-500)]': store.selectedId === node.id,
             'opacity-40': dragNodeId === node.id,
             'border-slate-200 dark:border-slate-700': store.selectedId !== node.id,
           }"
@@ -128,7 +128,7 @@ function childCount(node: Node): number {
           <div v-if="editingCardId === node.id">
             <input
               ref="editInputRef"
-              class="w-full text-sm text-slate-800 dark:text-slate-200 leading-snug border-none outline-none bg-transparent p-0 font-[inherit]"
+              class="w-full text-slate-800 dark:text-slate-200 leading-snug border-none outline-none bg-transparent p-0 font-[inherit] strata-text"
               :value="node.text"
               @input="onCardInput($event, node)"
               @blur="onCardEditBlur"
@@ -136,7 +136,7 @@ function childCount(node: Node): number {
               spellcheck="false"
             />
           </div>
-          <div v-else class="text-sm text-slate-800 dark:text-slate-200 leading-snug overflow-hidden text-ellipsis whitespace-nowrap">
+          <div v-else class="text-slate-800 dark:text-slate-200 leading-snug overflow-hidden text-ellipsis whitespace-nowrap strata-text">
             {{ node.text || '(empty)' }}
           </div>
           <div class="flex gap-2 mt-1 text-[11px] text-slate-400 dark:text-slate-500">

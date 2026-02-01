@@ -171,7 +171,7 @@ function onStatusPickerBlur() {
     class="flex items-center h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
     :class="{
       'bg-slate-200 dark:bg-slate-700': isSelected && !isEditing,
-      'bg-blue-100 dark:bg-blue-900/40': isEditing,
+      'bg-(--accent-100) dark:bg-[color-mix(in_srgb,var(--accent-700)_30%,transparent)]': isEditing,
       'ring-1 ring-amber-300 bg-amber-50 dark:ring-amber-500 dark:bg-amber-900/30': isSearchMatch && !isSelected && !isEditing,
     }"
     :style="{ paddingLeft: depth * 24 + 8 + 'px' }"
@@ -239,7 +239,7 @@ function onStatusPickerBlur() {
     <template v-if="isEditing">
       <input
         ref="inputRef"
-        class="flex-1 border-none outline-none bg-transparent text-sm font-[inherit] text-slate-800 dark:text-slate-200 p-0"
+        class="flex-1 border-none outline-none bg-transparent font-[inherit] text-slate-800 dark:text-slate-200 p-0 strata-text"
         :value="localText"
         @input="onInput"
         @blur="onBlur"
@@ -249,7 +249,7 @@ function onStatusPickerBlur() {
     </template>
     <template v-else>
       <span
-        class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm"
+        class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap strata-text"
         :class="node.text ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500 italic'"
       >
         {{ node.text || '(empty)' }}

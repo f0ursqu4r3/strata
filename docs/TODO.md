@@ -33,10 +33,10 @@
 - [x] Collapse/expand animations
 - [x] Focus management: auto-focus outline panel on view switch
 - [x] Mobile layout improvements (better responsive design)
-- [ ] User settings panel (theme, font size, etc.)
+- [x] User settings panel (theme, font size, etc.)
 - [x] Accessibility improvements (ARIA roles, keyboard nav, screen reader support)
-- [ ] Performance optimizations for large documents (virtualized rendering)
-- [ ] Testing: unit tests for core logic, integration tests for UI flows
+- [x] Performance optimizations for large documents (virtualized rendering)
+- [x] Testing: unit tests for core logic, integration tests for UI flows
 - [ ] Documentation: user guide, developer setup instructions
-- [ ] _Many_ themes!
+- [x] _Many_ themes! (7 themes: Slate Blue, Ocean, Forest, Rose, Amber, Violet, Mono)
   

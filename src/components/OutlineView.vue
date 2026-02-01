@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
 import { useDocStore } from '@/stores/doc'
 import { rankBefore, rankBetween, rankAfter } from '@/lib/rank'
 import OutlineRow from './OutlineRow.vue'
@@ -19,6 +19,59 @@ function onRowContextMenu(nodeId: string, x: number, y: number) {
 function closeContextMenu() {
   ctxMenu.value = null
 }
+
+// ── Virtual scroll ──
+const ROW_HEIGHT = 32
+const BUFFER = 10
+const VIRTUAL_THRESHOLD = 100
+
+const scrollTop = ref(0)
+const containerHeight = ref(600)
+
+function onScroll() {
+  scrollTop.value = containerRef.value?.scrollTop ?? 0
+}
+
+const useVirtual = computed(() => store.visibleRows.length > VIRTUAL_THRESHOLD)
+
+const virtualRange = computed(() => {
+  if (!useVirtual.value) {
+    return { start: 0, end: store.visibleRows.length }
+  }
+  const start = Math.max(0, Math.floor(scrollTop.value / ROW_HEIGHT) - BUFFER)
+  const visibleCount = Math.ceil(containerHeight.value / ROW_HEIGHT) + BUFFER * 2
+  const end = Math.min(store.visibleRows.length, start + visibleCount)
+  return { start, end }
+})
+
+const virtualRows = computed(() => {
+  const { start, end } = virtualRange.value
+  return store.visibleRows.slice(start, end).map((row, i) => ({
+    ...row,
+    globalIdx: start + i,
+  }))
+})
+
+const topSpacer = computed(() => virtualRange.value.start * ROW_HEIGHT)
+const bottomSpacer = computed(
+  () => (store.visibleRows.length - virtualRange.value.end) * ROW_HEIGHT,
+)
+
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  if (containerRef.value) {
+    containerHeight.value = containerRef.value.clientHeight
+    resizeObserver = new ResizeObserver((entries) => {
+      containerHeight.value = entries[0]?.contentRect.height ?? 600
+    })
+    resizeObserver.observe(containerRef.value)
+  }
+})
+
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+})
 
 function onKeydown(e: KeyboardEvent) {
   // Undo/redo works even while editing
@@ -177,8 +230,24 @@ function onContainerDrop(e: DragEvent) {
 
 function scrollSelectedIntoView() {
   nextTick(() => {
-    const el = containerRef.value?.querySelector('.bg-slate-200, .bg-blue-100')
-    el?.scrollIntoView({ block: 'nearest' })
+    if (useVirtual.value) {
+      // For virtual scroll, compute the position and scroll to it
+      const idx = store.visibleRows.findIndex((r) => r.node.id === store.selectedId)
+      if (idx >= 0 && containerRef.value) {
+        const rowTop = idx * ROW_HEIGHT
+        const rowBottom = rowTop + ROW_HEIGHT
+        const viewTop = containerRef.value.scrollTop
+        const viewBottom = viewTop + containerRef.value.clientHeight
+        if (rowTop < viewTop) {
+          containerRef.value.scrollTop = rowTop
+        } else if (rowBottom > viewBottom) {
+          containerRef.value.scrollTop = rowBottom - containerRef.value.clientHeight
+        }
+      }
+    } else {
+      const el = containerRef.value?.querySelector('[aria-selected="true"]')
+      el?.scrollIntoView({ block: 'nearest' })
+    }
   })
 }
 
@@ -198,6 +267,7 @@ watch(
     role="tree"
     aria-label="Outline"
     @keydown="onKeydown"
+    @scroll="onScroll"
   >
     <!-- Rows -->
     <div
@@ -206,11 +276,31 @@ watch(
       @dragleave="onContainerDragLeave"
       @drop="onContainerDrop"
     >
-      <TransitionGroup name="outline-row">
+      <!-- Virtualized mode -->
+      <template v-if="useVirtual">
+        <div :style="{ height: topSpacer + 'px' }" />
+        <template v-for="row in virtualRows" :key="row.node.id">
+          <div
+            v-if="dropTargetIdx === row.globalIdx"
+            class="h-0.5 bg-(--accent-500) rounded mx-2 my-px"
+          />
+          <div :data-row-idx="row.globalIdx">
+            <OutlineRow
+              :node="row.node"
+              :depth="row.depth"
+              @contextmenu="onRowContextMenu"
+            />
+          </div>
+        </template>
+        <div :style="{ height: bottomSpacer + 'px' }" />
+      </template>
+
+      <!-- Normal mode with transitions -->
+      <TransitionGroup v-else name="outline-row">
         <template v-for="(row, idx) in store.visibleRows" :key="row.node.id">
           <div
             v-if="dropTargetIdx === idx"
-            class="h-0.5 bg-blue-500 rounded mx-2 my-px"
+            class="h-0.5 bg-(--accent-500) rounded mx-2 my-px"
           />
           <div :data-row-idx="idx">
             <OutlineRow
@@ -221,9 +311,10 @@ watch(
           </div>
         </template>
       </TransitionGroup>
+
       <div
         v-if="dropTargetIdx === store.visibleRows.length && store.visibleRows.length > 0"
-        class="h-0.5 bg-blue-500 rounded mx-2 my-px"
+        class="h-0.5 bg-(--accent-500) rounded mx-2 my-px"
       />
       <div
         v-if="store.visibleRows.length === 0"
