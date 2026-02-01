@@ -3,7 +3,10 @@
     "allow": [
       "Bash(bun add:*)",
       "Bash(bun run:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(npx vite build:*)",
+      "Bash(npx vitest:*)"
     ]
   }
 }

@@ -121,7 +121,7 @@ function onKeydown(e: KeyboardEvent) {
       break
     case 'Enter':
       if (store.selectedId) {
-        store.startEditing(store.selectedId)
+        store.startEditing(store.selectedId, 'keyboard')
         e.preventDefault()
       }
       break

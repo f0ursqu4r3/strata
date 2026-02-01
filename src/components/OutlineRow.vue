@@ -40,8 +40,17 @@ watch(isEditing, async (editing) => {
   if (editing) {
     localText.value = props.node.text
     await nextTick()
-    inputRef.value?.focus()
-    inputRef.value?.select()
+    const input = inputRef.value
+    if (input) {
+      input.focus()
+      if (store.editingTrigger === 'dblclick') {
+        input.select()
+      } else {
+        // Place cursor at end
+        const len = input.value.length
+        input.setSelectionRange(len, len)
+      }
+    }
   }
 })
 
@@ -58,31 +67,42 @@ function onBlur() {
 }
 
 function onKeydown(e: KeyboardEvent) {
+  const input = inputRef.value
   if (e.key === 'Escape') {
     store.stopEditing()
     e.preventDefault()
   } else if (e.key === 'Enter' && !e.shiftKey) {
-    store.stopEditing()
-    store.createSiblingBelow()
+    // Flush current text, then create sibling below and edit it
+    store.flushTextDebounce()
+    store.createSiblingBelowAndEdit()
     e.preventDefault()
-  } else if (e.key === 'ArrowUp' && !e.shiftKey) {
-    store.stopEditing()
-    store.moveSelectionUp()
+  } else if (e.key === 'Backspace' && input && input.value === '') {
+    // Backspace on empty node: delete it and edit previous
     e.preventDefault()
-  } else if (e.key === 'ArrowDown' && !e.shiftKey) {
-    store.stopEditing()
-    store.moveSelectionDown()
-    e.preventDefault()
+    store.deleteNodeAndEditPrevious(props.node.id)
+  } else if (e.key === 'ArrowUp' && !e.shiftKey && input) {
+    // Only navigate if cursor is at the very start
+    const atStart = input.selectionStart === 0 && input.selectionEnd === 0
+    if (atStart) {
+      e.preventDefault()
+      store.flushTextDebounce()
+      store.editPreviousNode(props.node.id)
+    }
+  } else if (e.key === 'ArrowDown' && !e.shiftKey && input) {
+    // Only navigate if cursor is at the very end
+    const len = input.value.length
+    const atEnd = input.selectionStart === len && input.selectionEnd === len
+    if (atEnd) {
+      e.preventDefault()
+      store.flushTextDebounce()
+      store.editNextNode(props.node.id)
+    }
   } else if (e.key === 'Tab' && !e.shiftKey) {
-    store.stopEditing()
-    store.indentNode()
-    store.startEditing(store.selectedId)
     e.preventDefault()
+    store.indentAndKeepEditing(props.node.id)
   } else if (e.key === 'Tab' && e.shiftKey) {
-    store.stopEditing()
-    store.outdentNode()
-    store.startEditing(store.selectedId)
     e.preventDefault()
+    store.outdentAndKeepEditing(props.node.id)
   }
 }
 
@@ -92,7 +112,7 @@ function onClick() {
 
 function onDblClick() {
   store.selectNode(props.node.id)
-  store.startEditing(props.node.id)
+  store.startEditing(props.node.id, 'dblclick')
 }
 
 function onContextMenu(e: MouseEvent) {

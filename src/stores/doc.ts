@@ -24,6 +24,7 @@ export const useDocStore = defineStore('doc', () => {
   const zoomId = ref<string | null>(null)
   const selectedId = ref<string>('')
   const editingId = ref<string | null>(null)
+  const editingTrigger = ref<'keyboard' | 'click' | 'dblclick' | null>(null)
   const viewMode = ref<ViewMode>('split')
   const ready = ref(false)
   const searchQuery = ref('')
@@ -513,6 +514,83 @@ export const useDocStore = defineStore('doc', () => {
     moveNode(node.id, grandparentId, pos)
   }
 
+  // ── Editing-aware navigation ──
+
+  function editPreviousNode(fromId: string) {
+    const idx = visibleRows.value.findIndex((r) => r.node.id === fromId)
+    if (idx > 0) {
+      const prevId = visibleRows.value[idx - 1]!.node.id
+      selectedId.value = prevId
+      editingId.value = prevId
+      editingTrigger.value = 'keyboard'
+    }
+  }
+
+  function editNextNode(fromId: string) {
+    const idx = visibleRows.value.findIndex((r) => r.node.id === fromId)
+    if (idx >= 0 && idx < visibleRows.value.length - 1) {
+      const nextId = visibleRows.value[idx + 1]!.node.id
+      selectedId.value = nextId
+      editingId.value = nextId
+      editingTrigger.value = 'keyboard'
+    }
+  }
+
+  function deleteNodeAndEditPrevious(id: string) {
+    const idx = visibleRows.value.findIndex((r) => r.node.id === id)
+    const prevId = idx > 0 ? visibleRows.value[idx - 1]!.node.id : null
+    const nextId = idx < visibleRows.value.length - 1 ? visibleRows.value[idx + 1]!.node.id : null
+
+    tombstone(id)
+
+    const targetId = prevId ?? nextId
+    if (targetId) {
+      selectedId.value = targetId
+      editingId.value = targetId
+      editingTrigger.value = 'keyboard'
+    } else {
+      editingId.value = null
+      editingTrigger.value = null
+    }
+  }
+
+  function indentAndKeepEditing(id: string) {
+    selectedId.value = id
+    indentNode()
+    // Node id doesn't change, just re-assert editing
+    editingId.value = id
+    editingTrigger.value = 'keyboard'
+  }
+
+  function outdentAndKeepEditing(id: string) {
+    selectedId.value = id
+    outdentNode()
+    editingId.value = id
+    editingTrigger.value = 'keyboard'
+  }
+
+  function createSiblingBelowAndEdit() {
+    const node = nodes.value.get(selectedId.value)
+    if (!node) return
+
+    const siblings = getChildren(node.parentId!)
+    const myIdx = siblings.findIndex((s) => s.id === node.id)
+    const nextSibling = siblings[myIdx + 1]
+
+    let pos: string
+    if (nextSibling) {
+      pos = rankBetween(node.pos, nextSibling.pos)
+    } else {
+      pos = rankAfter(node.pos)
+    }
+
+    const op = createNode(node.parentId, pos, '', node.status)
+    const newId = (op.payload as { id: string }).id
+    selectedId.value = newId
+    editingId.value = newId
+    editingTrigger.value = 'keyboard'
+  }
+
   // ── Init / Load ──
 
   async function init() {
@@ -630,12 +708,14 @@ export const useDocStore = defineStore('doc', () => {
     selectedId.value = id
   }
 
-  function startEditing(id: string) {
+  function startEditing(id: string, trigger: 'keyboard' | 'click' | 'dblclick' = 'keyboard') {
+    editingTrigger.value = trigger
     editingId.value = id
   }
 
   function stopEditing() {
     editingId.value = null
+    editingTrigger.value = null
   }
 
   function setViewMode(mode: ViewMode) {
@@ -762,6 +842,7 @@ export const useDocStore = defineStore('doc', () => {
     zoomId,
     selectedId,
     editingId,
+    editingTrigger,
     viewMode,
     ready,
     searchQuery,
@@ -789,6 +870,12 @@ export const useDocStore = defineStore('doc', () => {
     createSiblingBelow,
     indentNode,
     outdentNode,
+    editPreviousNode,
+    editNextNode,
+    deleteNodeAndEditPrevious,
+    indentAndKeepEditing,
+    outdentAndKeepEditing,
+    createSiblingBelowAndEdit,
     selectNode,
     startEditing,
     stopEditing,
