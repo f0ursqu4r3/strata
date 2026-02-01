@@ -121,12 +121,13 @@ function onKeydown(e: KeyboardEvent) {
     ;(inputRef.value?.closest('.outline-focus-target') as HTMLElement)?.focus()
     e.preventDefault()
   } else if (e.key === 'Enter' && e.shiftKey) {
-    // Shift+Enter: insert newline (default textarea behavior, let it through)
-    nextTick(autoResize)
-  } else if (e.key === 'Enter' && !e.shiftKey) {
+    // Shift+Enter: create new sibling below
     store.flushTextDebounce()
     store.createSiblingBelowAndEdit()
     e.preventDefault()
+  } else if (e.key === 'Enter' && !e.shiftKey) {
+    // Enter: insert newline (default textarea behavior, let it through)
+    nextTick(autoResize)
   } else if (e.key === 'Backspace' && input && input.value === '') {
     e.preventDefault()
     store.deleteNodeAndEditPrevious(props.node.id)

@@ -28,7 +28,7 @@ const sections = [
   {
     title: 'Editing',
     shortcuts: [
-      { keys: ['Enter'], desc: 'Create sibling below (while editing)' },
+      { keys: ['Shift', 'Enter'], desc: 'Create sibling below (while editing)' },
       { keys: ['Tab'], desc: 'Indent node' },
       { keys: ['Shift', 'Tab'], desc: 'Outdent node' },
       { keys: ['Delete'], desc: 'Delete node' },

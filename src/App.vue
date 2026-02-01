@@ -47,8 +47,8 @@ function onGlobalKeydown(e: KeyboardEvent) {
 
 const modes: { key: ViewMode; label: string }[] = [
   { key: "outline", label: "Outline" },
-  { key: "board", label: "Board" },
   { key: "split", label: "Split" },
+  { key: "board", label: "Board" },
 ];
 
 // Focus management: focus outline when switching to outline/split
