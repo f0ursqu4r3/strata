@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, computed, onMounted } from 'vue'
-import { ChevronRight, ChevronDown } from 'lucide-vue-next'
+import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
+import { ChevronRight, ChevronDown, Calendar } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
+import { matchesCombo, type ShortcutAction } from '@/lib/shortcuts'
 import TagPicker from '@/components/TagPicker.vue'
 import { renderInlineMarkdown } from '@/lib/inline-markdown'
 import { resolveStatusIcon } from '@/lib/status-icons'
+import { dueDateUrgency, formatDueDate } from '@/lib/due-date'
+import DatePicker from '@/components/DatePicker.vue'
 import type { Node, Status } from '@/types'
 
 const props = defineProps<{
@@ -21,6 +24,46 @@ const store = useDocStore()
 const settings = useSettingsStore()
 const inputRef = ref<HTMLTextAreaElement | null>(null)
 const showTagPicker = ref(false)
+const tagPickerWrapperRef = ref<HTMLElement | null>(null)
+const showDatePicker = ref(false)
+const datePickerWrapperRef = ref<HTMLElement | null>(null)
+
+function onDatePickerClickOutside(e: MouseEvent) {
+  if (datePickerWrapperRef.value && !datePickerWrapperRef.value.contains(e.target as HTMLElement)) {
+    showDatePicker.value = false
+  }
+}
+
+watch(showDatePicker, (open) => {
+  if (open) {
+    // Delay so the opening click doesn't immediately close it
+    setTimeout(() => document.addEventListener('mousedown', onDatePickerClickOutside, true), 0)
+  } else {
+    document.removeEventListener('mousedown', onDatePickerClickOutside, true)
+  }
+})
+
+function onTagPickerClickOutside(e: MouseEvent) {
+  if (tagPickerWrapperRef.value && !tagPickerWrapperRef.value.contains(e.target as HTMLElement)) {
+    showTagPicker.value = false
+  }
+}
+
+watch(showTagPicker, (open) => {
+  if (open) {
+    setTimeout(() => document.addEventListener('mousedown', onTagPickerClickOutside, true), 0)
+  } else {
+    document.removeEventListener('mousedown', onTagPickerClickOutside, true)
+  }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('mousedown', onDatePickerClickOutside, true)
+  document.removeEventListener('mousedown', onTagPickerClickOutside, true)
+})
+
+const nodeDueUrgency = computed(() => dueDateUrgency(props.node.dueDate))
+const nodeDueLabel = computed(() => props.node.dueDate ? formatDueDate(props.node.dueDate) : null)
 
 const isSelected = computed(() => store.selectedId === props.node.id)
 const isEditing = computed(() => store.editingId === props.node.id)
@@ -75,9 +118,7 @@ watch(
 )
 
 watch(isEditing, async (editing) => {
-  if (!editing) {
-    showTagPicker.value = false
-  }
+  // Don't close tag picker here — it has its own click-outside handling
   if (editing) {
     localText.value = props.node.text
     await nextTick()
@@ -111,6 +152,14 @@ function onBlur() {
   }
 }
 
+function findEditingAction(e: KeyboardEvent): ShortcutAction | null {
+  for (const def of settings.resolvedShortcuts) {
+    if (def.context !== 'editing') continue
+    if (matchesCombo(e, def.combo)) return def.action
+  }
+  return null
+}
+
 function onKeydown(e: KeyboardEvent) {
   const input = inputRef.value
 
@@ -124,23 +173,37 @@ function onKeydown(e: KeyboardEvent) {
     }
   }
 
-  if (e.key === 'Escape') {
+  const action = findEditingAction(e)
+  if (action === 'stopEditing') {
     store.stopEditing()
     ;(inputRef.value?.closest('.outline-focus-target') as HTMLElement)?.focus()
     e.preventDefault()
-  } else if (e.key === 'Enter' && e.shiftKey) {
-    // Shift+Enter: create new sibling below
+    return
+  }
+  if (action === 'newSibling') {
     store.flushTextDebounce()
     store.createSiblingBelowAndEdit()
     e.preventDefault()
-  } else if (e.key === 'Enter' && !e.shiftKey) {
-    // Enter: insert newline (default textarea behavior, let it through)
+    return
+  }
+  if (action === 'indent') {
+    e.preventDefault()
+    store.indentAndKeepEditing(props.node.id)
+    return
+  }
+  if (action === 'outdent') {
+    e.preventDefault()
+    store.outdentAndKeepEditing(props.node.id)
+    return
+  }
+
+  // Non-customizable editing behaviors (cursor-position aware)
+  if (e.key === 'Enter' && !e.shiftKey) {
     nextTick(autoResize)
   } else if (e.key === 'Backspace' && input && input.value === '') {
     e.preventDefault()
     store.deleteNodeAndEditPrevious(props.node.id)
   } else if (e.key === 'ArrowUp' && !e.shiftKey && input) {
-    // Only navigate to previous node if cursor is on the first line
     const pos = input.selectionStart ?? 0
     const onFirstLine = input.value.lastIndexOf('\n', pos - 1) === -1
     if (onFirstLine && pos === 0 && input.selectionEnd === 0) {
@@ -149,7 +212,6 @@ function onKeydown(e: KeyboardEvent) {
       store.editPreviousNode(props.node.id)
     }
   } else if (e.key === 'ArrowDown' && !e.shiftKey && input) {
-    // Only navigate to next node if cursor is on the last line
     const pos = input.selectionStart ?? 0
     const len = input.value.length
     const onLastLine = input.value.indexOf('\n', pos) === -1
@@ -158,12 +220,6 @@ function onKeydown(e: KeyboardEvent) {
       store.flushTextDebounce()
       store.editNextNode(props.node.id)
     }
-  } else if (e.key === 'Tab' && !e.shiftKey) {
-    e.preventDefault()
-    store.indentAndKeepEditing(props.node.id)
-  } else if (e.key === 'Tab' && e.shiftKey) {
-    e.preventDefault()
-    store.outdentAndKeepEditing(props.node.id)
   }
 }
 
@@ -351,6 +407,7 @@ function onStatusPickerBlur() {
     <!-- Tag pills -->
     <div
       v-if="settings.showTags && (node.tags?.length > 0 || showTagPicker)"
+      ref="tagPickerWrapperRef"
       class="flex items-center gap-1 shrink-0 pr-2 self-center"
       @click.stop
     >
@@ -375,9 +432,44 @@ function onStatusPickerBlur() {
     <button
       v-if="settings.showTags && !showTagPicker && (!node.tags || node.tags.length === 0) && isEditing"
       class="shrink-0 pr-2 self-center text-[10px] text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+      @mousedown.prevent
       @click.stop="showTagPicker = true"
     >
       + tag
+    </button>
+
+    <!-- Due date badge -->
+    <div v-if="nodeDueLabel || showDatePicker" ref="datePickerWrapperRef" class="relative shrink-0 self-center pr-2" @click.stop>
+      <span
+        v-if="nodeDueLabel && !showDatePicker"
+        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer"
+        :class="{
+          'bg-red-100 text-red-700': nodeDueUrgency === 'overdue',
+          'bg-amber-100 text-amber-700': nodeDueUrgency === 'today',
+          'bg-blue-100 text-blue-700': nodeDueUrgency === 'soon',
+          'bg-(--bg-active) text-(--text-muted)': nodeDueUrgency === 'normal',
+        }"
+        @click="showDatePicker = true"
+      >
+        <Calendar class="w-2.5 h-2.5" />
+        {{ nodeDueLabel }}
+      </span>
+      <div v-if="showDatePicker" class="absolute right-0 top-full z-40 mt-1">
+        <DatePicker
+          :model-value="node.dueDate ?? null"
+          @update:model-value="store.setDueDate(node.id, $event); showDatePicker = false"
+        />
+      </div>
+    </div>
+
+    <!-- Add due date button (when editing and no date set) -->
+    <button
+      v-if="!node.dueDate && !showDatePicker && isEditing"
+      class="shrink-0 pr-2 self-center text-[10px] text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+      @mousedown.prevent
+      @click.stop="showDatePicker = true"
+    >
+      + due
     </button>
   </div>
 </template>

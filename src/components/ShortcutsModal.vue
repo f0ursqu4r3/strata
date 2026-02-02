@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
-import { X } from 'lucide-vue-next'
+import { X, Settings2 } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
+import { useSettingsStore } from '@/stores/settings'
+import { comboToString } from '@/lib/shortcuts'
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; customize: [] }>()
 const store = useDocStore()
+const settings = useSettingsStore()
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' || e.key === '?') {
@@ -16,42 +19,35 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', onKeydown))
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
-const sections = computed(() => [
-  {
-    title: 'Navigation',
-    shortcuts: [
-      { keys: ['↑', '↓'], desc: 'Move selection' },
-      { keys: ['Enter'], desc: 'Start editing selected node' },
-      { keys: ['Escape'], desc: 'Stop editing' },
-      { keys: ['Space'], desc: 'Toggle collapse' },
-      { keys: ['Double-click bullet'], desc: 'Zoom into node' },
-    ],
-  },
-  {
-    title: 'Editing',
-    shortcuts: [
-      { keys: ['Shift', 'Enter'], desc: 'Create sibling below (while editing)' },
-      { keys: ['Tab'], desc: 'Indent node' },
-      { keys: ['Shift', 'Tab'], desc: 'Outdent node' },
-      { keys: ['Delete'], desc: 'Delete node' },
-    ],
-  },
-  {
+const sections = computed(() => {
+  // Build sections from resolved shortcuts grouped by category
+  const catMap = new Map<string, { keys: string[]; desc: string }[]>()
+  const order: string[] = []
+
+  for (const def of settings.resolvedShortcuts) {
+    if (!catMap.has(def.category)) {
+      catMap.set(def.category, [])
+      order.push(def.category)
+    }
+    catMap.get(def.category)!.push({
+      keys: [comboToString(def.combo)],
+      desc: def.label,
+    })
+  }
+
+  const result = order.map((cat) => ({ title: cat, shortcuts: catMap.get(cat)! }))
+
+  // Add status shortcuts (dynamic, not part of shortcut system)
+  result.push({
     title: 'Status',
     shortcuts: store.statusDefs.map((s, i) => ({
-      keys: ['Ctrl', String(i + 1)],
+      keys: ['Ctrl+' + String(i + 1)],
       desc: `Set ${s.label}`,
     })),
-  },
-  {
-    title: 'General',
-    shortcuts: [
-      { keys: ['Ctrl', 'Z'], desc: 'Undo' },
-      { keys: ['Ctrl', 'Shift', 'Z'], desc: 'Redo' },
-      { keys: ['?'], desc: 'Toggle this panel' },
-    ],
-  },
-])
+  })
+
+  return result
+})
 </script>
 
 <template>
@@ -59,12 +55,21 @@ const sections = computed(() => [
     <div class="bg-(--bg-secondary) rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
       <div class="flex items-center justify-between px-5 py-4 border-b border-(--border-primary)">
         <h2 class="text-base font-semibold text-(--text-primary)">Keyboard Shortcuts</h2>
-        <button
-          class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint)"
-          @click="emit('close')"
-        >
-          <X class="w-4 h-4" />
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            class="flex items-center gap-1 text-[11px] text-(--text-faint) hover:text-(--text-secondary) px-2 py-1 rounded hover:bg-(--bg-hover) cursor-pointer"
+            @click="emit('customize')"
+          >
+            <Settings2 class="w-3 h-3" />
+            Customize
+          </button>
+          <button
+            class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) cursor-pointer"
+            @click="emit('close')"
+          >
+            <X class="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <div class="p-5 space-y-5">

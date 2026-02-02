@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { themeRegistry, getTheme, getPairedTheme } from '@/data/theme-registry'
 import type { ThemeKey } from '@/data/theme-registry'
+import { DEFAULT_SHORTCUTS, type ShortcutAction, type KeyCombo, type ShortcutDef } from '@/lib/shortcuts'
 
 const STORAGE_KEY = 'strata-settings'
 
@@ -22,9 +23,10 @@ interface PersistedSettings {
   dark?: boolean // legacy field, used for migration only
   showTags?: boolean
   sidebarOpen?: boolean
+  shortcuts?: Record<string, KeyCombo>
 }
 
-function loadSettings(): { theme: string; fontSize: number; showTags: boolean; sidebarOpen: boolean } {
+function loadSettings(): { theme: string; fontSize: number; showTags: boolean; sidebarOpen: boolean; shortcuts: Record<string, KeyCombo> } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
@@ -44,7 +46,7 @@ function loadSettings(): { theme: string; fontSize: number; showTags: boolean; s
       const valid = themeRegistry.some((t) => t.key === themeKey)
       if (!valid) themeKey = 'github-light'
 
-      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false }
+      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false, shortcuts: parsed.shortcuts ?? {} }
     }
   } catch {
     // ignore
@@ -57,6 +59,7 @@ function loadSettings(): { theme: string; fontSize: number; showTags: boolean; s
     fontSize: 14,
     showTags: true,
     sidebarOpen: false,
+    shortcuts: {},
   }
 }
 
@@ -66,6 +69,15 @@ export const useSettingsStore = defineStore('settings', () => {
   const fontSize = ref(saved.fontSize)
   const showTags = ref(saved.showTags)
   const sidebarOpen = ref(saved.sidebarOpen)
+  const shortcutOverrides = ref<Record<string, KeyCombo>>(saved.shortcuts)
+
+  const resolvedShortcuts = computed<ShortcutDef[]>(() => {
+    return DEFAULT_SHORTCUTS.map((def) => {
+      const override = shortcutOverrides.value[def.action]
+      if (override) return { ...def, combo: override }
+      return def
+    })
+  })
 
   const dark = computed(() => getTheme(theme.value).appearance === 'dark')
 
@@ -77,6 +89,7 @@ export const useSettingsStore = defineStore('settings', () => {
         fontSize: fontSize.value,
         showTags: showTags.value,
         sidebarOpen: sidebarOpen.value,
+        shortcuts: shortcutOverrides.value,
       }),
     )
   }
@@ -119,12 +132,28 @@ export const useSettingsStore = defineStore('settings', () => {
     persist()
   }
 
+  function updateShortcut(action: ShortcutAction, combo: KeyCombo) {
+    shortcutOverrides.value = { ...shortcutOverrides.value, [action]: combo }
+    persist()
+  }
+
+  function resetShortcut(action: ShortcutAction) {
+    const { [action]: _, ...rest } = shortcutOverrides.value
+    shortcutOverrides.value = rest
+    persist()
+  }
+
+  function resetAllShortcuts() {
+    shortcutOverrides.value = {}
+    persist()
+  }
+
   function init() {
     applyTheme()
     applyFontSize()
   }
 
-  watch([theme, fontSize, showTags, sidebarOpen], persist)
+  watch([theme, fontSize, showTags, sidebarOpen, shortcutOverrides], persist)
 
   return {
     theme,
@@ -132,11 +161,15 @@ export const useSettingsStore = defineStore('settings', () => {
     showTags,
     sidebarOpen,
     dark,
+    resolvedShortcuts,
     toggleAppearance,
     setTheme,
     setFontSize,
     setShowTags,
     setSidebarOpen,
+    updateShortcut,
+    resetShortcut,
+    resetAllShortcuts,
     init,
   }
 })

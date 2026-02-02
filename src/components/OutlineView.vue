@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
 import { useDocStore } from '@/stores/doc'
+import { useSettingsStore } from '@/stores/settings'
+import { matchesCombo, type ShortcutAction } from '@/lib/shortcuts'
 import { rankBefore, rankBetween, rankAfter } from '@/lib/rank'
 import OutlineRow from './OutlineRow.vue'
 import ContextMenu from './ContextMenu.vue'
 
 const store = useDocStore()
+const settings = useSettingsStore()
 const containerRef = ref<HTMLElement | null>(null)
 const dropTargetIdx = ref<number | null>(null)
 
@@ -73,20 +76,24 @@ onUnmounted(() => {
   resizeObserver?.disconnect()
 })
 
+function findAction(e: KeyboardEvent, context: 'outline' | 'global'): ShortcutAction | null {
+  for (const def of settings.resolvedShortcuts) {
+    if (def.context !== context) continue
+    if (matchesCombo(e, def.combo)) return def.action
+  }
+  return null
+}
+
 function onKeydown(e: KeyboardEvent) {
-  // Undo/redo works even while editing
-  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+  // Global shortcuts (undo/redo) work even while editing
+  const globalAction = findAction(e, 'global')
+  if (globalAction === 'undo') {
     e.preventDefault()
-    if (e.shiftKey) {
-      store.flushTextDebounce()
-      store.redo()
-    } else {
-      store.flushTextDebounce()
-      store.undo()
-    }
+    store.flushTextDebounce()
+    store.undo()
     return
   }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+  if (globalAction === 'redo') {
     e.preventDefault()
     store.flushTextDebounce()
     store.redo()
@@ -106,33 +113,35 @@ function onKeydown(e: KeyboardEvent) {
     }
   }
 
-  switch (e.key) {
-    case 'ArrowUp':
+  const action = findAction(e, 'outline')
+  if (!action) return
+
+  switch (action) {
+    case 'moveUp':
       store.moveSelectionUp()
       e.preventDefault()
       scrollSelectedIntoView()
       break
-    case 'ArrowDown':
+    case 'moveDown':
       store.moveSelectionDown()
       e.preventDefault()
       scrollSelectedIntoView()
       break
-    case 'Enter':
+    case 'startEditing':
       if (store.selectedId) {
         store.startEditing(store.selectedId, 'keyboard')
         e.preventDefault()
       }
       break
-    case 'Tab':
-      if (e.shiftKey) {
-        store.outdentNode()
-      } else {
-        store.indentNode()
-      }
+    case 'indent':
+      store.indentNode()
       e.preventDefault()
       break
-    case 'Delete':
-    case 'Backspace':
+    case 'outdent':
+      store.outdentNode()
+      e.preventDefault()
+      break
+    case 'delete':
       if (store.selectedId) {
         const rows = store.visibleRows
         const idx = rows.findIndex((r) => r.node.id === store.selectedId)
@@ -143,7 +152,7 @@ function onKeydown(e: KeyboardEvent) {
         e.preventDefault()
       }
       break
-    case ' ':
+    case 'toggleCollapse':
       if (store.selectedId) {
         const node = store.nodes.get(store.selectedId)
         if (node && store.getChildren(node.id).length > 0) {

@@ -24,6 +24,7 @@ export interface Node {
   deleted: boolean
   tags: string[]
   deletedAt?: number
+  dueDate?: number | null
 }
 
 export interface Op {
@@ -45,6 +46,7 @@ export type OpType =
   | 'addTag'
   | 'removeTag'
   | 'restore'
+  | 'setDueDate'
 
 export type OpPayload =
   | CreatePayload
@@ -56,6 +58,7 @@ export type OpPayload =
   | AddTagPayload
   | RemoveTagPayload
   | RestorePayload
+  | SetDueDatePayload
 
 export interface CreatePayload {
   type: 'create'
@@ -110,6 +113,12 @@ export interface RemoveTagPayload {
 export interface RestorePayload {
   type: 'restore'
   id: string
+}
+
+export interface SetDueDatePayload {
+  type: 'setDueDate'
+  id: string
+  dueDate: number | null
 }
 
 export interface Snapshot {

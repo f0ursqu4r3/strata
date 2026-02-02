@@ -8,9 +8,11 @@ import {
   Tag,
   ChevronRight,
   CircleDot,
+  Calendar,
 } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { resolveStatusIcon } from '@/lib/status-icons'
+import DatePicker from '@/components/DatePicker.vue'
 
 const props = defineProps<{
   nodeId: string
@@ -25,6 +27,12 @@ const emit = defineEmits<{
 const store = useDocStore()
 const menuRef = ref<HTMLElement | null>(null)
 const showStatusSub = ref(false)
+const showDatePicker = ref(false)
+
+function onSetDueDate(dueDate: number | null) {
+  store.setDueDate(props.nodeId, dueDate)
+  emit('close')
+}
 
 function onEdit() {
   store.selectNode(props.nodeId)
@@ -139,6 +147,27 @@ onUnmounted(() => {
       <Tag class="w-3.5 h-3.5 text-(--text-faint)" />
       Tags
     </button>
+
+    <!-- Due date -->
+    <div class="relative">
+      <button
+        class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
+        role="menuitem"
+        @click="showDatePicker = !showDatePicker"
+      >
+        <Calendar class="w-3.5 h-3.5 text-(--text-faint)" />
+        Due date
+      </button>
+      <div
+        v-if="showDatePicker"
+        class="absolute left-full top-0 z-10"
+      >
+        <DatePicker
+          :model-value="store.nodes.get(nodeId)?.dueDate ?? null"
+          @update:model-value="onSetDueDate($event)"
+        />
+      </div>
+    </div>
 
     <button
       class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"

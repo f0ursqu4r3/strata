@@ -5,6 +5,8 @@ import { DEFAULT_STATUSES } from '@/types'
 import { makeOp, applyOp, rebuildState, setSeq } from '@/lib/ops'
 import { rankBetween, rankAfter, rankBefore, initialRank } from '@/lib/rank'
 import { exportToMarkdown, exportToOPML, exportToPlaintext } from '@/lib/export-formats'
+import { matchesDueDateFilter } from '@/lib/due-date'
+import { updateIndexForDoc } from '@/lib/search-index'
 import {
   saveOp,
   saveOps,
@@ -34,6 +36,20 @@ export const useDocStore = defineStore('doc', () => {
   const ready = ref(false)
   const searchQuery = ref('')
   const tagFilter = ref<string | null>(null)
+  const dueDateFilter = ref<'all' | 'overdue' | 'today' | 'week'>('all')
+  const currentDocId = ref<string>('')
+
+  // ── Debounced search-index updater ──
+  let _indexTimer: ReturnType<typeof setTimeout> | null = null
+  function scheduleIndexUpdate() {
+    if (_indexTimer) clearTimeout(_indexTimer)
+    _indexTimer = setTimeout(() => {
+      _indexTimer = null
+      if (currentDocId.value) {
+        updateIndexForDoc(currentDocId.value, nodes.value)
+      }
+    }, 500)
+  }
 
   // ── Status configuration (per-document) ──
   const statusConfig = ref<StatusDef[]>([...DEFAULT_STATUSES])
@@ -143,20 +159,42 @@ export const useDocStore = defineStore('doc', () => {
     return matches
   })
 
+  const dueDateMatchIds = computed(() => {
+    const filter = dueDateFilter.value
+    if (filter === 'all') return null
+    const matches = new Set<string>()
+    for (const node of nodes.value.values()) {
+      if (node.deleted) continue
+      if (matchesDueDateFilter(node.dueDate, filter)) {
+        matches.add(node.id)
+        let cur = node
+        while (cur.parentId) {
+          matches.add(cur.parentId)
+          const parent = nodes.value.get(cur.parentId)
+          if (!parent) break
+          cur = parent
+        }
+      }
+    }
+    return matches
+  })
+
   const visibleRows = computed(() => {
     const rows: { node: Node; depth: number }[] = []
     const root = effectiveZoomId.value
     if (!root) return rows
     const searchFilter = searchMatchIds.value
     const tagF = tagMatchIds.value
+    const dueF = dueDateMatchIds.value
 
     function walk(parentId: string, depth: number) {
       const children = getChildren(parentId)
       for (const child of children) {
         if (searchFilter && !searchFilter.has(child.id)) continue
         if (tagF && !tagF.has(child.id)) continue
+        if (dueF && !dueF.has(child.id)) continue
         rows.push({ node: child, depth })
-        const isFiltering = searchFilter || tagF
+        const isFiltering = searchFilter || tagF || dueF
         if (!child.collapsed || isFiltering) {
           walk(child.id, depth + 1)
         }
@@ -183,10 +221,12 @@ export const useDocStore = defineStore('doc', () => {
   const kanbanNodes = computed(() => {
     const root = effectiveZoomId.value
     if (!root) return []
-    const all = subtreeNodes(root)
+    let all = subtreeNodes(root)
     const tag = tagFilter.value
-    if (!tag) return all
-    return all.filter((n) => n.tags && n.tags.includes(tag))
+    if (tag) all = all.filter((n) => n.tags && n.tags.includes(tag))
+    const dueFilter = dueDateFilter.value
+    if (dueFilter !== 'all') all = all.filter((n) => matchesDueDateFilter(n.dueDate, dueFilter))
+    return all
   })
 
   const kanbanColumns = computed(() => {
@@ -253,6 +293,11 @@ export const useDocStore = defineStore('doc', () => {
     opsSinceSnapshot.value++
 
     await saveOp(op)
+
+    // Update search index for content-changing ops
+    if (op.type === 'create' || op.type === 'updateText' || op.type === 'tombstone' || op.type === 'restore') {
+      scheduleIndexUpdate()
+    }
 
     if (opsSinceSnapshot.value >= SNAPSHOT_INTERVAL) {
       await takeSnapshot()
@@ -343,6 +388,14 @@ export const useDocStore = defineStore('doc', () => {
             node.deleted = snap.deleted
             node.deletedAt = snap.deletedAt
             const compensate = makeOp('tombstone', { type: 'tombstone', id: snap.id })
+            saveOp(compensate)
+            lastSeq.value = compensate.seq
+          }
+        } else if (entry.op.type === 'setDueDate') {
+          const node = nodes.value.get(snap.id)
+          if (node) {
+            node.dueDate = snap.dueDate
+            const compensate = makeOp('setDueDate', { type: 'setDueDate', id: snap.id, dueDate: snap.dueDate ?? null })
             saveOp(compensate)
             lastSeq.value = compensate.seq
           }
@@ -465,6 +518,7 @@ export const useDocStore = defineStore('doc', () => {
     // Persist (don't re-apply to memory, already done)
     lastSeq.value = op.seq
     opsSinceSnapshot.value++
+    scheduleIndexUpdate()
     saveOp(op).then(() => {
       if (opsSinceSnapshot.value >= SNAPSHOT_INTERVAL) {
         takeSnapshot()
@@ -557,6 +611,11 @@ export const useDocStore = defineStore('doc', () => {
       dispatch(moveOp, false)
     }
     const op = makeOp('restore', { type: 'restore', id })
+    dispatch(op)
+  }
+
+  function setDueDate(id: string, dueDate: number | null) {
+    const op = makeOp('setDueDate', { type: 'setDueDate', id, dueDate })
     dispatch(op)
   }
 
@@ -781,6 +840,7 @@ export const useDocStore = defineStore('doc', () => {
     flushTextDebounce()
     await flushOpBuffer()
     setCurrentDocId(docId)
+    currentDocId.value = docId
 
     // Reset state
     undoStack.length = 0
@@ -788,6 +848,7 @@ export const useDocStore = defineStore('doc', () => {
     zoomId.value = null
     searchQuery.value = ''
     tagFilter.value = null
+    dueDateFilter.value = 'all'
     editingId.value = null
     editingTrigger.value = null
     ready.value = false
@@ -920,6 +981,9 @@ export const useDocStore = defineStore('doc', () => {
     }
 
     ready.value = true
+
+    // Update cross-document search index
+    scheduleIndexUpdate()
   }
 
   function selectNode(id: string) {
@@ -974,7 +1038,7 @@ export const useDocStore = defineStore('doc', () => {
     // Note: flushOpBuffer is async but export is sync; the buffer will flush soon via timer
     const allNodes = Array.from(nodes.value.values())
     const doc = {
-      version: 2,
+      version: 3,
       rootId: rootId.value,
       nodes: allNodes,
       statusConfig: statusConfig.value,
@@ -1092,6 +1156,22 @@ export const useDocStore = defineStore('doc', () => {
     await init()
   }
 
+  function navigateToNode(nodeId: string) {
+    // Expand all ancestors so the node becomes visible
+    let cur = nodes.value.get(nodeId)
+    while (cur && cur.parentId) {
+      const parent = nodes.value.get(cur.parentId)
+      if (parent && parent.collapsed) {
+        const op = makeOp('toggleCollapsed', { type: 'toggleCollapsed', id: parent.id })
+        dispatch(op, false)
+      }
+      cur = parent
+    }
+    // Clear zoom so node is reachable
+    zoomId.value = null
+    selectedId.value = nodeId
+  }
+
   return {
     // State
     nodes,
@@ -1104,6 +1184,7 @@ export const useDocStore = defineStore('doc', () => {
     ready,
     searchQuery,
     tagFilter,
+    dueDateFilter,
     statusConfig,
     // Computed
     statusDefs,
@@ -1131,6 +1212,8 @@ export const useDocStore = defineStore('doc', () => {
     addTag,
     removeTag,
     restoreNode,
+    setDueDate,
+    navigateToNode,
     addStatus,
     removeStatus,
     updateStatus,

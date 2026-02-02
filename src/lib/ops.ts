@@ -11,6 +11,7 @@ import type {
   AddTagPayload,
   RemoveTagPayload,
   RestorePayload,
+  SetDueDatePayload,
 } from '@/types'
 
 let clientId: string | null = null
@@ -139,6 +140,15 @@ export function applyOp(nodes: Map<string, Node>, op: Op): string | null {
         node.deleted = false
         node.deletedAt = undefined
         return rp.id
+      }
+      return null
+    }
+    case 'setDueDate': {
+      const dp = p as SetDueDatePayload
+      const node = nodes.get(dp.id)
+      if (node) {
+        node.dueDate = dp.dueDate
+        return dp.id
       }
       return null
     }

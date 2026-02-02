@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
-import { Settings2 } from 'lucide-vue-next'
+import { Settings2, Calendar } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
 import { renderInlineMarkdown } from '@/lib/inline-markdown'
+import { dueDateUrgency, formatDueDate } from '@/lib/due-date'
 import type { Node } from '@/types'
 import ContextMenu from './ContextMenu.vue'
 
@@ -176,6 +177,20 @@ function closeContextMenu() {
               </span>
               <span v-if="childCount(node) > 0">
                 {{ childCount(node) }} children
+              </span>
+            </div>
+            <div v-if="node.dueDate" class="mt-1">
+              <span
+                class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                :class="{
+                  'bg-red-100 text-red-700': dueDateUrgency(node.dueDate) === 'overdue',
+                  'bg-amber-100 text-amber-700': dueDateUrgency(node.dueDate) === 'today',
+                  'bg-blue-100 text-blue-700': dueDateUrgency(node.dueDate) === 'soon',
+                  'bg-(--bg-active) text-(--text-muted)': dueDateUrgency(node.dueDate) === 'normal',
+                }"
+              >
+                <Calendar class="w-2.5 h-2.5" />
+                {{ formatDueDate(node.dueDate) }}
               </span>
             </div>
             <div v-if="settings.showTags && node.tags?.length > 0" class="flex flex-wrap gap-1 mt-1.5">

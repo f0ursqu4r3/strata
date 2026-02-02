@@ -12,6 +12,7 @@ import {
   type DocumentRegistry,
 } from '@/lib/doc-registry'
 import { migrateOldDB, deleteDocDB, setCurrentDocId } from '@/lib/idb'
+import { removeDocFromIndex } from '@/lib/search-index'
 
 export const useDocumentsStore = defineStore('documents', () => {
   const documents = ref<DocumentMeta[]>([])
@@ -87,6 +88,7 @@ export const useDocumentsStore = defineStore('documents', () => {
     }
 
     removeDoc(docId)
+    removeDocFromIndex(docId)
     await deleteDocDB(docId)
     documents.value = loadRegistry().documents
   }

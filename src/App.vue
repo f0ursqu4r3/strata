@@ -3,6 +3,7 @@ import { ref, onMounted, watch, nextTick } from "vue";
 import {
   Layers,
   Search,
+  FileSearch,
   Upload,
   RotateCcw,
   Keyboard,
@@ -12,6 +13,7 @@ import {
   X,
   PanelLeft,
   Trash2,
+  Calendar,
 } from "lucide-vue-next";
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -26,6 +28,9 @@ import DocumentSidebar from "@/components/DocumentSidebar.vue";
 import TrashPanel from "@/components/TrashPanel.vue";
 import ExportMenu from "@/components/ExportMenu.vue";
 import StatusEditor from "@/components/StatusEditor.vue";
+import GlobalSearch from "@/components/GlobalSearch.vue";
+import ShortcutEditor from "@/components/ShortcutEditor.vue";
+import { matchesCombo } from "@/lib/shortcuts";
 import type { ViewMode } from "@/types";
 
 const store = useDocStore();
@@ -36,7 +41,10 @@ const showSettings = ref(false);
 const showTrash = ref(false);
 const showStatusEditor = ref(false);
 const showMobileSearch = ref(false);
+const showGlobalSearch = ref(false);
+const showShortcutEditor = ref(false);
 const showTagFilter = ref(false);
+const showDueDateFilter = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const outlineRef = ref<InstanceType<typeof OutlineView> | null>(null);
 
@@ -54,6 +62,19 @@ function onGlobalKeydown(e: KeyboardEvent) {
     showShortcuts.value = !showShortcuts.value;
     e.preventDefault();
   }
+  const searchDef = settings.resolvedShortcuts.find((s) => s.action === "globalSearch");
+  if (searchDef && matchesCombo(e, searchDef.combo)) {
+    showGlobalSearch.value = !showGlobalSearch.value;
+    e.preventDefault();
+  }
+}
+
+async function onGlobalSearchNavigate(docId: string, nodeId: string) {
+  if (docsStore.activeId !== docId) {
+    await docsStore.switchDocument(docId);
+    await store.loadDocument(docId);
+  }
+  store.navigateToNode(nodeId);
 }
 
 const modes: { key: ViewMode; label: string }[] = [
@@ -165,6 +186,15 @@ function onZoomRoot() {
           />
         </div>
 
+        <!-- Global search button -->
+        <button
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer hidden sm:block"
+          title="Search all documents (Ctrl+Shift+F)"
+          @click="showGlobalSearch = true"
+        >
+          <FileSearch class="w-4 h-4" />
+        </button>
+
         <!-- Tag filter -->
         <div v-if="store.allTags.length > 0" class="relative hidden sm:block">
           <button
@@ -206,6 +236,49 @@ function onZoomRoot() {
               @click="store.tagFilter = tag; showTagFilter = false"
             >
               {{ tag }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Due date filter -->
+        <div class="relative hidden sm:block">
+          <button
+            class="flex items-center gap-1 px-2 py-1 rounded-md border text-[13px] cursor-pointer"
+            :class="
+              store.dueDateFilter !== 'all'
+                ? 'border-(--accent-500) bg-(--accent-50) text-(--accent-700)'
+                : 'border-(--border-secondary) text-(--text-muted) hover:text-(--text-secondary) bg-(--bg-tertiary)'
+            "
+            @click="showDueDateFilter = !showDueDateFilter"
+          >
+            <Calendar class="w-3.5 h-3.5" />
+            <span v-if="store.dueDateFilter !== 'all'">{{ { overdue: 'Overdue', today: 'Due Today', week: 'This Week' }[store.dueDateFilter] }}</span>
+            <span v-else>Due</span>
+            <button
+              v-if="store.dueDateFilter !== 'all'"
+              class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
+              @click.stop="store.dueDateFilter = 'all'; showDueDateFilter = false"
+            >
+              <X class="w-3 h-3" />
+            </button>
+          </button>
+          <div
+            v-if="showDueDateFilter"
+            class="absolute right-0 top-full z-50 mt-1 w-40 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg py-1"
+          >
+            <button
+              v-for="opt in [
+                { key: 'all', label: 'All' },
+                { key: 'overdue', label: 'Overdue' },
+                { key: 'today', label: 'Due Today' },
+                { key: 'week', label: 'This Week' },
+              ]"
+              :key="opt.key"
+              class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
+              :class="store.dueDateFilter === opt.key ? 'text-(--accent-600) font-medium bg-(--bg-hover)' : 'text-(--text-secondary)'"
+              @click="store.dueDateFilter = opt.key as 'all' | 'overdue' | 'today' | 'week'; showDueDateFilter = false"
+            >
+              {{ opt.label }}
             </button>
           </div>
         </div>
@@ -344,7 +417,7 @@ function onZoomRoot() {
   </div>
 
   <!-- Shortcuts modal -->
-  <ShortcutsModal v-if="showShortcuts" @close="showShortcuts = false" />
+  <ShortcutsModal v-if="showShortcuts" @close="showShortcuts = false" @customize="showShortcuts = false; showShortcutEditor = true" />
 
   <!-- Settings panel -->
   <SettingsPanel v-if="showSettings" @close="showSettings = false" @open-status-editor="showSettings = false; showStatusEditor = true" />
@@ -354,6 +427,16 @@ function onZoomRoot() {
 
   <!-- Status editor -->
   <StatusEditor v-if="showStatusEditor" @close="showStatusEditor = false" />
+
+  <!-- Shortcut editor -->
+  <ShortcutEditor v-if="showShortcutEditor" @close="showShortcutEditor = false" />
+
+  <!-- Global search -->
+  <GlobalSearch
+    v-if="showGlobalSearch"
+    @close="showGlobalSearch = false"
+    @navigate="onGlobalSearchNavigate"
+  />
 </template>
 
 <style>
