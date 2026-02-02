@@ -7,6 +7,8 @@ import { rankBetween, rankAfter, rankBefore, initialRank } from "@/lib/rank";
 import { exportToMarkdown, exportToOPML, exportToPlaintext } from "@/lib/export-formats";
 import { matchesDueDateFilter } from "@/lib/due-date";
 import { updateIndexForDoc } from "@/lib/search-index";
+import { isTauri } from "@/lib/platform";
+import { serializeToMarkdown, parseMarkdown } from "@/lib/markdown-serialize";
 import {
   saveOp,
   saveOps,
@@ -49,6 +51,35 @@ export const useDocStore = defineStore("doc", () => {
         updateIndexForDoc(currentDocId.value, nodes.value);
       }
     }, 500);
+  }
+
+  // ── Debounced file save (Tauri mode) ──
+  let _fileSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  const FILE_SAVE_DELAY = 1000;
+
+  function scheduleFileSave() {
+    if (!isTauri()) return;
+    if (_fileSaveTimer) clearTimeout(_fileSaveTimer);
+    _fileSaveTimer = setTimeout(() => {
+      _fileSaveTimer = null;
+      saveToFile();
+    }, FILE_SAVE_DELAY);
+  }
+
+  async function saveToFile() {
+    if (!isTauri() || !currentDocId.value) return;
+    flushTextDebounce();
+    const { useSettingsStore } = await import("@/stores/settings");
+    const settings = useSettingsStore();
+    if (!settings.workspacePath) return;
+    const { writeFile } = await import("@/lib/tauri-fs");
+    const content = serializeToMarkdown({
+      nodes: nodes.value,
+      rootId: rootId.value,
+      statusConfig: statusConfig.value,
+    });
+    const filePath = `${settings.workspacePath}\\${currentDocId.value}`;
+    await writeFile(filePath, content);
   }
 
   // ── Status configuration (per-document) ──
@@ -304,6 +335,8 @@ export const useDocStore = defineStore("doc", () => {
       scheduleIndexUpdate();
     }
 
+    scheduleFileSave();
+
     if (opsSinceSnapshot.value >= SNAPSHOT_INTERVAL) {
       await takeSnapshot();
     }
@@ -541,6 +574,7 @@ export const useDocStore = defineStore("doc", () => {
     lastSeq.value = op.seq;
     opsSinceSnapshot.value++;
     scheduleIndexUpdate();
+    scheduleFileSave();
     saveOp(op).then(() => {
       if (opsSinceSnapshot.value >= SNAPSHOT_INTERVAL) {
         takeSnapshot();
@@ -646,7 +680,8 @@ export const useDocStore = defineStore("doc", () => {
 
   async function addStatus(def: StatusDef) {
     statusConfig.value = [...statusConfig.value, def];
-    await saveStatusConfig(statusConfig.value);
+    if (!isTauri()) await saveStatusConfig(statusConfig.value);
+    scheduleFileSave();
   }
 
   async function removeStatus(statusId: string, replacementId: string) {
@@ -658,20 +693,23 @@ export const useDocStore = defineStore("doc", () => {
       }
     }
     statusConfig.value = statusConfig.value.filter((s) => s.id !== statusId);
-    await saveStatusConfig(statusConfig.value);
+    if (!isTauri()) await saveStatusConfig(statusConfig.value);
+    scheduleFileSave();
   }
 
   async function updateStatus(statusId: string, updates: Partial<Omit<StatusDef, "id">>) {
     statusConfig.value = statusConfig.value.map((s) =>
       s.id === statusId ? { ...s, ...updates } : s,
     );
-    await saveStatusConfig(statusConfig.value);
+    if (!isTauri()) await saveStatusConfig(statusConfig.value);
+    scheduleFileSave();
   }
 
   async function reorderStatuses(orderedIds: string[]) {
     const byId = new Map(statusConfig.value.map((s) => [s.id, s]));
     statusConfig.value = orderedIds.map((id) => byId.get(id)!).filter(Boolean);
-    await saveStatusConfig(statusConfig.value);
+    if (!isTauri()) await saveStatusConfig(statusConfig.value);
+    scheduleFileSave();
   }
 
   const trashedNodes = computed(() => {
@@ -861,8 +899,10 @@ export const useDocStore = defineStore("doc", () => {
 
   async function loadDocument(docId: string) {
     flushTextDebounce();
-    await flushOpBuffer();
-    setCurrentDocId(docId);
+    if (!isTauri()) {
+      await flushOpBuffer();
+      setCurrentDocId(docId);
+    }
     currentDocId.value = docId;
 
     // Reset state
@@ -881,6 +921,73 @@ export const useDocStore = defineStore("doc", () => {
   }
 
   async function init() {
+    if (isTauri() && currentDocId.value) {
+      await initFromFile();
+      return;
+    }
+    await initFromIdb();
+  }
+
+  async function initFromFile() {
+    const { useSettingsStore } = await import("@/stores/settings");
+    const settings = useSettingsStore();
+    if (!settings.workspacePath || !currentDocId.value) return;
+
+    const { readFile } = await import("@/lib/tauri-fs");
+    const filePath = `${settings.workspacePath}\\${currentDocId.value}`;
+
+    let content = "";
+    try {
+      content = await readFile(filePath);
+    } catch {
+      // New file — will be created on first save
+    }
+
+    if (content.trim()) {
+      const parsed = parseMarkdown(content);
+      rootId.value = parsed.rootId;
+      nodes.value = parsed.nodes;
+      statusConfig.value = parsed.statusConfig;
+    } else {
+      // Brand new document
+      const nodeMap = new Map<string, Node>();
+      const rId = crypto.randomUUID();
+      rootId.value = rId;
+      nodeMap.set(rId, {
+        id: rId,
+        parentId: null,
+        pos: initialRank(),
+        text: "Root",
+        collapsed: false,
+        status: statusConfig.value[0]?.id ?? "todo",
+        deleted: false,
+        tags: [],
+      });
+      const firstId = crypto.randomUUID();
+      nodeMap.set(firstId, {
+        id: firstId,
+        parentId: rId,
+        pos: initialRank(),
+        text: "",
+        collapsed: false,
+        status: statusConfig.value[0]?.id ?? "todo",
+        deleted: false,
+        tags: [],
+      });
+      nodes.value = nodeMap;
+    }
+
+    // Set selection to first visible
+    const firstChild = getChildren(rootId.value);
+    if (firstChild.length > 0) {
+      selectedId.value = firstChild[0]!.id;
+    }
+
+    ready.value = true;
+    scheduleIndexUpdate();
+  }
+
+  async function initFromIdb() {
     const snapshot = await loadLatestSnapshot();
 
     let nodeMap: Map<string, Node>;
@@ -1283,5 +1390,6 @@ export const useDocStore = defineStore("doc", () => {
     downloadExport,
     importJSON,
     resetDocument,
+    saveToFile,
   };
 });

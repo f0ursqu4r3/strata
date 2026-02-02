@@ -6,7 +6,10 @@
       "Bash(ls:*)",
       "Bash(npx vue-tsc:*)",
       "Bash(npx vite build:*)",
-      "Bash(npx vitest:*)"
+      "Bash(npx vitest:*)",
+      "Bash(rustc:*)",
+      "Bash(cargo:*)",
+      "Bash(bun install:*)"
     ]
   }
 }

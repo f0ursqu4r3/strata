@@ -13,6 +13,7 @@ import {
   PanelLeft,
   Trash2,
   Calendar,
+  GitBranch,
 } from "lucide-vue-next";
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -30,6 +31,8 @@ import StatusEditor from "@/components/StatusEditor.vue";
 import GlobalSearch from "@/components/GlobalSearch.vue";
 import ShortcutEditor from "@/components/ShortcutEditor.vue";
 import { matchesCombo } from "@/lib/shortcuts";
+import { isTauri } from "@/lib/platform";
+import WorkspacePicker from "@/components/WorkspacePicker.vue";
 import type { ViewMode } from "@/types";
 
 const store = useDocStore();
@@ -45,15 +48,40 @@ const showTagFilter = ref(false);
 const showDueDateFilter = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const outlineRef = ref<InstanceType<typeof OutlineView> | null>(null);
+const needsWorkspacePicker = ref(false);
+const isGitWorkspace = ref(false);
 
 onMounted(async () => {
   settings.init();
+
+  // In Tauri mode, check if workspace is set
+  if (isTauri() && !settings.workspacePath) {
+    needsWorkspacePicker.value = true;
+    return;
+  }
+
   await docsStore.init();
   await store.init();
+
+  // Check git status in Tauri mode
+  if (isTauri() && settings.workspacePath) {
+    import("@/lib/tauri-fs").then(({ isGitRepo }) => {
+      isGitRepo(settings.workspacePath).then((v) => {
+        isGitWorkspace.value = v;
+      });
+    });
+  }
 
   // Global ? shortcut
   document.addEventListener("keydown", onGlobalKeydown);
 });
+
+async function onWorkspaceSelected() {
+  needsWorkspacePicker.value = false;
+  await docsStore.init();
+  await store.init();
+  document.addEventListener("keydown", onGlobalKeydown);
+}
 
 function onGlobalKeydown(e: KeyboardEvent) {
   if (e.key === "?" && !store.editingId && !(e.target instanceof HTMLInputElement)) {
@@ -131,7 +159,10 @@ function onZoomRoot() {
 </script>
 
 <template>
-  <div v-if="store.ready" class="flex flex-col h-full bg-(--bg-primary) text-(--text-secondary)">
+  <!-- Workspace picker (Tauri first-run) -->
+  <WorkspacePicker v-if="needsWorkspacePicker" @selected="onWorkspaceSelected" />
+
+  <div v-else-if="store.ready" class="flex flex-col h-full bg-(--bg-primary) text-(--text-secondary)">
     <!-- Top bar -->
     <header
       class="flex flex-wrap items-center min-h-12 px-3 sm:px-4 gap-2 py-2 border-b border-(--border-primary) bg-(--bg-primary) shrink-0"
@@ -146,6 +177,14 @@ function onZoomRoot() {
         </button>
         <Layers class="w-4.5 h-4.5" style="color: var(--accent-500)" />
         <span class="font-bold text-base text-(--text-primary) tracking-tight">Strata</span>
+        <span
+          v-if="isGitWorkspace"
+          class="flex items-center gap-1 text-[11px] text-(--text-faint) bg-(--bg-hover) rounded px-1.5 py-0.5"
+          title="Workspace is a git repository"
+        >
+          <GitBranch class="w-3 h-3" />
+          git
+        </span>
       </div>
 
       <div class="flex items-center gap-2 order-3 sm:order-0 sm:ml-auto sm:mr-auto">

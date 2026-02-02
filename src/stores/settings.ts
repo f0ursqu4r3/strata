@@ -25,9 +25,10 @@ interface PersistedSettings {
   showBoardTags?: boolean
   sidebarOpen?: boolean
   shortcuts?: Record<string, KeyCombo>
+  workspacePath?: string
 }
 
-function loadSettings(): { theme: string; fontSize: number; showTags: boolean; showBoardTags: boolean; sidebarOpen: boolean; shortcuts: Record<string, KeyCombo> } {
+function loadSettings(): { theme: string; fontSize: number; showTags: boolean; showBoardTags: boolean; sidebarOpen: boolean; shortcuts: Record<string, KeyCombo>; workspacePath: string } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
@@ -47,7 +48,7 @@ function loadSettings(): { theme: string; fontSize: number; showTags: boolean; s
       const valid = themeRegistry.some((t) => t.key === themeKey)
       if (!valid) themeKey = 'github-light'
 
-      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, showBoardTags: parsed.showBoardTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false, shortcuts: parsed.shortcuts ?? {} }
+      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, showBoardTags: parsed.showBoardTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false, shortcuts: parsed.shortcuts ?? {}, workspacePath: parsed.workspacePath ?? '' }
     }
   } catch {
     // ignore
@@ -62,6 +63,7 @@ function loadSettings(): { theme: string; fontSize: number; showTags: boolean; s
     showBoardTags: true,
     sidebarOpen: false,
     shortcuts: {},
+    workspacePath: '',
   }
 }
 
@@ -73,6 +75,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const showBoardTags = ref(saved.showBoardTags)
   const sidebarOpen = ref(saved.sidebarOpen)
   const shortcutOverrides = ref<Record<string, KeyCombo>>(saved.shortcuts)
+  const workspacePath = ref(saved.workspacePath)
 
   const resolvedShortcuts = computed<ShortcutDef[]>(() => {
     return DEFAULT_SHORTCUTS.map((def) => {
@@ -94,6 +97,7 @@ export const useSettingsStore = defineStore('settings', () => {
         showBoardTags: showBoardTags.value,
         sidebarOpen: sidebarOpen.value,
         shortcuts: shortcutOverrides.value,
+        workspacePath: workspacePath.value,
       }),
     )
   }
@@ -157,12 +161,17 @@ export const useSettingsStore = defineStore('settings', () => {
     persist()
   }
 
+  function setWorkspacePath(path: string) {
+    workspacePath.value = path
+    persist()
+  }
+
   function init() {
     applyTheme()
     applyFontSize()
   }
 
-  watch([theme, fontSize, showTags, showBoardTags, sidebarOpen, shortcutOverrides], persist)
+  watch([theme, fontSize, showTags, showBoardTags, sidebarOpen, shortcutOverrides, workspacePath], persist)
 
   return {
     theme,
@@ -178,9 +187,11 @@ export const useSettingsStore = defineStore('settings', () => {
     setShowTags,
     setShowBoardTags,
     setSidebarOpen,
+    workspacePath,
     updateShortcut,
     resetShortcut,
     resetAllShortcuts,
+    setWorkspacePath,
     init,
   }
 })

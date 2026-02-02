@@ -34,5 +34,15 @@
 
 ## Remaining
 
-- [ ] Multi-device sync (CRDTs or server-based merge)
+### Priority: Tauri + Git-backed persistence
+
+- [ ] Wrap app in Tauri (Rust shell for native filesystem access)
+- [ ] File-based persistence layer: serialize each document to `.md` in a user-chosen directory using inline markers (e.g. `- Task text @due(2026-02-15) #tag !status(in-progress)`) with nested lists for hierarchy
+- [ ] Keep IndexedDB as fast working cache, sync to filesystem on save
+- [ ] Auto-detect git repo in chosen directory; surface git status in UI
+- [ ] Git operations from UI: commit, pull, push (via Tauri command bridge)
+
+### Backlog
+
+- [ ] Multi-device sync (via git push/pull — replaces CRDT approach)
 - [ ] Collaboration: real-time multi-user editing

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
-import { X, Minus, Plus, Settings2 } from 'lucide-vue-next'
+import { X, Minus, Plus, Settings2, FolderOpen } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
 import { themeRegistry } from '@/data/theme-registry'
+import { isTauri } from '@/lib/platform'
 
 const emit = defineEmits<{ close: []; openStatusEditor: [] }>()
 const settings = useSettingsStore()
@@ -11,6 +12,18 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     emit('close')
     e.preventDefault()
+  }
+}
+
+async function changeWorkspace() {
+  const { open } = await import('@tauri-apps/plugin-dialog')
+  const selected = await open({
+    directory: true,
+    title: 'Choose Strata Workspace',
+  })
+  if (selected) {
+    settings.setWorkspacePath(selected as string)
+    window.location.reload()
   }
 }
 
@@ -139,6 +152,28 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
               />
             </button>
           </label>
+        </div>
+
+        <!-- Workspace (Tauri only) -->
+        <div v-if="isTauri()">
+          <h3 class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide mb-3">
+            Workspace
+          </h3>
+          <div class="flex items-center gap-2">
+            <code class="flex-1 text-xs text-(--text-tertiary) bg-(--bg-hover) rounded px-2 py-1.5 truncate">
+              {{ settings.workspacePath || '(not set)' }}
+            </code>
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-(--border-primary) hover:bg-(--bg-hover) text-(--text-secondary) cursor-pointer"
+              @click="changeWorkspace"
+            >
+              <FolderOpen class="w-3.5 h-3.5" />
+              Change
+            </button>
+          </div>
+          <p class="text-[11px] text-(--text-faint) mt-1.5">
+            Documents are saved as .md files in this folder
+          </p>
         </div>
       </div>
     </div>
