@@ -1,50 +1,104 @@
 # Strata
 
-A WorkFlowy-style outline + Kanban projection mashup. Single-user, offline-first.
+Your outline is the truth. Everything else is a projection.
 
-## Quick start
+A keyboard-first outliner with kanban, due dates, tags, and plain-text markdown files you actually own.
 
-```bash
-bun install
-bun run dev
+[Download](https://github.com/f0ursqu4r3/strata/releases/latest) &middot; [Website](https://f0ursqu4r3.github.io/strata/)
+
+---
+
+## What is Strata?
+
+Strata is a desktop app for managing tasks and notes as a single nested outline. The outline can be viewed as a tree (like WorkFlowy) or projected into a kanban board grouped by status. Both views operate on the same data — changes in one are instantly reflected in the other.
+
+Documents are plain `.md` files with YAML frontmatter. Edit them in any text editor, grep them from the terminal, version them with git.
+
+```markdown
+---
+doc-type: strata
+---
+
+- Ship v1.0  #release
+  - Fix auth token refresh  !status(Done)  #api
+  - Write migration guide  !status(In Progress)  @due(2025-02-14)
+  - Update changelog
+  - Tag release on GitHub  !status(Blocked)
+- Backlog
+  - Dark mode improvements  #ui
+  - Search performance  #perf
 ```
 
-Open http://localhost:5173
+## Features
 
-## Keybindings (Outline panel)
+### Views
 
-| Key | Action |
-|---|---|
-| **Up / Down** | Move selection |
-| **Enter** | Edit selected node (while editing: commit + create sibling below) |
-| **Tab** | Indent (make child of previous sibling) |
-| **Shift+Tab** | Outdent (move to grandparent level) |
-| **Delete / Backspace** | Delete selected node |
-| **Space** | Toggle collapse (on nodes with children) |
-| **Escape** | Stop editing |
-| **Double-click** | Start editing |
+- Outline tree with infinite nesting, collapse/expand, and zoom
+- Kanban board grouped by status with drag-and-drop between columns
+- Split view showing both simultaneously
+
+### Organization
+
+- Statuses — Todo, In Progress, Blocked, Done (customizable per document)
+- Tags — filter outline and board by tag
+- Due dates — filter by overdue, today, or this week
+- Full-text search across current document or all documents
+
+### Editing
+
+- Keyboard-driven — navigate, indent/outdent, change status, all from the keyboard
+- Customizable shortcuts
+- Undo/redo with full operation history
+- Duplicate, delete, restore from trash
+
+### Files
+
+- Plain markdown — human-readable, no proprietary formats
+- Recursive file discovery — point at a folder, Strata finds all `.md` files with `doc-type: strata`
+- File watcher — external edits are picked up automatically
+
+### Export
+
+- JSON, Markdown, OPML, Plain Text
+- Exports respect current zoom level
+
+### Themes
+
+- Light and dark modes
+- 13 built-in themes including GitHub, Nord, Dracula, Solarized, Catppuccin, Tokyo Night
+- Adjustable font size
+
+## Keybindings
+
+| Key                   | Action                                                            |
+| --------------------- | ----------------------------------------------------------------- |
+| Up / Down             | Move selection                                                    |
+| Enter                 | Edit selected node (while editing: commit + create sibling below) |
+| Tab                   | Indent (make child of previous sibling)                           |
+| Shift+Tab             | Outdent (move to grandparent level)                               |
+| Delete / Backspace    | Delete selected node                                              |
+| Space                 | Toggle collapse                                                   |
+| Escape                | Stop editing                                                      |
+| Ctrl+1..9             | Set status (by position in status list)                           |
+| Ctrl+Z / Ctrl+Shift+Z | Undo / Redo                                                       |
+| Ctrl+Shift+F          | Global search                                                     |
+| Double-click          | Start editing / Create new node (empty area)                      |
+
+All shortcuts are customizable in Settings.
 
 ## Architecture
 
 ### One tree, two views
 
-All data lives in a single tree of `Node` objects. The **Outline** view renders this tree directly. The **Kanban** board is a *projection*: it groups the same nodes by their `status` field. Dragging a card between columns emits a `setStatus` op — it changes the node's status without reparenting it in the tree.
+All data lives in a single tree of `Node` objects. The **Outline** view renders this tree directly. The **Kanban** board is a *projection*: it groups the same nodes by their `status` field. Dragging a card between columns changes the node's status without reparenting it in the tree.
 
 ### Op-log design
 
-Every mutation goes through an append-only operation log:
+Every mutation goes through an append-only operation log. State is derived by replaying ops over an optional snapshot. This enables:
 
-```
-Op { opId, clientId, seq, ts, type, payload }
-```
-
-Types: `create`, `updateText`, `move`, `setStatus`, `toggleCollapsed`, `tombstone`
-
-State is derived by replaying ops over an optional snapshot. This design enables:
-
-- **Undo/redo** (walk ops backward)
-- **Multi-device sync** (exchange op logs between clients)
-- **Conflict resolution** (ops are commutative for most cases; last-writer-wins on same field)
+- **Undo/redo** — walk ops backward with compensating operations
+- **Future sync** — exchange op logs between clients
+- **Conflict resolution** — ops are commutative for most cases; last-writer-wins on same field
 
 Snapshots are taken every 200 ops to bound replay time on load.
 
@@ -54,43 +108,38 @@ Sibling ordering uses lexicographically sortable strings instead of integer indi
 
 ### Persistence
 
-All ops and snapshots are persisted to IndexedDB via [Dexie](https://dexie.org/). The app loads by:
+**Desktop (Tauri):** Documents are `.md` files on disk. The workspace folder is watched for changes. Strata recursively discovers any `.md` file with `doc-type: strata` frontmatter.
 
-1. Finding the latest snapshot
-2. Replaying any ops with `seq > snapshot.seqAfter`
-3. Building the in-memory `Map<string, Node>`
+**Browser fallback:** Ops and snapshots are persisted to IndexedDB via Dexie.
 
-### Why no hard deletes?
+## Tech Stack
 
-Nodes are tombstoned (`deleted: true`) rather than removed. This is required for:
+- [Tauri 2](https://v2.tauri.app/) — Rust backend, native webview
+- [Vue 3](https://vuejs.org/) + [Pinia](https://pinia.vuejs.org/) — frontend
+- [Tailwind CSS 4](https://tailwindcss.com/) — styling
+- [Vite](https://vite.dev/) — build tooling
 
-- Sync: a delete op must be distinguishable from "never existed"
-- Undo: restoring a deleted subtree
-- Conflict resolution: concurrent edits to a deleted node resolve cleanly
+## Development
 
-## File tree
+Prerequisites: [Rust](https://rustup.rs/), [Bun](https://bun.sh/), and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your platform.
 
-```
-src/
-  types/index.ts      -- Node, Op, Status, ViewMode types
-  lib/
-    rank.ts            -- LexoRank-lite position key generation
-    ops.ts             -- Op creation, application, state rebuild
-    idb.ts             -- Dexie wrapper for IndexedDB persistence
-  stores/
-    doc.ts             -- Pinia store: state, computed views, actions
-  components/
-    OutlineView.vue    -- Outline container with keyboard handling
-    OutlineRow.vue     -- Single outline row (display + inline edit)
-    KanbanBoard.vue    -- Kanban columns with drag-and-drop
-  App.vue              -- Shell layout, view mode toggle
-  main.ts              -- App entry point
+```sh
+bun install
+bun run tauri:dev
 ```
 
-## Limitations / future work
+Build for production:
 
-- No undo/redo yet (op log makes this straightforward to add)
-- No search (placeholder in top bar)
-- No drag reordering in outline (keyboard indent/outdent only)
-- No virtualized rendering (fine up to ~2-3k visible nodes)
-- No multi-device sync (op-log structure is ready for it)
+```sh
+bun run tauri:build
+```
+
+Run tests:
+
+```sh
+bunx vitest run
+```
+
+## License
+
+MIT
