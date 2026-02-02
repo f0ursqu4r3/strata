@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed, shallowRef, triggerRef } from "vue";
+import { ref, computed, shallowRef, triggerRef, nextTick } from "vue";
 import type { Node, Op, Status, ViewMode, Snapshot, StatusDef } from "@/types";
 import { DEFAULT_STATUSES } from "@/types";
 import { makeOp, applyOp, rebuildState, setSeq } from "@/lib/ops";
@@ -40,6 +40,7 @@ export const useDocStore = defineStore("doc", () => {
   const tagFilter = ref<string | null>(null);
   const dueDateFilter = ref<"all" | "overdue" | "today" | "week">("all");
   const currentDocId = ref<string>("");
+  const suppressTransitions = ref(false);
 
   // ── Debounced search-index updater ──
   let _indexTimer: ReturnType<typeof setTimeout> | null = null;
@@ -56,6 +57,8 @@ export const useDocStore = defineStore("doc", () => {
   // ── Debounced file save (Tauri mode) ──
   let _fileSaveTimer: ReturnType<typeof setTimeout> | null = null;
   const FILE_SAVE_DELAY = 1000;
+  const WRITE_COOLDOWN = 2000;
+  let _lastWriteAt = 0;
 
   function scheduleFileSave() {
     if (!isTauri()) return;
@@ -64,6 +67,14 @@ export const useDocStore = defineStore("doc", () => {
       _fileSaveTimer = null;
       saveToFile();
     }, FILE_SAVE_DELAY);
+  }
+
+  function hasUnsavedChanges(): boolean {
+    return _fileSaveTimer !== null;
+  }
+
+  function recentlyWritten(): boolean {
+    return Date.now() - _lastWriteAt < WRITE_COOLDOWN;
   }
 
   async function saveToFile() {
@@ -78,8 +89,9 @@ export const useDocStore = defineStore("doc", () => {
       rootId: rootId.value,
       statusConfig: statusConfig.value,
     });
-    const filePath = `${settings.workspacePath}\\${currentDocId.value}`;
+    const filePath = `${settings.workspacePath}/${currentDocId.value}`;
     await writeFile(filePath, content);
+    _lastWriteAt = Date.now();
   }
 
   // ── Status configuration (per-document) ──
@@ -934,7 +946,7 @@ export const useDocStore = defineStore("doc", () => {
     if (!settings.workspacePath || !currentDocId.value) return;
 
     const { readFile } = await import("@/lib/tauri-fs");
-    const filePath = `${settings.workspacePath}\\${currentDocId.value}`;
+    const filePath = `${settings.workspacePath}/${currentDocId.value}`;
 
     let content = "";
     try {
@@ -985,6 +997,45 @@ export const useDocStore = defineStore("doc", () => {
 
     ready.value = true;
     scheduleIndexUpdate();
+  }
+
+  async function refreshFromFile() {
+    const { useSettingsStore } = await import("@/stores/settings");
+    const settings = useSettingsStore();
+    if (!settings.workspacePath || !currentDocId.value) return;
+
+    const { readFile } = await import("@/lib/tauri-fs");
+    const filePath = `${settings.workspacePath}/${currentDocId.value}`;
+
+    let content = "";
+    try {
+      content = await readFile(filePath);
+    } catch {
+      return;
+    }
+
+    if (!content.trim()) return;
+
+    const parsed = parseMarkdown(content);
+
+    // Preserve UI state: carry over collapsed and selection from current nodes
+    const oldNodes = nodes.value;
+    for (const [id, newNode] of parsed.nodes) {
+      const oldNode = oldNodes.get(id);
+      if (oldNode) {
+        newNode.collapsed = oldNode.collapsed;
+      }
+    }
+
+    suppressTransitions.value = true;
+    rootId.value = parsed.rootId;
+    nodes.value = parsed.nodes;
+    statusConfig.value = parsed.statusConfig;
+    triggerRef(nodes);
+    scheduleIndexUpdate();
+    nextTick(() => {
+      suppressTransitions.value = false;
+    });
   }
 
   async function initFromIdb() {
@@ -1390,6 +1441,10 @@ export const useDocStore = defineStore("doc", () => {
     downloadExport,
     importJSON,
     resetDocument,
+    suppressTransitions,
     saveToFile,
+    hasUnsavedChanges,
+    recentlyWritten,
+    refreshFromFile,
   };
 });

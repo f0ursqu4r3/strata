@@ -116,6 +116,18 @@ describe('serializeToMarkdown', () => {
     expect(md).not.toContain('Deleted')
   })
 
+  it('uses minimal frontmatter with default statuses', () => {
+    const rootId = 'root'
+    const nodes = buildTree([
+      { text: 'Item', parentId: rootId },
+    ], rootId)
+
+    const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
+
+    expect(md).toContain('doc-type: strata')
+    expect(md).not.toContain('statuses:')
+  })
+
   it('includes status config in frontmatter', () => {
     const rootId = 'root'
     const nodes = buildTree([], rootId)
@@ -126,7 +138,7 @@ describe('serializeToMarkdown', () => {
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig })
 
-    expect(md).toContain('---')
+    expect(md).toContain('doc-type: strata')
     expect(md).toContain('id: open')
     expect(md).toContain('label: "Open"')
     expect(md).toContain('color: "#aaa"')
@@ -148,17 +160,9 @@ describe('serializeToMarkdown', () => {
 })
 
 describe('parseMarkdown', () => {
-  it('parses a simple flat list', () => {
+  it('parses a simple flat list with minimal frontmatter', () => {
     const md = `---
-statuses:
-  - id: todo
-    label: "Todo"
-    color: "#94a3b8"
-    icon: circle
-  - id: done
-    label: "Done"
-    color: "#22c55e"
-    icon: circle-check
+doc-type: strata
 ---
 
 - First item
@@ -176,11 +180,7 @@ statuses:
 
   it('parses nested items', () => {
     const md = `---
-statuses:
-  - id: todo
-    label: "Todo"
-    color: "#94a3b8"
-    icon: circle
+doc-type: strata
 ---
 
 - Parent
@@ -204,11 +204,7 @@ statuses:
 
   it('parses tags', () => {
     const md = `---
-statuses:
-  - id: todo
-    label: "Todo"
-    color: "#94a3b8"
-    icon: circle
+doc-type: strata
 ---
 
 - Item with tags #urgent #backend
@@ -222,11 +218,7 @@ statuses:
 
   it('parses due dates', () => {
     const md = `---
-statuses:
-  - id: todo
-    label: "Todo"
-    color: "#94a3b8"
-    icon: circle
+doc-type: strata
 ---
 
 - Due item @due(2026-03-15)
@@ -240,11 +232,7 @@ statuses:
 
   it('parses collapsed marker', () => {
     const md = `---
-statuses:
-  - id: todo
-    label: "Todo"
-    color: "#94a3b8"
-    icon: circle
+doc-type: strata
 ---
 
 - Collapsed item !collapsed
@@ -257,6 +245,7 @@ statuses:
 
   it('parses custom status config from frontmatter', () => {
     const md = `---
+doc-type: strata
 statuses:
   - id: open
     label: "Open"
@@ -289,6 +278,7 @@ statuses:
 
   it('parses all markers combined', () => {
     const md = `---
+doc-type: strata
 statuses:
   - id: todo
     label: "Todo"

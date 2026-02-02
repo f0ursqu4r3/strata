@@ -31,10 +31,20 @@ async function onSwitchDoc(docId: string) {
   await docStore.loadDocument(docId)
 }
 
+function baseName(name: string): string {
+  const slash = name.lastIndexOf('/')
+  return slash >= 0 ? name.substring(slash + 1) : name
+}
+
+function dirPrefix(name: string): string {
+  const slash = name.lastIndexOf('/')
+  return slash >= 0 ? name.substring(0, slash + 1) : ''
+}
+
 function startRename(docId: string, name: string, e: MouseEvent) {
   e.stopPropagation()
   renamingId.value = docId
-  renameText.value = name
+  renameText.value = baseName(name)
   nextTick(() => {
     renameInputRef.value?.focus()
     renameInputRef.value?.select()
@@ -121,7 +131,7 @@ async function onDelete(docId: string, e: MouseEvent) {
           v-else
           class="flex-1 truncate"
         >
-          {{ doc.name }}
+          <span v-if="dirPrefix(doc.name)" class="text-(--text-faint) text-xs">{{ dirPrefix(doc.name) }}</span>{{ baseName(doc.name) }}
         </span>
 
         <!-- Delete button -->

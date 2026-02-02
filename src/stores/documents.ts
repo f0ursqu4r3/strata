@@ -93,7 +93,7 @@ export const useDocumentsStore = defineStore("documents", () => {
       // Empty workspace — create a default document
       const filename = "My Document.md";
       const { writeFile } = await import("@/lib/tauri-fs");
-      await writeFile(`${workspace}\\${filename}`, emptyStrataDoc());
+      await writeFile(`${workspace}/${filename}`, emptyStrataDoc());
       documents.value = [
         {
           id: filename,
@@ -131,7 +131,7 @@ export const useDocumentsStore = defineStore("documents", () => {
     import("@/lib/tauri-fs").then(({ writeFile }) => {
       import("@/stores/settings").then(({ useSettingsStore }) => {
         const settings = useSettingsStore();
-        writeFile(`${settings.workspacePath}\\${filename}`, emptyStrataDoc());
+        writeFile(`${settings.workspacePath}/${filename}`, emptyStrataDoc());
       });
     });
     documents.value = [
@@ -171,16 +171,18 @@ export const useDocumentsStore = defineStore("documents", () => {
     const { renameFile } = await import("@/lib/tauri-fs");
     const { useSettingsStore } = await import("@/stores/settings");
     const settings = useSettingsStore();
-    const newFilename = `${newName}.md`;
+    // Preserve directory prefix from old ID (e.g., "notes/Old.md" → "notes/")
+    const dirPrefix = oldId.includes("/") ? oldId.substring(0, oldId.lastIndexOf("/") + 1) : "";
+    const newRelPath = `${dirPrefix}${newName}.md`;
     await renameFile(
-      `${settings.workspacePath}\\${oldId}`,
-      `${settings.workspacePath}\\${newFilename}`,
+      `${settings.workspacePath}/${oldId}`,
+      `${settings.workspacePath}/${newRelPath}`,
     );
     documents.value = documents.value.map((d) =>
-      d.id === oldId ? { ...d, id: newFilename, name: newName } : d,
+      d.id === oldId ? { ...d, id: newRelPath, name: newRelPath.replace(/\.md$/, "") } : d,
     );
     if (activeId.value === oldId) {
-      activeId.value = newFilename;
+      activeId.value = newRelPath;
     }
   }
 
@@ -198,7 +200,7 @@ export const useDocumentsStore = defineStore("documents", () => {
       const { deleteFile } = await import("@/lib/tauri-fs");
       const { useSettingsStore } = await import("@/stores/settings");
       const settings = useSettingsStore();
-      await deleteFile(`${settings.workspacePath}\\${docId}`);
+      await deleteFile(`${settings.workspacePath}/${docId}`);
       documents.value = documents.value.filter((d) => d.id !== docId);
     } else {
       removeDoc(docId);
@@ -214,6 +216,63 @@ export const useDocumentsStore = defineStore("documents", () => {
     documents.value = loadRegistry().documents;
   }
 
+  // ── File watching (Tauri mode) ──
+
+  let unlistenHandles: Array<() => void> = [];
+
+  async function setupFileWatching(workspace: string) {
+    const { startWatching } = await import("@/lib/tauri-fs");
+    const { listen } = await import("@tauri-apps/api/event");
+
+    await startWatching(workspace);
+
+    unlistenHandles.push(
+      await listen<{ relPath: string }>("fs:created", (event) => {
+        const { relPath } = event.payload;
+        if (!documents.value.find((d) => d.id === relPath)) {
+          documents.value = [
+            ...documents.value,
+            {
+              id: relPath,
+              name: relPath.replace(/\.md$/, ""),
+              createdAt: Date.now(),
+              lastModified: Date.now(),
+            },
+          ];
+        }
+      }),
+
+      await listen<{ relPath: string }>("fs:deleted", (event) => {
+        const { relPath } = event.payload;
+        documents.value = documents.value.filter((d) => d.id !== relPath);
+        if (activeId.value === relPath) {
+          const other = documents.value[0];
+          if (other) switchDocument(other.id);
+        }
+      }),
+
+      await listen<{ relPath: string }>("fs:modified", async (event) => {
+        const { relPath } = event.payload;
+        if (relPath === activeId.value) {
+          const { useDocStore } = await import("@/stores/doc");
+          const docStore = useDocStore();
+          if (!docStore.hasUnsavedChanges() && !docStore.recentlyWritten()) {
+            docStore.refreshFromFile();
+          }
+        }
+      }),
+    );
+  }
+
+  async function teardownFileWatching() {
+    for (const unlisten of unlistenHandles) {
+      unlisten();
+    }
+    unlistenHandles = [];
+    const { stopWatching } = await import("@/lib/tauri-fs");
+    await stopWatching();
+  }
+
   return {
     documents,
     activeId,
@@ -224,5 +283,7 @@ export const useDocumentsStore = defineStore("documents", () => {
     renameDocument,
     deleteDocument,
     touch,
+    setupFileWatching,
+    teardownFileWatching,
   };
 });

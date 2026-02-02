@@ -64,7 +64,7 @@ export async function migrateIdbToFiles(workspacePath: string): Promise<number> 
 
       // Write file (sanitize name for filesystem)
       const safeName = doc.name.replace(/[<>:"/\\|?*]/g, '_')
-      const filePath = `${workspacePath}\\${safeName}.md`
+      const filePath = `${workspacePath}/${safeName}.md`
       await writeFile(filePath, content)
       migrated++
     } catch (err) {

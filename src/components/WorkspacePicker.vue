@@ -24,15 +24,7 @@ async function pickFolder() {
       title: "Choose Strata Workspace",
     });
     if (selected) {
-      let workspace = selected as string;
-
-      // If the selected folder is a git repo, use .strata/ inside it
-      const { isGitRepo, ensureDir } = await import("@/lib/tauri-fs");
-      if (await isGitRepo(workspace)) {
-        workspace = `${workspace}\\.strata`;
-        await ensureDir(workspace);
-      }
-
+      const workspace = selected as string;
       settings.setWorkspacePath(workspace);
 
       // Offer migration if there are existing IDB docs

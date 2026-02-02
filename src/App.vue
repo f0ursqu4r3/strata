@@ -54,15 +54,18 @@ const isGitWorkspace = ref(false);
 onMounted(async () => {
   settings.init();
 
+  // Migrate legacy .strata workspace path
+  if (isTauri() && settings.workspacePath && /[\\/]\.strata$/.test(settings.workspacePath)) {
+    settings.setWorkspacePath(settings.workspacePath.replace(/[\\/]\.strata$/, ""));
+  }
+
   // In Tauri mode, auto-detect git repo or show workspace picker
   if (isTauri() && !settings.workspacePath) {
     try {
-      const { findGitRoot, ensureDir } = await import("@/lib/tauri-fs");
+      const { findGitRoot } = await import("@/lib/tauri-fs");
       const gitRoot = await findGitRoot();
       if (gitRoot) {
-        const strataDir = `${gitRoot}\\.strata`;
-        await ensureDir(strataDir);
-        settings.setWorkspacePath(strataDir);
+        settings.setWorkspacePath(gitRoot);
         isGitWorkspace.value = true;
       } else {
         needsWorkspacePicker.value = true;
@@ -84,11 +87,20 @@ onMounted(async () => {
   // Check git status in Tauri mode
   if (isTauri() && settings.workspacePath && !isGitWorkspace.value) {
     import("@/lib/tauri-fs").then(({ isGitRepo }) => {
-      const checkPath = settings.workspacePath.replace(/[\\/]\.strata$/, "");
-      isGitRepo(checkPath).then((v) => {
+      isGitRepo(settings.workspacePath).then((v) => {
         isGitWorkspace.value = v;
       });
     });
+  }
+
+  // Tauri: set up native menu handler and file watching
+  if (isTauri()) {
+    const { setupMenuHandler } = await import("@/lib/menu-handler");
+    await setupMenuHandler({ showShortcuts, showSettings });
+
+    if (settings.workspacePath) {
+      await docsStore.setupFileWatching(settings.workspacePath);
+    }
   }
 
   // Global ? shortcut
@@ -101,13 +113,14 @@ async function onWorkspaceSelected() {
   if (activeDocId) {
     await store.loadDocument(activeDocId);
   }
+  if (isTauri() && settings.workspacePath) {
+    await docsStore.setupFileWatching(settings.workspacePath);
+  }
 
   // Check git status after manual workspace selection
   if (isTauri() && settings.workspacePath) {
     import("@/lib/tauri-fs").then(({ isGitRepo }) => {
-      // Check the parent dir if workspace is a .strata folder
-      const checkPath = settings.workspacePath.replace(/[\\/]\.strata$/, "");
-      isGitRepo(checkPath).then((v) => {
+      isGitRepo(settings.workspacePath).then((v) => {
         isGitWorkspace.value = v;
       });
     });

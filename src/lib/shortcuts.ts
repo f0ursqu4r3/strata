@@ -46,6 +46,8 @@ export const DEFAULT_SHORTCUTS: ShortcutDef[] = [
   // Editing context
   { action: 'stopEditing', combo: { key: 'Escape' }, label: 'Stop editing', category: 'Navigation', context: 'editing' },
   { action: 'newSibling', combo: { key: 'Enter', shift: true }, label: 'New sibling below', category: 'Editing', context: 'editing' },
+  { action: 'indent', combo: { key: 'Tab' }, label: 'Indent', category: 'Editing', context: 'editing' },
+  { action: 'outdent', combo: { key: 'Tab', shift: true }, label: 'Outdent', category: 'Editing', context: 'editing' },
 ]
 
 /**

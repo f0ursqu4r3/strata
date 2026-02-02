@@ -309,8 +309,8 @@ watch(
         <div :style="{ height: bottomSpacer + 'px' }" />
       </template>
 
-      <!-- Normal mode with transitions -->
-      <TransitionGroup v-else name="outline-row">
+      <!-- Normal mode with transitions (suppressed during external file refresh) -->
+      <TransitionGroup v-else :name="store.suppressTransitions ? '' : 'outline-row'">
         <template v-for="(row, idx) in store.visibleRows" :key="row.node.id">
           <div
             v-if="dropTargetIdx === idx"

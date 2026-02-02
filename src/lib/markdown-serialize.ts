@@ -21,14 +21,17 @@ export function serializeToMarkdown(opts: SerializeOptions): string {
   const { nodes, rootId, statusConfig } = opts
   const lines: string[] = []
 
-  // YAML frontmatter for status config
+  // YAML frontmatter — minimal when using default statuses
   lines.push('---')
-  lines.push('statuses:')
-  for (const s of statusConfig) {
-    lines.push(`  - id: ${s.id}`)
-    lines.push(`    label: "${s.label}"`)
-    lines.push(`    color: "${s.color}"`)
-    lines.push(`    icon: ${s.icon}`)
+  lines.push('doc-type: strata')
+  if (!isDefaultStatuses(statusConfig)) {
+    lines.push('statuses:')
+    for (const s of statusConfig) {
+      lines.push(`  - id: ${s.id}`)
+      lines.push(`    label: "${s.label}"`)
+      lines.push(`    color: "${s.color}"`)
+      lines.push(`    icon: ${s.icon}`)
+    }
   }
   lines.push('---')
   lines.push('')
@@ -215,6 +218,14 @@ export function parseMarkdown(content: string): ParseResult {
 
 // ── Frontmatter helpers ──
 
+function isDefaultStatuses(statuses: StatusDef[]): boolean {
+  if (statuses.length !== DEFAULT_STATUSES.length) return false
+  return statuses.every((s, i) => {
+    const d = DEFAULT_STATUSES[i]!
+    return s.id === d.id && s.label === d.label && s.color === d.color && s.icon === d.icon
+  })
+}
+
 function splitFrontmatter(content: string): { frontmatter: string; body: string } {
   const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/)
   if (fmMatch) {
@@ -228,6 +239,9 @@ function splitFrontmatter(content: string): { frontmatter: string; body: string 
 
 function parseFrontmatterStatuses(fm: string): StatusDef[] {
   if (!fm.trim()) return [...DEFAULT_STATUSES]
+
+  // If frontmatter has no statuses block, use defaults
+  if (!fm.includes('statuses:')) return [...DEFAULT_STATUSES]
 
   const statuses: StatusDef[] = []
   // Split on each "  - " entry (first split element is the "statuses:" header)
