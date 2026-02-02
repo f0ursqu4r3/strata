@@ -242,6 +242,21 @@ function onContainerDrop(e: DragEvent) {
   }
 }
 
+function onContainerDblClick(e: MouseEvent) {
+  // Only create a new node when clicking empty space (not on a row)
+  const target = e.target as HTMLElement
+  if (target.closest('[data-row-idx]')) return
+
+  const siblings = store.getChildren(store.effectiveZoomId)
+  const lastSibling = siblings[siblings.length - 1]
+  const pos = lastSibling ? rankAfter(lastSibling.pos) : initialRank()
+
+  const op = store.createNode(store.effectiveZoomId, pos)
+  const newId = (op.payload as { id: string }).id
+  store.selectNode(newId)
+  store.startEditing(newId, 'dblclick')
+}
+
 function scrollSelectedIntoView() {
   nextTick(() => {
     if (useVirtual.value) {
@@ -282,6 +297,7 @@ watch(
     aria-label="Outline"
     @keydown="onKeydown"
     @scroll="onScroll"
+    @dblclick="onContainerDblClick"
   >
     <!-- Rows -->
     <div
@@ -334,7 +350,7 @@ watch(
         v-if="store.visibleRows.length === 0"
         class="p-6 text-center text-(--text-faint) text-sm"
       >
-        No items. Press Enter to create one.
+        No items. Press Enter or double-click to create one.
       </div>
     </div>
 

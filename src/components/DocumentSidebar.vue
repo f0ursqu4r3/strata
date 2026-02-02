@@ -9,7 +9,7 @@ const docsStore = useDocumentsStore()
 const docStore = useDocStore()
 
 const renamingId = ref<string | null>(null)
-const renameInputRef = ref<HTMLInputElement | null>(null)
+const renameInputRef = ref<HTMLInputElement[]>([])
 const renameText = ref('')
 
 async function onCreateNew() {
@@ -46,8 +46,8 @@ function startRename(docId: string, name: string, e: MouseEvent) {
   renamingId.value = docId
   renameText.value = baseName(name)
   nextTick(() => {
-    renameInputRef.value?.focus()
-    renameInputRef.value?.select()
+    renameInputRef.value[0]?.focus()
+    renameInputRef.value[0]?.select()
   })
 }
 

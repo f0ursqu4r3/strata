@@ -4,6 +4,7 @@ import type { Ref } from 'vue'
 export interface MenuHandlerRefs {
   showShortcuts: Ref<boolean>
   showSettings: Ref<boolean>
+  onOpenWorkspace: () => void
 }
 
 export async function setupMenuHandler(refs: MenuHandlerRefs) {
@@ -18,8 +19,13 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
     const docs = useDocumentsStore()
 
     switch (action) {
-      case 'new-document':
-        docs.createDocument('Untitled')
+      case 'new-document': {
+        const id = docs.createDocument('Untitled')
+        docs.switchDocument(id).then(() => store.loadDocument(id))
+        break
+      }
+      case 'open-workspace':
+        refs.onOpenWorkspace()
         break
       case 'undo':
         store.undo()
@@ -50,4 +56,19 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
         break
     }
   })
+}
+
+export async function updateWindowTitle(workspacePath: string) {
+  const { getCurrentWindow } = await import('@tauri-apps/api/window')
+  const { homeDir } = await import('@tauri-apps/api/path')
+  let display = workspacePath
+  try {
+    const home = (await homeDir()).replace(/\/+$/, '')
+    if (display.startsWith(home + '/')) {
+      display = '~' + display.slice(home.length)
+    }
+  } catch {
+    // homeDir unavailable — use full path
+  }
+  await getCurrentWindow().setTitle(`Strata — ${display}`)
 }

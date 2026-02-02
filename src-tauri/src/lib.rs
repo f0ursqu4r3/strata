@@ -261,7 +261,8 @@ fn build_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     // File menu
     let mut file_builder = SubmenuBuilder::new(handle, "File")
-        .item(&MenuItem::with_id(handle, "new-document", "New Document", true, Some("CmdOrCtrl+N"))?);
+        .item(&MenuItem::with_id(handle, "new-document", "New Document", true, Some("CmdOrCtrl+N"))?)
+        .item(&MenuItem::with_id(handle, "open-workspace", "Open Workspace…", true, Some("CmdOrCtrl+O"))?);
 
     file_builder = file_builder
         .separator()

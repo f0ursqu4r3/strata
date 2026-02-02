@@ -54,11 +54,6 @@ const isGitWorkspace = ref(false);
 onMounted(async () => {
   settings.init();
 
-  // Migrate legacy .strata workspace path
-  if (isTauri() && settings.workspacePath && /[\\/]\.strata$/.test(settings.workspacePath)) {
-    settings.setWorkspacePath(settings.workspacePath.replace(/[\\/]\.strata$/, ""));
-  }
-
   // In Tauri mode, auto-detect git repo or show workspace picker
   if (isTauri() && !settings.workspacePath) {
     try {
@@ -78,11 +73,15 @@ onMounted(async () => {
   }
 
   const activeDocId = await docsStore.init();
-  if (!activeDocId) {
+  if (!activeDocId && !settings.workspacePath) {
     needsWorkspacePicker.value = true;
     return;
   }
-  await store.loadDocument(activeDocId);
+  if (activeDocId) {
+    await store.loadDocument(activeDocId);
+  } else {
+    store.ready = true;
+  }
 
   // Check git status in Tauri mode
   if (isTauri() && settings.workspacePath && !isGitWorkspace.value) {
@@ -93,13 +92,14 @@ onMounted(async () => {
     });
   }
 
-  // Tauri: set up native menu handler and file watching
+  // Tauri: set up native menu handler, file watching, and window title
   if (isTauri()) {
-    const { setupMenuHandler } = await import("@/lib/menu-handler");
-    await setupMenuHandler({ showShortcuts, showSettings });
+    const { setupMenuHandler, updateWindowTitle } = await import("@/lib/menu-handler");
+    await setupMenuHandler({ showShortcuts, showSettings, onOpenWorkspace: openWorkspacePicker });
 
     if (settings.workspacePath) {
       await docsStore.setupFileWatching(settings.workspacePath);
+      await updateWindowTitle(settings.workspacePath);
     }
   }
 
@@ -107,14 +107,25 @@ onMounted(async () => {
   document.addEventListener("keydown", onGlobalKeydown);
 });
 
+async function openWorkspacePicker() {
+  // Tear down current file watching before switching
+  await docsStore.teardownFileWatching();
+  needsWorkspacePicker.value = true;
+}
+
 async function onWorkspaceSelected() {
   needsWorkspacePicker.value = false;
   const activeDocId = await docsStore.init();
   if (activeDocId) {
     await store.loadDocument(activeDocId);
+  } else {
+    store.ready = true;
   }
   if (isTauri() && settings.workspacePath) {
     await docsStore.setupFileWatching(settings.workspacePath);
+    import("@/lib/menu-handler").then(({ updateWindowTitle }) => {
+      updateWindowTitle(settings.workspacePath);
+    });
   }
 
   // Check git status after manual workspace selection
@@ -427,7 +438,13 @@ function onZoomRoot() {
       />
 
       <main class="flex-1 overflow-hidden">
-        <Splitpanes v-if="store.viewMode === 'split'" class="h-full">
+        <div v-if="!docsStore.activeId" class="flex items-center justify-center h-full text-(--text-muted) text-sm">
+          <div class="text-center">
+            <p>No documents found in this workspace.</p>
+            <p class="mt-1 text-xs text-(--text-faint)">Press <kbd class="px-1.5 py-0.5 rounded bg-(--bg-hover) text-(--text-secondary) text-[11px] font-mono">{{ isTauri() ? '⌘' : 'Ctrl' }}+N</kbd> to create one.</p>
+          </div>
+        </div>
+        <Splitpanes v-else-if="store.viewMode === 'split'" class="h-full">
           <Pane :min-size="20" :size="50">
             <OutlineView ref="outlineRef" />
           </Pane>

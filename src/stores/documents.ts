@@ -89,29 +89,13 @@ export const useDocumentsStore = defineStore("documents", () => {
     const { listWorkspaceFiles } = await import("@/lib/tauri-fs");
     const files = await listWorkspaceFiles(workspace);
 
-    if (files.length === 0) {
-      // Empty workspace — create a default document
-      const filename = "My Document.md";
-      const { writeFile } = await import("@/lib/tauri-fs");
-      await writeFile(`${workspace}/${filename}`, emptyStrataDoc());
-      documents.value = [
-        {
-          id: filename,
-          name: "My Document",
-          createdAt: Date.now(),
-          lastModified: Date.now(),
-        },
-      ];
-      activeId.value = filename;
-    } else {
-      documents.value = files.map((name) => ({
-        id: name,
-        name: name.replace(/\.md$/, ""),
-        createdAt: 0,
-        lastModified: 0,
-      }));
-      activeId.value = files[0]!;
-    }
+    documents.value = files.map((relPath) => ({
+      id: relPath,
+      name: relPath.replace(/\.md$/, ""),
+      createdAt: 0,
+      lastModified: 0,
+    }));
+    activeId.value = files[0] ?? "";
 
     return activeId.value;
   }
