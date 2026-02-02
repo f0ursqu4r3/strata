@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
-import { Settings2, Calendar } from 'lucide-vue-next'
+import { Settings2, Calendar, Tag } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
 import { renderInlineMarkdown } from '@/lib/inline-markdown'
@@ -100,7 +100,15 @@ function closeContextMenu() {
 <template>
   <div class="flex flex-col h-full bg-(--bg-primary)">
     <!-- Kanban header with gear button -->
-    <div class="flex items-center justify-end px-3 pt-2 pb-0 shrink-0">
+    <div class="flex items-center justify-end gap-1 px-3 pt-2 pb-0 shrink-0">
+      <button
+        class="p-1 rounded hover:bg-(--bg-hover) cursor-pointer"
+        :class="settings.showBoardTags ? 'text-(--accent-500)' : 'text-(--text-faint) hover:text-(--text-tertiary)'"
+        title="Toggle tags on cards"
+        @click="settings.setShowBoardTags(!settings.showBoardTags)"
+      >
+        <Tag class="w-3.5 h-3.5" />
+      </button>
       <button
         class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
         title="Manage statuses"
@@ -193,7 +201,7 @@ function closeContextMenu() {
                 {{ formatDueDate(node.dueDate) }}
               </span>
             </div>
-            <div v-if="settings.showTags && node.tags?.length > 0" class="flex flex-wrap gap-1 mt-1.5">
+            <div v-if="settings.showBoardTags && node.tags?.length > 0" class="flex flex-wrap gap-1 mt-1.5">
               <span
                 v-for="tag in node.tags.slice(0, 3)"
                 :key="tag"

@@ -25,12 +25,13 @@
 - Inline markdown rendering (bold, italic, strikethrough, code, links, images) via markdown-it
 - Text edits are undo/redoable (before-snapshot capture on first keystroke)
 - Per-document custom statuses: add, remove, reorder, rename, recolor, pick icons; stored in IDB meta table; dynamic kanban columns, status picker, context menu, keyboard shortcuts
+- Due dates with visual urgency badges (overdue/today/soon/normal), inline date picker, due date filter in toolbar (All/Overdue/Today/This Week)
+- Unified search modal: search current document and all documents from a single overlay (Ctrl+Shift+F), with match highlighting and keyboard navigation
+- Keyboard shortcut customization: remap all shortcuts via interactive editor, conflict detection, per-shortcut and bulk reset, persisted in localStorage
+- Separate show/hide tags toggle for board view (independent of outline tags setting)
 
 ## Remaining
 
 - [ ] Documentation: user guide, developer setup instructions
 - [ ] Multi-device sync (CRDTs or server-based merge)
 - [ ] Collaboration: real-time multi-user editing
-- [ ] Due dates, reminders, and date-based filtering
-- [ ] Full-text search across all documents
-- [ ] Keyboard shortcut customization

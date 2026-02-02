@@ -3,7 +3,6 @@ import { ref, onMounted, watch, nextTick } from "vue";
 import {
   Layers,
   Search,
-  FileSearch,
   Upload,
   RotateCcw,
   Keyboard,
@@ -40,7 +39,6 @@ const showShortcuts = ref(false);
 const showSettings = ref(false);
 const showTrash = ref(false);
 const showStatusEditor = ref(false);
-const showMobileSearch = ref(false);
 const showGlobalSearch = ref(false);
 const showShortcutEditor = ref(false);
 const showTagFilter = ref(false);
@@ -65,6 +63,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
   const searchDef = settings.resolvedShortcuts.find((s) => s.action === "globalSearch");
   if (searchDef && matchesCombo(e, searchDef.combo)) {
     showGlobalSearch.value = !showGlobalSearch.value;
+    store.searchQuery = "";
     e.preventDefault();
   }
 }
@@ -169,30 +168,12 @@ function onZoomRoot() {
 
       <div class="flex items-center gap-1.5 ml-auto">
         <!-- Search -->
-        <div class="relative hidden sm:block">
-          <Search
-            class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-(--text-faint) pointer-events-none"
-          />
-          <input
-            class="w-36 lg:w-44 py-1 pl-8 pr-2.5 border border-(--border-secondary) rounded-md text-[13px] text-(--text-secondary) bg-(--bg-tertiary) placeholder:text-(--text-placeholder) focus:outline-none focus:ring-1 focus:ring-(--accent-400) focus:border-(--accent-400)"
-            type="text"
-            placeholder="Search..."
-            :value="store.searchQuery"
-            @input="store.searchQuery = ($event.target as HTMLInputElement).value"
-            @keydown.escape="
-              store.searchQuery = '';
-              ($event.target as HTMLInputElement).blur();
-            "
-          />
-        </div>
-
-        <!-- Global search button -->
         <button
-          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer hidden sm:block"
-          title="Search all documents (Ctrl+Shift+F)"
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
+          title="Search (Ctrl+Shift+F)"
           @click="showGlobalSearch = true"
         >
-          <FileSearch class="w-4 h-4" />
+          <Search class="w-4 h-4" />
         </button>
 
         <!-- Tag filter -->
@@ -283,15 +264,6 @@ function onZoomRoot() {
           </div>
         </div>
 
-        <!-- Mobile search toggle -->
-        <button
-          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) sm:hidden"
-          title="Search"
-          @click="showMobileSearch = !showMobileSearch"
-        >
-          <Search class="w-4 h-4" />
-        </button>
-
         <!-- Toolbar buttons -->
         <div class="hidden sm:block">
           <ExportMenu />
@@ -340,29 +312,6 @@ function onZoomRoot() {
         />
       </div>
     </header>
-
-    <!-- Mobile search bar -->
-    <div
-      v-if="showMobileSearch"
-      class="flex items-center gap-2 px-3 py-2 border-b border-(--border-primary) bg-(--bg-tertiary) sm:hidden"
-    >
-      <div class="relative flex-1">
-        <Search
-          class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-(--text-faint) pointer-events-none"
-        />
-        <input
-          class="w-full py-1 pl-8 pr-2.5 border border-(--border-secondary) rounded-md text-[13px] text-(--text-secondary) bg-(--bg-secondary) placeholder:text-(--text-placeholder) focus:outline-none focus:ring-1 focus:ring-(--accent-400) focus:border-(--accent-400)"
-          type="text"
-          placeholder="Search..."
-          :value="store.searchQuery"
-          @input="store.searchQuery = ($event.target as HTMLInputElement).value"
-          @keydown.escape="
-            store.searchQuery = '';
-            showMobileSearch = false;
-          "
-        />
-      </div>
-    </div>
 
     <!-- Zoom breadcrumb bar -->
     <div

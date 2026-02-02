@@ -22,11 +22,12 @@ interface PersistedSettings {
   fontSize: number
   dark?: boolean // legacy field, used for migration only
   showTags?: boolean
+  showBoardTags?: boolean
   sidebarOpen?: boolean
   shortcuts?: Record<string, KeyCombo>
 }
 
-function loadSettings(): { theme: string; fontSize: number; showTags: boolean; sidebarOpen: boolean; shortcuts: Record<string, KeyCombo> } {
+function loadSettings(): { theme: string; fontSize: number; showTags: boolean; showBoardTags: boolean; sidebarOpen: boolean; shortcuts: Record<string, KeyCombo> } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
@@ -46,7 +47,7 @@ function loadSettings(): { theme: string; fontSize: number; showTags: boolean; s
       const valid = themeRegistry.some((t) => t.key === themeKey)
       if (!valid) themeKey = 'github-light'
 
-      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false, shortcuts: parsed.shortcuts ?? {} }
+      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, showBoardTags: parsed.showBoardTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false, shortcuts: parsed.shortcuts ?? {} }
     }
   } catch {
     // ignore
@@ -58,6 +59,7 @@ function loadSettings(): { theme: string; fontSize: number; showTags: boolean; s
     theme: prefersDark ? 'github-dark' : 'github-light',
     fontSize: 14,
     showTags: true,
+    showBoardTags: true,
     sidebarOpen: false,
     shortcuts: {},
   }
@@ -68,6 +70,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const theme = ref<ThemeKey>(saved.theme)
   const fontSize = ref(saved.fontSize)
   const showTags = ref(saved.showTags)
+  const showBoardTags = ref(saved.showBoardTags)
   const sidebarOpen = ref(saved.sidebarOpen)
   const shortcutOverrides = ref<Record<string, KeyCombo>>(saved.shortcuts)
 
@@ -88,6 +91,7 @@ export const useSettingsStore = defineStore('settings', () => {
         theme: theme.value,
         fontSize: fontSize.value,
         showTags: showTags.value,
+        showBoardTags: showBoardTags.value,
         sidebarOpen: sidebarOpen.value,
         shortcuts: shortcutOverrides.value,
       }),
@@ -127,6 +131,11 @@ export const useSettingsStore = defineStore('settings', () => {
     persist()
   }
 
+  function setShowBoardTags(v: boolean) {
+    showBoardTags.value = v
+    persist()
+  }
+
   function setSidebarOpen(v: boolean) {
     sidebarOpen.value = v
     persist()
@@ -153,12 +162,13 @@ export const useSettingsStore = defineStore('settings', () => {
     applyFontSize()
   }
 
-  watch([theme, fontSize, showTags, sidebarOpen, shortcutOverrides], persist)
+  watch([theme, fontSize, showTags, showBoardTags, sidebarOpen, shortcutOverrides], persist)
 
   return {
     theme,
     fontSize,
     showTags,
+    showBoardTags,
     sidebarOpen,
     dark,
     resolvedShortcuts,
@@ -166,6 +176,7 @@ export const useSettingsStore = defineStore('settings', () => {
     setTheme,
     setFontSize,
     setShowTags,
+    setShowBoardTags,
     setSidebarOpen,
     updateShortcut,
     resetShortcut,
