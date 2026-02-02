@@ -121,6 +121,90 @@ describe('ops', () => {
       const op = makeOp('tombstone', { type: 'tombstone', id: 'n1' })
       applyOp(nodes, op)
       expect(nodes.get('n1')!.deleted).toBe(true)
+      expect(nodes.get('n1')!.deletedAt).toBeTypeOf('number')
+    })
+
+    it('adds a tag', () => {
+      const nodes = new Map<string, Node>()
+      nodes.set('n1', makeNode({ id: 'n1', tags: [] }))
+
+      const op = makeOp('addTag', { type: 'addTag', id: 'n1', tag: 'urgent' })
+      applyOp(nodes, op)
+      expect(nodes.get('n1')!.tags).toEqual(['urgent'])
+    })
+
+    it('does not add duplicate tag', () => {
+      const nodes = new Map<string, Node>()
+      nodes.set('n1', makeNode({ id: 'n1', tags: ['urgent'] }))
+
+      const op = makeOp('addTag', { type: 'addTag', id: 'n1', tag: 'urgent' })
+      applyOp(nodes, op)
+      expect(nodes.get('n1')!.tags).toEqual(['urgent'])
+    })
+
+    it('returns null for addTag on nonexistent node', () => {
+      const nodes = new Map<string, Node>()
+      const op = makeOp('addTag', { type: 'addTag', id: 'missing', tag: 'x' })
+      expect(applyOp(nodes, op)).toBeNull()
+    })
+
+    it('removes a tag', () => {
+      const nodes = new Map<string, Node>()
+      nodes.set('n1', makeNode({ id: 'n1', tags: ['urgent', 'bug'] }))
+
+      const op = makeOp('removeTag', { type: 'removeTag', id: 'n1', tag: 'urgent' })
+      applyOp(nodes, op)
+      expect(nodes.get('n1')!.tags).toEqual(['bug'])
+    })
+
+    it('removeTag is no-op when tag not present', () => {
+      const nodes = new Map<string, Node>()
+      nodes.set('n1', makeNode({ id: 'n1', tags: ['bug'] }))
+
+      const op = makeOp('removeTag', { type: 'removeTag', id: 'n1', tag: 'urgent' })
+      applyOp(nodes, op)
+      expect(nodes.get('n1')!.tags).toEqual(['bug'])
+    })
+
+    it('restores a tombstoned node', () => {
+      const nodes = new Map<string, Node>()
+      nodes.set('n1', makeNode({ id: 'n1', deleted: true, deletedAt: 12345 }))
+
+      const op = makeOp('restore', { type: 'restore', id: 'n1' })
+      applyOp(nodes, op)
+      expect(nodes.get('n1')!.deleted).toBe(false)
+      expect(nodes.get('n1')!.deletedAt).toBeUndefined()
+    })
+
+    it('returns null for restore on nonexistent node', () => {
+      const nodes = new Map<string, Node>()
+      const op = makeOp('restore', { type: 'restore', id: 'missing' })
+      expect(applyOp(nodes, op)).toBeNull()
+    })
+
+    it('sets due date', () => {
+      const nodes = new Map<string, Node>()
+      nodes.set('n1', makeNode({ id: 'n1' }))
+
+      const ts = Date.now()
+      const op = makeOp('setDueDate', { type: 'setDueDate', id: 'n1', dueDate: ts })
+      applyOp(nodes, op)
+      expect(nodes.get('n1')!.dueDate).toBe(ts)
+    })
+
+    it('clears due date with null', () => {
+      const nodes = new Map<string, Node>()
+      nodes.set('n1', makeNode({ id: 'n1', dueDate: 12345 }))
+
+      const op = makeOp('setDueDate', { type: 'setDueDate', id: 'n1', dueDate: null })
+      applyOp(nodes, op)
+      expect(nodes.get('n1')!.dueDate).toBeNull()
+    })
+
+    it('returns null for setDueDate on nonexistent node', () => {
+      const nodes = new Map<string, Node>()
+      const op = makeOp('setDueDate', { type: 'setDueDate', id: 'missing', dueDate: 123 })
+      expect(applyOp(nodes, op)).toBeNull()
     })
   })
 
