@@ -20,8 +20,8 @@ async function onCreateNew() {
   renamingId.value = id
   renameText.value = 'Untitled'
   await nextTick()
-  renameInputRef.value?.focus()
-  renameInputRef.value?.select()
+  renameInputRef.value[0]?.focus()
+  renameInputRef.value[0]?.select()
 }
 
 async function onSwitchDoc(docId: string) {
