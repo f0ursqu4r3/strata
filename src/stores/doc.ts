@@ -932,29 +932,46 @@ export const useDocStore = defineStore("doc", () => {
           tags: [],
         });
 
-        // Create starter nodes for onboarding
-        const starters = [
-          { text: "Welcome to Strata", status: "in_progress" as Status },
-          { text: "Try pressing Ctrl/Cmd + Enter to create a new item", status: "todo" as Status },
-          { text: "Use Tab to indent, Shift+Tab to outdent", status: "todo" as Status },
-          { text: "Ctrl+1/2/3/4 to change status", status: "todo" as Status },
-          { text: "Right-click for more options", status: "todo" as Status },
-          { text: "Drag cards between Kanban columns", status: "done" as Status },
-        ];
-        let prevPos = "";
+        const isFirstLaunch = !localStorage.getItem("strata-launched");
         const firstId = crypto.randomUUID();
-        for (let i = 0; i < starters.length; i++) {
-          const s = starters[i]!;
-          const id = i === 0 ? firstId : crypto.randomUUID();
-          const pos = prevPos ? rankAfter(prevPos) : initialRank();
-          prevPos = pos;
-          nodeMap.set(id, {
-            id,
+
+        if (isFirstLaunch) {
+          // Create starter nodes for onboarding (first launch only)
+          localStorage.setItem("strata-launched", "1");
+          const starters = [
+            { text: "Welcome to Strata", status: "in_progress" as Status },
+            { text: "Try pressing Ctrl/Cmd + Enter to create a new item", status: "todo" as Status },
+            { text: "Use Tab to indent, Shift+Tab to outdent", status: "todo" as Status },
+            { text: "Ctrl+1/2/3/4 to change status", status: "todo" as Status },
+            { text: "Right-click for more options", status: "todo" as Status },
+            { text: "Drag cards between Kanban columns", status: "done" as Status },
+          ];
+          let prevPos = "";
+          for (let i = 0; i < starters.length; i++) {
+            const s = starters[i]!;
+            const id = i === 0 ? firstId : crypto.randomUUID();
+            const pos = prevPos ? rankAfter(prevPos) : initialRank();
+            prevPos = pos;
+            nodeMap.set(id, {
+              id,
+              parentId: rId,
+              pos,
+              text: s.text,
+              collapsed: false,
+              status: s.status,
+              deleted: false,
+              tags: [],
+            });
+          }
+        } else {
+          // Blank document with a single empty node
+          nodeMap.set(firstId, {
+            id: firstId,
             parentId: rId,
-            pos,
-            text: s.text,
+            pos: initialRank(),
+            text: "",
             collapsed: false,
-            status: s.status,
+            status: "todo",
             deleted: false,
             tags: [],
           });
