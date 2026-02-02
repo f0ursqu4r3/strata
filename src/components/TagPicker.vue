@@ -1,61 +1,61 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
-import { X } from 'lucide-vue-next'
-import { useDocStore } from '@/stores/doc'
+import { ref, computed, nextTick, onMounted, onUnmounted } from "vue";
+import { X } from "lucide-vue-next";
+import { useDocStore } from "@/stores/doc";
 
 const props = defineProps<{
-  nodeId: string
-  tags: string[]
-}>()
+  nodeId: string;
+  tags: string[];
+}>();
 
-const store = useDocStore()
-const inputRef = ref<HTMLInputElement | null>(null)
-const query = ref('')
-const pickerRef = ref<HTMLDivElement | null>(null)
-const highlightIdx = ref(0)
+const store = useDocStore();
+const inputRef = ref<HTMLInputElement | null>(null);
+const query = ref("");
+const pickerRef = ref<HTMLDivElement | null>(null);
+const highlightIdx = ref(0);
 
 const suggestions = computed(() => {
-  const q = query.value.trim().toLowerCase()
-  const existing = new Set(props.tags)
+  const q = query.value.trim().toLowerCase();
+  const existing = new Set(props.tags);
   return store.allTags
     .filter((t) => !existing.has(t))
     .filter((t) => !q || t.toLowerCase().includes(q))
-    .slice(0, 8)
-})
+    .slice(0, 8);
+});
 
 function addTag(tag: string) {
-  const trimmed = tag.trim()
-  if (!trimmed) return
-  store.addTag(props.nodeId, trimmed)
-  query.value = ''
-  highlightIdx.value = 0
-  inputRef.value?.focus()
+  const trimmed = tag.trim();
+  if (!trimmed) return;
+  store.addTag(props.nodeId, trimmed);
+  query.value = "";
+  highlightIdx.value = 0;
+  inputRef.value?.focus();
 }
 
 function removeTag(tag: string) {
-  store.removeTag(props.nodeId, tag)
+  store.removeTag(props.nodeId, tag);
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter') {
-    e.preventDefault()
-    e.stopPropagation()
+  if (e.key === "Enter") {
+    e.preventDefault();
+    e.stopPropagation();
     if (suggestions.value.length > 0 && highlightIdx.value < suggestions.value.length) {
-      addTag(suggestions.value[highlightIdx.value]!)
+      addTag(suggestions.value[highlightIdx.value]!);
     } else if (query.value.trim()) {
-      addTag(query.value)
+      addTag(query.value);
     }
-  } else if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    if (highlightIdx.value < suggestions.value.length - 1) highlightIdx.value++
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    if (highlightIdx.value > 0) highlightIdx.value--
-  } else if (e.key === 'Backspace' && !query.value && props.tags.length > 0) {
-    removeTag(props.tags[props.tags.length - 1]!)
-  } else if (e.key === 'Escape') {
-    e.stopPropagation()
-    inputRef.value?.blur()
+  } else if (e.key === "ArrowDown") {
+    e.preventDefault();
+    if (highlightIdx.value < suggestions.value.length - 1) highlightIdx.value++;
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    if (highlightIdx.value > 0) highlightIdx.value--;
+  } else if (e.key === "Backspace" && !query.value && props.tags.length > 0) {
+    removeTag(props.tags[props.tags.length - 1]!);
+  } else if (e.key === "Escape") {
+    e.stopPropagation();
+    inputRef.value?.blur();
   }
 }
 
@@ -66,13 +66,13 @@ function onClickOutside(e: MouseEvent) {
 }
 
 onMounted(() => {
-  nextTick(() => inputRef.value?.focus())
-  document.addEventListener('mousedown', onClickOutside)
-})
+  nextTick(() => inputRef.value?.focus());
+  document.addEventListener("mousedown", onClickOutside);
+});
 
 onUnmounted(() => {
-  document.removeEventListener('mousedown', onClickOutside)
-})
+  document.removeEventListener("mousedown", onClickOutside);
+});
 </script>
 
 <template>
@@ -93,7 +93,7 @@ onUnmounted(() => {
     </span>
 
     <!-- Input -->
-    <div class="relative flex-1 min-w-[80px]">
+    <div class="relative flex-1 min-w-20">
       <input
         ref="inputRef"
         v-model="query"
