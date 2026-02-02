@@ -11,6 +11,7 @@ function makeNode(overrides: Partial<Node> = {}): Node {
     collapsed: false,
     status: 'todo',
     deleted: false,
+    tags: [],
     ...overrides,
   }
 }

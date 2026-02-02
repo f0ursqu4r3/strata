@@ -29,9 +29,10 @@
 - Unified search modal: search current document and all documents from a single overlay (Ctrl+Shift+F), with match highlighting and keyboard navigation
 - Keyboard shortcut customization: remap all shortcuts via interactive editor, conflict detection, per-shortcut and bulk reset, persisted in localStorage
 - Separate show/hide tags toggle for board view (independent of outline tags setting)
+- User guide documentation (docs/user-guide.md)
+- Developer setup instructions (docs/developer-setup.md)
 
 ## Remaining
 
-- [ ] Documentation: user guide, developer setup instructions
 - [ ] Multi-device sync (CRDTs or server-based merge)
 - [ ] Collaboration: real-time multi-user editing

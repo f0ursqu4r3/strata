@@ -12,6 +12,7 @@ import {
 } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { resolveStatusIcon } from '@/lib/status-icons'
+import type { Status } from '@/types'
 import DatePicker from '@/components/DatePicker.vue'
 
 const props = defineProps<{
