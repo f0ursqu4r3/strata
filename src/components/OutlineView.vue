@@ -3,7 +3,7 @@ import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
 import { matchesCombo, type ShortcutAction } from '@/lib/shortcuts'
-import { rankBefore, rankBetween, rankAfter } from '@/lib/rank'
+import { rankBefore, rankBetween, rankAfter, initialRank } from '@/lib/rank'
 import OutlineRow from './OutlineRow.vue'
 import ContextMenu from './ContextMenu.vue'
 
@@ -130,6 +130,13 @@ function onKeydown(e: KeyboardEvent) {
     case 'startEditing':
       if (store.selectedId) {
         store.startEditing(store.selectedId, 'keyboard')
+        e.preventDefault()
+      } else if (store.visibleRows.length === 0) {
+        // Empty outline — create first node under root
+        const op = store.createNode(store.rootId, initialRank())
+        const newId = (op.payload as { id: string }).id
+        store.selectNode(newId)
+        store.startEditing(newId, 'keyboard')
         e.preventDefault()
       }
       break
