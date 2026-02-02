@@ -24,14 +24,23 @@ async function pickFolder() {
       title: "Choose Strata Workspace",
     });
     if (selected) {
-      settings.setWorkspacePath(selected as string);
+      let workspace = selected as string;
+
+      // If the selected folder is a git repo, use .strata/ inside it
+      const { isGitRepo, ensureDir } = await import("@/lib/tauri-fs");
+      if (await isGitRepo(workspace)) {
+        workspace = `${workspace}\\.strata`;
+        await ensureDir(workspace);
+      }
+
+      settings.setWorkspacePath(workspace);
 
       // Offer migration if there are existing IDB docs
       if (hasLegacyDocs.value) {
         migrating.value = true;
         try {
           const { migrateIdbToFiles } = await import("@/lib/migrate-to-files");
-          const count = await migrateIdbToFiles(selected as string);
+          const count = await migrateIdbToFiles(workspace);
           migrationResult.value = `Migrated ${count} document${count !== 1 ? "s" : ""} to workspace.`;
         } catch (err) {
           migrationResult.value = `Migration error: ${(err as Error).message}`;
@@ -41,7 +50,7 @@ async function pickFolder() {
         await new Promise((r) => setTimeout(r, 1500));
       }
 
-      emit("selected", selected as string);
+      emit("selected", workspace);
     }
   } finally {
     picking.value = false;

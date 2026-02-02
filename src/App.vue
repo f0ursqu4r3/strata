@@ -54,19 +54,38 @@ const isGitWorkspace = ref(false);
 onMounted(async () => {
   settings.init();
 
-  // In Tauri mode, check if workspace is set
+  // In Tauri mode, auto-detect git repo or show workspace picker
   if (isTauri() && !settings.workspacePath) {
+    try {
+      const { findGitRoot, ensureDir } = await import("@/lib/tauri-fs");
+      const gitRoot = await findGitRoot();
+      if (gitRoot) {
+        const strataDir = `${gitRoot}\\.strata`;
+        await ensureDir(strataDir);
+        settings.setWorkspacePath(strataDir);
+        isGitWorkspace.value = true;
+      } else {
+        needsWorkspacePicker.value = true;
+        return;
+      }
+    } catch {
+      needsWorkspacePicker.value = true;
+      return;
+    }
+  }
+
+  const activeDocId = await docsStore.init();
+  if (!activeDocId) {
     needsWorkspacePicker.value = true;
     return;
   }
-
-  await docsStore.init();
-  await store.init();
+  await store.loadDocument(activeDocId);
 
   // Check git status in Tauri mode
-  if (isTauri() && settings.workspacePath) {
+  if (isTauri() && settings.workspacePath && !isGitWorkspace.value) {
     import("@/lib/tauri-fs").then(({ isGitRepo }) => {
-      isGitRepo(settings.workspacePath).then((v) => {
+      const checkPath = settings.workspacePath.replace(/[\\/]\.strata$/, "");
+      isGitRepo(checkPath).then((v) => {
         isGitWorkspace.value = v;
       });
     });
@@ -78,8 +97,22 @@ onMounted(async () => {
 
 async function onWorkspaceSelected() {
   needsWorkspacePicker.value = false;
-  await docsStore.init();
-  await store.init();
+  const activeDocId = await docsStore.init();
+  if (activeDocId) {
+    await store.loadDocument(activeDocId);
+  }
+
+  // Check git status after manual workspace selection
+  if (isTauri() && settings.workspacePath) {
+    import("@/lib/tauri-fs").then(({ isGitRepo }) => {
+      // Check the parent dir if workspace is a .strata folder
+      const checkPath = settings.workspacePath.replace(/[\\/]\.strata$/, "");
+      isGitRepo(checkPath).then((v) => {
+        isGitWorkspace.value = v;
+      });
+    });
+  }
+
   document.addEventListener("keydown", onGlobalKeydown);
 }
 

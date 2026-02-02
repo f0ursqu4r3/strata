@@ -23,3 +23,11 @@ export async function renameFile(oldPath: string, newPath: string): Promise<void
 export async function isGitRepo(workspace: string): Promise<boolean> {
   return invoke('is_git_repo', { workspace })
 }
+
+export async function findGitRoot(): Promise<string> {
+  return invoke('find_git_root')
+}
+
+export async function ensureDir(path: string): Promise<void> {
+  return invoke('ensure_dir', { path })
+}

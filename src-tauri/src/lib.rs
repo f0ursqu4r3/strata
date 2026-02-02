@@ -1,6 +1,15 @@
 use std::fs;
 use std::path::PathBuf;
 
+/// Check if a file starts with Strata's YAML frontmatter (---\nstatuses:\n)
+fn is_strata_file(path: &std::path::Path) -> bool {
+    if let Ok(content) = fs::read_to_string(path) {
+        content.starts_with("---\n") || content.starts_with("---\r\n")
+    } else {
+        false
+    }
+}
+
 #[tauri::command]
 fn list_workspace_files(workspace: String) -> Result<Vec<String>, String> {
     let path = PathBuf::from(&workspace);
@@ -8,7 +17,7 @@ fn list_workspace_files(workspace: String) -> Result<Vec<String>, String> {
     for entry in fs::read_dir(&path).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;
         let name = entry.file_name().to_string_lossy().to_string();
-        if name.ends_with(".md") && !name.starts_with('.') {
+        if name.ends_with(".md") && !name.starts_with('.') && is_strata_file(&entry.path()) {
             files.push(name);
         }
     }
@@ -41,6 +50,31 @@ fn is_git_repo(workspace: String) -> bool {
     PathBuf::from(&workspace).join(".git").exists()
 }
 
+/// Walk up from the current working directory to find the nearest `.git` folder.
+/// Returns the git repo root path, or empty string if none found.
+#[tauri::command]
+fn find_git_root() -> String {
+    if let Ok(cwd) = std::env::current_dir() {
+        let mut dir = cwd.as_path();
+        loop {
+            if dir.join(".git").exists() {
+                return dir.to_string_lossy().to_string();
+            }
+            match dir.parent() {
+                Some(parent) => dir = parent,
+                None => break,
+            }
+        }
+    }
+    String::new()
+}
+
+/// Create a directory if it doesn't already exist.
+#[tauri::command]
+fn ensure_dir(path: String) -> Result<(), String> {
+    fs::create_dir_all(&path).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -62,6 +96,8 @@ pub fn run() {
             delete_file,
             rename_file,
             is_git_repo,
+            find_git_root,
+            ensure_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -14,6 +14,16 @@ import {
 import { migrateOldDB, deleteDocDB, setCurrentDocId } from "@/lib/idb";
 import { removeDocFromIndex } from "@/lib/search-index";
 import { isTauri } from "@/lib/platform";
+import { serializeToMarkdown } from "@/lib/markdown-serialize";
+import { DEFAULT_STATUSES } from "@/types";
+
+function emptyStrataDoc(): string {
+  return serializeToMarkdown({
+    nodes: new Map(),
+    rootId: "root",
+    statusConfig: [...DEFAULT_STATUSES],
+  });
+}
 
 export const useDocumentsStore = defineStore("documents", () => {
   const documents = ref<DocumentMeta[]>([]);
@@ -83,7 +93,7 @@ export const useDocumentsStore = defineStore("documents", () => {
       // Empty workspace — create a default document
       const filename = "My Document.md";
       const { writeFile } = await import("@/lib/tauri-fs");
-      await writeFile(`${workspace}\\${filename}`, "");
+      await writeFile(`${workspace}\\${filename}`, emptyStrataDoc());
       documents.value = [
         {
           id: filename,
@@ -121,7 +131,7 @@ export const useDocumentsStore = defineStore("documents", () => {
     import("@/lib/tauri-fs").then(({ writeFile }) => {
       import("@/stores/settings").then(({ useSettingsStore }) => {
         const settings = useSettingsStore();
-        writeFile(`${settings.workspacePath}\\${filename}`, "");
+        writeFile(`${settings.workspacePath}\\${filename}`, emptyStrataDoc());
       });
     });
     documents.value = [
