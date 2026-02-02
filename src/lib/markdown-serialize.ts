@@ -38,6 +38,12 @@ export function serializeToMarkdown(opts: SerializeOptions): string {
 
   const defaultStatus = statusConfig[0]?.id ?? 'todo'
 
+  // Build id → label map for serialization
+  const statusLabelById = new Map<string, string>()
+  for (const s of statusConfig) {
+    statusLabelById.set(s.id, s.label)
+  }
+
   function getOrderedChildren(parentId: string): Node[] {
     const children: Node[] = []
     for (const node of nodes.values()) {
@@ -55,30 +61,32 @@ export function serializeToMarkdown(opts: SerializeOptions): string {
       const textLines = (child.text || '').split('\n')
       const firstLine = textLines[0] ?? ''
 
-      let suffix = ''
+      const meta: string[] = []
 
-      // Status marker (omit if default)
+      // Status marker (omit if default) — use human-readable label
       if (child.status && child.status !== defaultStatus) {
-        suffix += ` !status(${child.status})`
+        const label = statusLabelById.get(child.status) ?? child.status
+        meta.push(`!status(${label})`)
       }
 
       // Tags
       if (child.tags?.length) {
-        suffix += ' ' + child.tags.map((t) => `#${t}`).join(' ')
+        meta.push(child.tags.map((t) => `#${t}`).join(' '))
       }
 
       // Due date
       if (child.dueDate) {
         const d = new Date(child.dueDate)
         const dateStr = d.toISOString().slice(0, 10)
-        suffix += ` @due(${dateStr})`
+        meta.push(`@due(${dateStr})`)
       }
 
       // Collapsed
       if (child.collapsed) {
-        suffix += ' !collapsed'
+        meta.push('!collapsed')
       }
 
+      const suffix = meta.length > 0 ? '  ' + meta.join(' ') : ''
       lines.push(`${indent}- ${firstLine}${suffix}`)
 
       // Continuation lines for multiline text
@@ -106,6 +114,12 @@ export function parseMarkdown(content: string): ParseResult {
   const { frontmatter, body } = splitFrontmatter(content)
   const statusConfig = parseFrontmatterStatuses(frontmatter)
   const defaultStatus = statusConfig[0]?.id ?? 'todo'
+
+  // Build label → id map for resolving human-readable status labels
+  const statusIdByLabel = new Map<string, string>()
+  for (const s of statusConfig) {
+    statusIdByLabel.set(s.label.toLowerCase(), s.id)
+  }
 
   const rootId = crypto.randomUUID()
   const nodes = new Map<string, Node>()
@@ -149,11 +163,12 @@ export function parseMarkdown(content: string): ParseResult {
     const depth = Math.floor(indentStr.length / 2)
     let lineContent = match[2]!
 
-    // Extract status
+    // Extract status — resolve human-readable label to internal id
     let status = defaultStatus
     const statusMatch = lineContent.match(STATUS_RE)
     if (statusMatch) {
-      status = statusMatch[1]!
+      const raw = statusMatch[1]!
+      status = statusIdByLabel.get(raw.toLowerCase()) ?? raw
       lineContent = lineContent.replace(STATUS_RE, '')
     }
 

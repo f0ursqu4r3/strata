@@ -18,6 +18,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   contextmenu: [nodeId: string, x: number, y: number];
+  'row-pointerdown': [nodeId: string, event: PointerEvent];
 }>();
 
 const store = useDocStore();
@@ -269,14 +270,10 @@ function onBulletDblClick(e: MouseEvent) {
 }
 
 // ── Drag reorder ──
-function onDragStart(e: DragEvent) {
-  e.dataTransfer!.effectAllowed = "move";
-  e.dataTransfer!.setData("application/x-strata-node", props.node.id);
-  (e.target as HTMLElement).classList.add("opacity-40");
-}
-
-function onDragEnd(e: DragEvent) {
-  (e.target as HTMLElement).classList.remove("opacity-40");
+function onRowPointerDown(e: PointerEvent) {
+  // Only primary button, not while editing
+  if (e.button !== 0 || isEditing.value) return;
+  emit('row-pointerdown', props.node.id, e);
 }
 
 // ── Inline status picker ──
@@ -320,11 +317,9 @@ function onStatusPickerBlur() {
     :aria-expanded="hasChildren ? !node.collapsed : undefined"
     :aria-level="depth + 1"
     :aria-label="node.text || '(empty)'"
-    draggable="true"
+    @pointerdown="onRowPointerDown"
     @click="onClick"
     @contextmenu="onContextMenu"
-    @dragstart="onDragStart"
-    @dragend="onDragEnd"
   >
     <!-- Collapse toggle / bullet -->
     <span

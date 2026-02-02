@@ -74,6 +74,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   resizeObserver?.disconnect()
+  document.removeEventListener('pointermove', onDocumentPointerMove)
+  document.removeEventListener('pointerup', onDocumentPointerUp)
+  document.removeEventListener('selectstart', onSelectStart)
+  destroyFloatingRow()
 })
 
 function findAction(e: KeyboardEvent, context: 'outline' | 'global'): ShortcutAction | null {
@@ -171,16 +175,63 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-// ── Drag reorder ──
-function onContainerDragOver(e: DragEvent) {
-  if (!e.dataTransfer?.types.includes('application/x-strata-node')) return
-  e.preventDefault()
-  e.dataTransfer!.dropEffect = 'move'
+// ── Pointer-based drag reorder ──
+const DRAG_THRESHOLD = 5
+const dragNodeId = ref<string | null>(null)
+const isDragging = ref(false)
 
-  const rows = containerRef.value?.querySelectorAll('[data-row-idx]')
-  if (!rows) return
+let dragStartX = 0
+let dragStartY = 0
+let grabOffsetX = 0
+let grabOffsetY = 0
+let pendingDragNodeId: string | null = null
+let floatingEl: HTMLElement | null = null
+
+function onRowPointerDown(nodeId: string, e: PointerEvent) {
+  pendingDragNodeId = nodeId
+  dragStartX = e.clientX
+  dragStartY = e.clientY
+
+  const rowEl = (e.target as HTMLElement).closest('[data-row-idx]') as HTMLElement | null
+  if (rowEl) {
+    const rect = rowEl.getBoundingClientRect()
+    grabOffsetX = e.clientX - rect.left
+    grabOffsetY = e.clientY - rect.top
+  }
+
+  document.addEventListener('pointermove', onDocumentPointerMove)
+  document.addEventListener('pointerup', onDocumentPointerUp)
+  document.addEventListener('selectstart', onSelectStart)
+}
+
+function onSelectStart(e: Event) {
+  if (pendingDragNodeId) e.preventDefault()
+}
+
+function onDocumentPointerMove(e: PointerEvent) {
+  if (!pendingDragNodeId) return
+
+  const dx = e.clientX - dragStartX
+  const dy = e.clientY - dragStartY
+
+  if (!isDragging.value) {
+    if (Math.abs(dx) + Math.abs(dy) < DRAG_THRESHOLD) return
+    isDragging.value = true
+    dragNodeId.value = pendingDragNodeId
+    window.getSelection()?.removeAllRanges()
+    createFloatingRow()
+  }
+
+  if (floatingEl) {
+    floatingEl.style.left = `${e.clientX - grabOffsetX}px`
+    floatingEl.style.top = `${e.clientY - grabOffsetY}px`
+  }
+
+  // Compute drop target index based on cursor position
+  const rowEls = containerRef.value?.querySelectorAll('[data-row-idx]')
+  if (!rowEls) return
   let targetIdx = -1
-  for (const row of rows) {
+  for (const row of rowEls) {
     const rect = (row as HTMLElement).getBoundingClientRect()
     if (e.clientY < rect.top + rect.height / 2) {
       targetIdx = parseInt((row as HTMLElement).dataset.rowIdx!)
@@ -191,55 +242,90 @@ function onContainerDragOver(e: DragEvent) {
   dropTargetIdx.value = targetIdx
 }
 
-function onContainerDragLeave() {
-  dropTargetIdx.value = null
+function createFloatingRow() {
+  const rowEl = containerRef.value?.querySelector(`[data-row-idx] [aria-label="${CSS.escape(store.nodes.get(pendingDragNodeId!)?.text || '(empty)')}"]`)?.closest('[data-row-idx]') as HTMLElement | null
+  // Fallback: find by iterating rows
+  let source: HTMLElement | null = rowEl
+  if (!source) {
+    const allRows = containerRef.value?.querySelectorAll('[data-row-idx]')
+    if (allRows) {
+      const rows = store.visibleRows
+      for (const el of allRows) {
+        const idx = parseInt((el as HTMLElement).dataset.rowIdx!)
+        if (rows[idx]?.node.id === pendingDragNodeId) {
+          source = el as HTMLElement
+          break
+        }
+      }
+    }
+  }
+  if (!source) return
+
+  const clone = source.cloneNode(true) as HTMLElement
+  const rect = source.getBoundingClientRect()
+
+  clone.style.position = 'fixed'
+  clone.style.left = `${rect.left}px`
+  clone.style.top = `${rect.top}px`
+  clone.style.width = `${rect.width}px`
+  clone.style.zIndex = '9999'
+  clone.style.pointerEvents = 'none'
+  clone.style.opacity = '0.9'
+  clone.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)'
+  clone.style.background = 'var(--bg-secondary)'
+  clone.style.borderRadius = '4px'
+
+  document.body.appendChild(clone)
+  floatingEl = clone
 }
 
-function onContainerDrop(e: DragEvent) {
-  e.preventDefault()
-  const nodeId = e.dataTransfer?.getData('application/x-strata-node')
+function destroyFloatingRow() {
+  if (floatingEl) {
+    floatingEl.remove()
+    floatingEl = null
+  }
+}
+
+function onDocumentPointerUp() {
+  document.removeEventListener('pointermove', onDocumentPointerMove)
+  document.removeEventListener('pointerup', onDocumentPointerUp)
+  document.removeEventListener('selectstart', onSelectStart)
+
+  if (isDragging.value && dragNodeId.value && dropTargetIdx.value !== null) {
+    const nodeId = dragNodeId.value
+    const targetIdx = dropTargetIdx.value
+    const rows = store.visibleRows
+
+    if (targetIdx === 0) {
+      const siblings = store.getChildren(store.effectiveZoomId)
+      const firstSibling = siblings[0]
+      if (firstSibling && firstSibling.id !== nodeId) {
+        store.moveNode(nodeId, store.effectiveZoomId, rankBefore(firstSibling.pos))
+      }
+    } else if (targetIdx <= rows.length) {
+      const aboveRow = rows[targetIdx - 1]
+      if (aboveRow && aboveRow.node.id !== nodeId) {
+        const aboveNode = aboveRow.node
+        const siblings = store.getChildren(aboveNode.parentId!)
+        const aboveIdx = siblings.findIndex((s) => s.id === aboveNode.id)
+        const nextSibling = siblings[aboveIdx + 1]
+
+        let pos: string
+        if (nextSibling && nextSibling.id !== nodeId) {
+          pos = rankBetween(aboveNode.pos, nextSibling.pos)
+        } else {
+          pos = rankAfter(aboveNode.pos)
+        }
+        store.moveNode(nodeId, aboveNode.parentId, pos)
+      }
+    }
+  }
+
+  destroyFloatingRow()
+  pendingDragNodeId = null
+  dragNodeId.value = null
   dropTargetIdx.value = null
-  if (!nodeId) return
-
-  const rows = store.visibleRows
-  const rowEls = containerRef.value?.querySelectorAll('[data-row-idx]')
-  if (!rowEls) return
-
-  let targetIdx = rows.length
-  for (const row of rowEls) {
-    const rect = (row as HTMLElement).getBoundingClientRect()
-    if (e.clientY < rect.top + rect.height / 2) {
-      targetIdx = parseInt((row as HTMLElement).dataset.rowIdx!)
-      break
-    }
-  }
-
-  const draggedNode = store.nodes.get(nodeId)
-  if (!draggedNode) return
-
-  if (targetIdx === 0) {
-    const siblings = store.getChildren(store.effectiveZoomId)
-    const firstSibling = siblings[0]
-    if (firstSibling && firstSibling.id !== nodeId) {
-      store.moveNode(nodeId, store.effectiveZoomId, rankBefore(firstSibling.pos))
-    }
-  } else if (targetIdx <= rows.length) {
-    const aboveRow = rows[targetIdx - 1]
-    if (!aboveRow || aboveRow.node.id === nodeId) return
-    const aboveNode = aboveRow.node
-
-    const siblings = store.getChildren(aboveNode.parentId!)
-    const aboveIdx = siblings.findIndex((s) => s.id === aboveNode.id)
-    const nextSibling = siblings[aboveIdx + 1]
-
-    let pos: string
-    if (nextSibling && nextSibling.id !== nodeId) {
-      pos = rankBetween(aboveNode.pos, nextSibling.pos)
-    } else {
-      pos = rankAfter(aboveNode.pos)
-    }
-    store.moveNode(nodeId, aboveNode.parentId, pos)
-  }
+  isDragging.value = false
 }
 
 function onContainerDblClick(e: MouseEvent) {
@@ -300,12 +386,7 @@ watch(
     @dblclick="onContainerDblClick"
   >
     <!-- Rows -->
-    <div
-      class="px-1"
-      @dragover="onContainerDragOver"
-      @dragleave="onContainerDragLeave"
-      @drop="onContainerDrop"
-    >
+    <div class="px-1">
       <!-- Virtualized mode -->
       <template v-if="useVirtual">
         <div :style="{ height: topSpacer + 'px' }" />
@@ -314,11 +395,15 @@ watch(
             v-if="dropTargetIdx === row.globalIdx"
             class="h-0.5 bg-(--accent-500) rounded mx-2 my-px"
           />
-          <div :data-row-idx="row.globalIdx">
+          <div
+            :data-row-idx="row.globalIdx"
+            :class="{ 'opacity-30': dragNodeId === row.node.id }"
+          >
             <OutlineRow
               :node="row.node"
               :depth="row.depth"
               @contextmenu="onRowContextMenu"
+              @row-pointerdown="onRowPointerDown"
             />
           </div>
         </template>
@@ -332,11 +417,15 @@ watch(
             v-if="dropTargetIdx === idx"
             class="h-0.5 bg-(--accent-500) rounded mx-2 my-px"
           />
-          <div :data-row-idx="idx">
+          <div
+            :data-row-idx="idx"
+            :class="{ 'opacity-30': dragNodeId === row.node.id }"
+          >
             <OutlineRow
               :node="row.node"
               :depth="row.depth"
               @contextmenu="onRowContextMenu"
+              @row-pointerdown="onRowPointerDown"
             />
           </div>
         </template>
