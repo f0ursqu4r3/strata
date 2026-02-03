@@ -328,7 +328,7 @@
   <section class="download" id="download">
     <div class="container">
       <h2>Download</h2>
-      <p class="note">v0.1.0 &mdash; macOS, Linux, Windows</p>
+      <p class="note" id="dl-version">macOS, Linux, Windows</p>
       <div class="download-buttons">
         <a href="https://github.com/f0ursqu4r3/strata/releases/latest" class="platform-btn" id="btn-mac">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
@@ -352,17 +352,54 @@
     <span class="sep">&middot;</span>
     <span>MIT License</span>
     <span class="sep">&middot;</span>
-    <span>v0.1.0</span>
+    <span id="footer-version"></span>
   </footer>
 
-  <!-- Highlight user's platform -->
   <script>
+    const REPO = 'f0ursqu4r3/strata'
+    const FALLBACK = `https://github.com/${REPO}/releases/latest`
+
+    // Highlight user's platform
     const ua = navigator.userAgent.toLowerCase()
-    let btn = null
-    if (ua.includes('mac')) btn = document.getElementById('btn-mac')
-    else if (ua.includes('linux')) btn = document.getElementById('btn-linux')
-    else if (ua.includes('win')) btn = document.getElementById('btn-win')
-    if (btn) btn.classList.add('recommended')
+    let detectedPlatform = null
+    if (ua.includes('mac')) detectedPlatform = 'mac'
+    else if (ua.includes('linux')) detectedPlatform = 'linux'
+    else if (ua.includes('win')) detectedPlatform = 'win'
+
+    const btnMac = document.getElementById('btn-mac')
+    const btnLinux = document.getElementById('btn-linux')
+    const btnWin = document.getElementById('btn-win')
+
+    if (detectedPlatform === 'mac') btnMac.classList.add('recommended')
+    else if (detectedPlatform === 'linux') btnLinux.classList.add('recommended')
+    else if (detectedPlatform === 'win') btnWin.classList.add('recommended')
+
+    // Fetch latest release and update download links
+    fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(release => {
+        const assets = release.assets || []
+        const find = (pattern) => assets.find(a => pattern.test(a.name))
+
+        const dmg = find(/\.dmg$/)
+        const appImage = find(/\.AppImage$/)
+        const deb = find(/\.deb$/)
+        const exe = find(/setup\.exe$/i) || find(/\.exe$/i)
+        const msi = find(/\.msi$/)
+
+        if (dmg) btnMac.href = dmg.browser_download_url
+        if (appImage) btnLinux.href = appImage.browser_download_url
+        else if (deb) btnLinux.href = deb.browser_download_url
+        if (exe) btnWin.href = exe.browser_download_url
+        else if (msi) btnWin.href = msi.browser_download_url
+
+        const tag = release.tag_name
+        document.getElementById('dl-version').textContent = `${tag} — macOS, Linux, Windows`
+        document.getElementById('footer-version').textContent = tag
+      })
+      .catch(() => {
+        document.getElementById('footer-version').textContent = 'pre-release'
+      })
   </script>
 </body>
 </html>
