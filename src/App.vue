@@ -29,6 +29,7 @@ import TrashPanel from "@/components/TrashPanel.vue";
 import ExportMenu from "@/components/ExportMenu.vue";
 import StatusEditor from "@/components/StatusEditor.vue";
 import GlobalSearch from "@/components/GlobalSearch.vue";
+import CommandPalette from "@/components/CommandPalette.vue";
 import ShortcutEditor from "@/components/ShortcutEditor.vue";
 import { matchesCombo } from "@/lib/shortcuts";
 import { isTauri } from "@/lib/platform";
@@ -43,6 +44,7 @@ const showSettings = ref(false);
 const showTrash = ref(false);
 const showStatusEditor = ref(false);
 const showGlobalSearch = ref(false);
+const showCommandPalette = ref(false);
 const showShortcutEditor = ref(false);
 const showTagFilter = ref(false);
 const showDueDateFilter = ref(false);
@@ -149,6 +151,11 @@ function onGlobalKeydown(e: KeyboardEvent) {
   if (searchDef && matchesCombo(e, searchDef.combo)) {
     showGlobalSearch.value = !showGlobalSearch.value;
     store.searchQuery = "";
+    e.preventDefault();
+  }
+  const paletteDef = settings.resolvedShortcuts.find((s) => s.action === "commandPalette");
+  if (paletteDef && matchesCombo(e, paletteDef.combo)) {
+    showCommandPalette.value = !showCommandPalette.value;
     e.preventDefault();
   }
 }
@@ -446,7 +453,7 @@ function onZoomRoot() {
         </div>
         <Splitpanes v-else-if="store.viewMode === 'split'" class="h-full">
           <Pane :min-size="20" :size="50">
-            <OutlineView ref="outlineRef" />
+            <OutlineView ref="outlineRef" @openSearch="showGlobalSearch = true" />
           </Pane>
           <Pane :min-size="20" :size="50">
             <KanbanBoard @open-status-editor="showStatusEditor = true" />
@@ -454,7 +461,7 @@ function onZoomRoot() {
         </Splitpanes>
 
         <div v-else-if="store.viewMode === 'outline'" class="h-full">
-          <OutlineView ref="outlineRef" />
+          <OutlineView ref="outlineRef" @openSearch="showGlobalSearch = true" />
         </div>
         <div v-else class="h-full">
           <KanbanBoard @open-status-editor="showStatusEditor = true" />
@@ -481,6 +488,16 @@ function onZoomRoot() {
 
   <!-- Shortcut editor -->
   <ShortcutEditor v-if="showShortcutEditor" @close="showShortcutEditor = false" />
+
+  <!-- Command palette -->
+  <CommandPalette
+    v-if="showCommandPalette"
+    @close="showCommandPalette = false"
+    @openSettings="showCommandPalette = false; showSettings = true"
+    @openShortcuts="showCommandPalette = false; showShortcuts = true"
+    @openTrash="showCommandPalette = false; showTrash = true"
+    @openSearch="showCommandPalette = false; showGlobalSearch = true"
+  />
 
   <!-- Global search -->
   <GlobalSearch

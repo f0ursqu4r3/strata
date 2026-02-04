@@ -26,9 +26,10 @@ interface PersistedSettings {
   sidebarOpen?: boolean
   shortcuts?: Record<string, KeyCombo>
   workspacePath?: string
+  vimMode?: boolean
 }
 
-function loadSettings(): { theme: string; fontSize: number; showTags: boolean; showBoardTags: boolean; sidebarOpen: boolean; shortcuts: Record<string, KeyCombo>; workspacePath: string } {
+function loadSettings(): { theme: string; fontSize: number; showTags: boolean; showBoardTags: boolean; sidebarOpen: boolean; shortcuts: Record<string, KeyCombo>; workspacePath: string; vimMode: boolean } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
@@ -48,7 +49,7 @@ function loadSettings(): { theme: string; fontSize: number; showTags: boolean; s
       const valid = themeRegistry.some((t) => t.key === themeKey)
       if (!valid) themeKey = 'github-light'
 
-      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, showBoardTags: parsed.showBoardTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false, shortcuts: parsed.shortcuts ?? {}, workspacePath: parsed.workspacePath ?? '' }
+      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, showBoardTags: parsed.showBoardTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false, shortcuts: parsed.shortcuts ?? {}, workspacePath: parsed.workspacePath ?? '', vimMode: parsed.vimMode ?? false }
     }
   } catch {
     // ignore
@@ -64,6 +65,7 @@ function loadSettings(): { theme: string; fontSize: number; showTags: boolean; s
     sidebarOpen: false,
     shortcuts: {},
     workspacePath: '',
+    vimMode: false,
   }
 }
 
@@ -76,6 +78,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const sidebarOpen = ref(saved.sidebarOpen)
   const shortcutOverrides = ref<Record<string, KeyCombo>>(saved.shortcuts)
   const workspacePath = ref(saved.workspacePath)
+  const vimMode = ref(saved.vimMode)
 
   const resolvedShortcuts = computed<ShortcutDef[]>(() => {
     return DEFAULT_SHORTCUTS.map((def) => {
@@ -98,6 +101,7 @@ export const useSettingsStore = defineStore('settings', () => {
         sidebarOpen: sidebarOpen.value,
         shortcuts: shortcutOverrides.value,
         workspacePath: workspacePath.value,
+        vimMode: vimMode.value,
       }),
     )
   }
@@ -161,6 +165,11 @@ export const useSettingsStore = defineStore('settings', () => {
     persist()
   }
 
+  function setVimMode(v: boolean) {
+    vimMode.value = v
+    persist()
+  }
+
   function setWorkspacePath(path: string) {
     workspacePath.value = path
     persist()
@@ -171,7 +180,7 @@ export const useSettingsStore = defineStore('settings', () => {
     applyFontSize()
   }
 
-  watch([theme, fontSize, showTags, showBoardTags, sidebarOpen, shortcutOverrides, workspacePath], persist)
+  watch([theme, fontSize, showTags, showBoardTags, sidebarOpen, shortcutOverrides, workspacePath, vimMode], persist)
 
   return {
     theme,
@@ -187,6 +196,8 @@ export const useSettingsStore = defineStore('settings', () => {
     setShowTags,
     setShowBoardTags,
     setSidebarOpen,
+    vimMode,
+    setVimMode,
     workspacePath,
     updateShortcut,
     resetShortcut,

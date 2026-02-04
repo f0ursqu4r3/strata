@@ -8,9 +8,12 @@ export type ShortcutAction =
   | 'outdent'
   | 'delete'
   | 'newSibling'
+  | 'zoomIn'
+  | 'zoomOut'
   | 'undo'
   | 'redo'
   | 'globalSearch'
+  | 'commandPalette'
 
 export interface KeyCombo {
   key: string
@@ -35,11 +38,14 @@ export const DEFAULT_SHORTCUTS: ShortcutDef[] = [
   { action: 'undo', combo: { key: 'z', ctrl: true }, label: 'Undo', category: 'General', context: 'global' },
   { action: 'redo', combo: { key: 'z', ctrl: true, shift: true }, label: 'Redo', category: 'General', context: 'global' },
   { action: 'globalSearch', combo: { key: 'F', ctrl: true, shift: true }, label: 'Search all documents', category: 'General', context: 'global' },
+  { action: 'commandPalette', combo: { key: 'k', ctrl: true }, label: 'Command palette', category: 'General', context: 'global' },
   // Outline (not editing)
   { action: 'moveUp', combo: { key: 'ArrowUp' }, label: 'Move selection up', category: 'Navigation', context: 'outline' },
   { action: 'moveDown', combo: { key: 'ArrowDown' }, label: 'Move selection down', category: 'Navigation', context: 'outline' },
   { action: 'startEditing', combo: { key: 'Enter' }, label: 'Start editing', category: 'Navigation', context: 'outline' },
   { action: 'toggleCollapse', combo: { key: ' ' }, label: 'Toggle collapse', category: 'Navigation', context: 'outline' },
+  { action: 'zoomIn', combo: { key: 'ArrowRight', alt: true }, label: 'Zoom into node', category: 'Navigation', context: 'outline' },
+  { action: 'zoomOut', combo: { key: 'ArrowLeft', alt: true }, label: 'Zoom out to parent', category: 'Navigation', context: 'outline' },
   { action: 'indent', combo: { key: 'Tab' }, label: 'Indent', category: 'Editing', context: 'outline' },
   { action: 'outdent', combo: { key: 'Tab', shift: true }, label: 'Outdent', category: 'Editing', context: 'outline' },
   { action: 'delete', combo: { key: 'Delete' }, label: 'Delete node', category: 'Editing', context: 'outline' },

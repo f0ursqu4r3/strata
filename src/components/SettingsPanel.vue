@@ -137,6 +137,24 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
           <h3 class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide mb-3">
             Display
           </h3>
+          <label class="flex items-center justify-between cursor-pointer mb-3">
+            <div>
+              <span class="text-sm text-(--text-secondary)">Vim keyboard mode</span>
+              <p class="text-[11px] text-(--text-faint) mt-0.5">j/k navigate, i edit, dd delete, o new sibling</p>
+            </div>
+            <button
+              class="relative w-9 h-5 rounded-full transition-colors cursor-pointer shrink-0 ml-3"
+              :class="settings.vimMode ? 'bg-(--accent-500)' : 'bg-(--bg-active)'"
+              role="switch"
+              :aria-checked="settings.vimMode"
+              @click="settings.setVimMode(!settings.vimMode)"
+            >
+              <span
+                class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+                :class="{ 'translate-x-4': settings.vimMode }"
+              />
+            </button>
+          </label>
           <label class="flex items-center justify-between cursor-pointer">
             <span class="text-sm text-(--text-secondary)">Show tags on rows</span>
             <button

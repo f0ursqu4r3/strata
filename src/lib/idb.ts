@@ -117,6 +117,11 @@ export async function getOpCount(): Promise<number> {
   return db().ops.count()
 }
 
+export async function loadOpsForNode(nodeId: string): Promise<Op[]> {
+  return (await db().ops.orderBy('seq').toArray())
+    .filter(op => (op.payload as { id?: string }).id === nodeId)
+}
+
 export async function saveSnapshot(snapshot: Snapshot): Promise<void> {
   await db().snapshots.put(snapshot as SnapshotRecord)
 }

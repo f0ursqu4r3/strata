@@ -41,6 +41,8 @@ export const useDocStore = defineStore("doc", () => {
   const dueDateFilter = ref<"all" | "overdue" | "today" | "week">("all");
   const currentDocId = ref<string>("");
   const suppressTransitions = ref(false);
+  const selectedIds = ref<Set<string>>(new Set());
+  const selectionAnchor = ref<string>("");
 
   // ── Debounced search-index updater ──
   let _indexTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1186,6 +1188,91 @@ export const useDocStore = defineStore("doc", () => {
 
   function selectNode(id: string) {
     selectedId.value = id;
+    selectedIds.value = new Set([id]);
+    selectionAnchor.value = id;
+  }
+
+  function clearSelection() {
+    selectedId.value = '';
+    selectedIds.value = new Set();
+    selectionAnchor.value = '';
+  }
+
+  function toggleSelectNode(id: string) {
+    const newSet = new Set(selectedIds.value);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+      // Update selectedId to last remaining or the toggled one
+      if (newSet.size > 0) {
+        selectedId.value = [...newSet][newSet.size - 1]!;
+      }
+    } else {
+      newSet.add(id);
+      selectedId.value = id;
+    }
+    selectedIds.value = newSet;
+    selectionAnchor.value = id;
+  }
+
+  function rangeSelectTo(id: string) {
+    const rows = visibleRows.value;
+    const anchorIdx = rows.findIndex((r) => r.node.id === selectionAnchor.value);
+    const targetIdx = rows.findIndex((r) => r.node.id === id);
+    if (anchorIdx === -1 || targetIdx === -1) return;
+
+    const start = Math.min(anchorIdx, targetIdx);
+    const end = Math.max(anchorIdx, targetIdx);
+    const newSet = new Set<string>();
+    for (let i = start; i <= end; i++) {
+      newSet.add(rows[i]!.node.id);
+    }
+    selectedIds.value = newSet;
+    selectedId.value = id;
+  }
+
+  function isSelected(id: string): boolean {
+    return selectedIds.value.has(id);
+  }
+
+  function bulkSetStatus(status: Status) {
+    for (const id of selectedIds.value) {
+      const op = makeOp("setStatus", { type: "setStatus", id, status });
+      dispatch(op);
+    }
+  }
+
+  function bulkTombstone() {
+    const rows = visibleRows.value;
+    const ids = selectedIds.value;
+    // Find first row after selection for focus
+    // Find a row to focus after deletion: prefer first non-selected row after the last selected
+    let lastSelectedIdx = -1;
+    let firstSelectedIdx = -1;
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (ids.has(rows[i]!.node.id)) {
+        if (lastSelectedIdx === -1) lastSelectedIdx = i;
+        firstSelectedIdx = i;
+      }
+    }
+    let nextId: string | null = null;
+    for (let i = lastSelectedIdx + 1; i < rows.length; i++) {
+      if (!ids.has(rows[i]!.node.id)) {
+        nextId = rows[i]!.node.id;
+        break;
+      }
+    }
+    if (!nextId && firstSelectedIdx > 0) {
+      nextId = rows[firstSelectedIdx - 1]!.node.id;
+    }
+    for (const id of ids) {
+      const op = makeOp("tombstone", { type: "tombstone", id });
+      dispatch(op);
+    }
+    if (nextId) {
+      selectNode(nextId);
+    } else {
+      selectedIds.value = new Set();
+    }
   }
 
   function startEditing(id: string, trigger: "keyboard" | "click" | "dblclick" = "keyboard") {
@@ -1429,6 +1516,13 @@ export const useDocStore = defineStore("doc", () => {
     outdentAndKeepEditing,
     createSiblingBelowAndEdit,
     selectNode,
+    clearSelection,
+    selectedIds,
+    toggleSelectNode,
+    rangeSelectTo,
+    isSelected,
+    bulkSetStatus,
+    bulkTombstone,
     startEditing,
     stopEditing,
     setViewMode,

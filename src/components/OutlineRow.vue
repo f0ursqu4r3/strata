@@ -68,7 +68,7 @@ const nodeDueLabel = computed(() =>
   props.node.dueDate ? formatDueDate(props.node.dueDate) : null,
 );
 
-const isSelected = computed(() => store.selectedId === props.node.id);
+const isSelected = computed(() => store.isSelected(props.node.id));
 const isEditing = computed(() => store.editingId === props.node.id);
 const hasChildren = computed(() => store.getChildren(props.node.id).length > 0);
 
@@ -236,6 +236,19 @@ function onFocus() {
 function onClick(e: MouseEvent) {
   // Don't start editing when clicking a rendered link
   if ((e.target as HTMLElement).closest?.("a")) return;
+
+  // Multi-select: Shift+Click for range, Cmd/Ctrl+Click for toggle
+  if (e.shiftKey) {
+    e.preventDefault();
+    store.rangeSelectTo(props.node.id);
+    return;
+  }
+  if (e.metaKey || e.ctrlKey) {
+    e.preventDefault();
+    store.toggleSelectNode(props.node.id);
+    return;
+  }
+
   store.selectNode(props.node.id);
   if (!isEditing.value) {
     store.startEditing(props.node.id, "click");
@@ -308,6 +321,7 @@ function onStatusPickerBlur() {
     :class="{
       'bg-(--bg-active)': isSelected && !isEditing,
       'bg-(--bg-editing)': isEditing,
+      'ring-1 ring-(--accent-300)': isSelected && store.selectedIds.size > 1 && !isEditing,
       'ring-1 ring-(--highlight-search-ring) bg-(--highlight-search-bg)':
         isSearchMatch && !isSelected && !isEditing,
     }"

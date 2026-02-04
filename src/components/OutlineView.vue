@@ -6,14 +6,21 @@ import { matchesCombo, type ShortcutAction } from '@/lib/shortcuts'
 import { rankBefore, rankBetween, rankAfter, initialRank } from '@/lib/rank'
 import OutlineRow from './OutlineRow.vue'
 import ContextMenu from './ContextMenu.vue'
+import NodeHistory from './NodeHistory.vue'
+
+const emit = defineEmits<{
+  openSearch: []
+}>()
 
 const store = useDocStore()
 const settings = useSettingsStore()
 const containerRef = ref<HTMLElement | null>(null)
 const dropTargetIdx = ref<number | null>(null)
+const dropAsChildId = ref<string | null>(null)
 
 // Context menu state
 const ctxMenu = ref<{ nodeId: string; x: number; y: number } | null>(null)
+const historyNodeId = ref<string | null>(null)
 
 function onRowContextMenu(nodeId: string, x: number, y: number) {
   ctxMenu.value = { nodeId, x, y }
@@ -88,6 +95,129 @@ function findAction(e: KeyboardEvent, context: 'outline' | 'global'): ShortcutAc
   return null
 }
 
+// ── Vim mode ──
+let vimPendingKey = ''
+let vimPendingTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearVimPending() {
+  vimPendingKey = ''
+  if (vimPendingTimer) {
+    clearTimeout(vimPendingTimer)
+    vimPendingTimer = null
+  }
+}
+
+function handleVimKey(e: KeyboardEvent): boolean {
+  if (!settings.vimMode || store.editingId) return false
+  if (e.ctrlKey || e.metaKey || e.altKey) return false
+
+  const key = e.key
+
+  // Two-key combos
+  if (vimPendingKey) {
+    const combo = vimPendingKey + key
+    clearVimPending()
+
+    if (combo === 'dd' && store.selectedId) {
+      const rows = store.visibleRows
+      const idx = rows.findIndex((r) => r.node.id === store.selectedId)
+      const nextId = rows[idx + 1]?.node.id ?? rows[idx - 1]?.node.id ?? null
+      store.tombstone(store.selectedId)
+      if (nextId) store.selectNode(nextId)
+      e.preventDefault()
+      return true
+    }
+    if (combo === 'gg') {
+      const rows = store.visibleRows
+      if (rows.length > 0) {
+        store.selectNode(rows[0]!.node.id)
+        scrollSelectedIntoView()
+      }
+      e.preventDefault()
+      return true
+    }
+    if (combo === 'zc' && store.selectedId) {
+      const node = store.nodes.get(store.selectedId)
+      if (node && store.getChildren(node.id).length > 0 && !node.collapsed) {
+        store.toggleCollapsed(node.id)
+      }
+      e.preventDefault()
+      return true
+    }
+    if (combo === 'zo' && store.selectedId) {
+      const node = store.nodes.get(store.selectedId)
+      if (node && node.collapsed) {
+        store.toggleCollapsed(node.id)
+      }
+      e.preventDefault()
+      return true
+    }
+    return false
+  }
+
+  // Start two-key sequences
+  if (key === 'd' || key === 'g' || key === 'z') {
+    vimPendingKey = key
+    vimPendingTimer = setTimeout(clearVimPending, 500)
+    e.preventDefault()
+    return true
+  }
+
+  // Single keys
+  if (key === 'j') {
+    store.moveSelectionDown()
+    scrollSelectedIntoView()
+    e.preventDefault()
+    return true
+  }
+  if (key === 'k') {
+    store.moveSelectionUp()
+    scrollSelectedIntoView()
+    e.preventDefault()
+    return true
+  }
+  if (key === 'i') {
+    if (store.selectedId) {
+      store.startEditing(store.selectedId, 'keyboard')
+      e.preventDefault()
+    }
+    return true
+  }
+  if (key === 'o') {
+    if (store.selectedId) {
+      const node = store.nodes.get(store.selectedId)
+      if (node) {
+        const siblings = store.getChildren(node.parentId!)
+        const idx = siblings.findIndex((s) => s.id === node.id)
+        const next = siblings[idx + 1]
+        const pos = next ? rankBetween(node.pos, next.pos) : rankAfter(node.pos)
+        const op = store.createNode(node.parentId!, pos)
+        const newId = (op.payload as { id: string }).id
+        store.selectNode(newId)
+        store.startEditing(newId, 'keyboard')
+        e.preventDefault()
+      }
+    }
+    return true
+  }
+  if (key === 'G') {
+    const rows = store.visibleRows
+    if (rows.length > 0) {
+      store.selectNode(rows[rows.length - 1]!.node.id)
+      scrollSelectedIntoView()
+    }
+    e.preventDefault()
+    return true
+  }
+  if (key === '/') {
+    emit('openSearch')
+    e.preventDefault()
+    return true
+  }
+
+  return false
+}
+
 function onKeydown(e: KeyboardEvent) {
   // Global shortcuts (undo/redo) work even while editing
   const globalAction = findAction(e, 'global')
@@ -106,12 +236,30 @@ function onKeydown(e: KeyboardEvent) {
 
   if (store.editingId) return
 
+  // Escape clears multi-selection (or deselects)
+  if (e.key === 'Escape') {
+    if (store.selectedIds.size > 1) {
+      store.selectNode(store.selectedId)
+    } else if (store.selectedId) {
+      store.clearSelection()
+    }
+    e.preventDefault()
+    return
+  }
+
+  // Vim mode keys (before standard outline shortcuts)
+  if (handleVimKey(e)) return
+
   // Status shortcuts: Ctrl+1..9 → dynamic from statusDefs
   if ((e.ctrlKey || e.metaKey) && store.selectedId && e.key >= '1' && e.key <= '9') {
     const idx = parseInt(e.key) - 1
     const def = store.statusDefs[idx]
     if (def) {
-      store.setStatus(store.selectedId, def.id)
+      if (store.selectedIds.size > 1) {
+        store.bulkSetStatus(def.id)
+      } else {
+        store.setStatus(store.selectedId, def.id)
+      }
       e.preventDefault()
       return
     }
@@ -153,7 +301,10 @@ function onKeydown(e: KeyboardEvent) {
       e.preventDefault()
       break
     case 'delete':
-      if (store.selectedId) {
+      if (store.selectedIds.size > 1) {
+        store.bulkTombstone()
+        e.preventDefault()
+      } else if (store.selectedId) {
         const rows = store.visibleRows
         const idx = rows.findIndex((r) => r.node.id === store.selectedId)
         const nextId =
@@ -172,6 +323,16 @@ function onKeydown(e: KeyboardEvent) {
         }
       }
       break
+    case 'zoomIn':
+      if (store.selectedId) {
+        store.zoomIn(store.selectedId)
+        e.preventDefault()
+      }
+      break
+    case 'zoomOut':
+      store.zoomOut()
+      e.preventDefault()
+      break
   }
 }
 
@@ -179,6 +340,35 @@ function onKeydown(e: KeyboardEvent) {
 const DRAG_THRESHOLD = 5
 const dragNodeId = ref<string | null>(null)
 const isDragging = ref(false)
+
+// The set of root-level node IDs being dragged (multi-select aware)
+const dragRootIds = computed(() => {
+  if (!dragNodeId.value) return [] as string[]
+  // If the dragged node is part of a multi-selection, drag all selected nodes
+  if (store.selectedIds.size > 1 && store.selectedIds.has(dragNodeId.value)) {
+    // Return selected nodes in visible order
+    return store.visibleRows
+      .filter((r) => store.selectedIds.has(r.node.id))
+      .map((r) => r.node.id)
+  }
+  return [dragNodeId.value]
+})
+
+const dragSubtreeIds = computed(() => {
+  const ids = new Set<string>()
+  if (!dragNodeId.value) return ids
+  function addDescendants(parentId: string) {
+    for (const child of store.getChildren(parentId)) {
+      ids.add(child.id)
+      addDescendants(child.id)
+    }
+  }
+  for (const rootId of dragRootIds.value) {
+    ids.add(rootId)
+    addDescendants(rootId)
+  }
+  return ids
+})
 
 let dragStartX = 0
 let dragStartY = 0
@@ -227,56 +417,87 @@ function onDocumentPointerMove(e: PointerEvent) {
     floatingEl.style.top = `${e.clientY - grabOffsetY}px`
   }
 
-  // Compute drop target index based on cursor position
+  // Compute drop target: 3-zone detection per row (top 25% = before, mid 50% = as child, bottom 25% = after)
   const rowEls = containerRef.value?.querySelectorAll('[data-row-idx]')
   if (!rowEls) return
-  let targetIdx = -1
+  const subtreeIds = dragSubtreeIds.value
+  let targetIdx: number | null = null
+  let childId: string | null = null
+
   for (const row of rowEls) {
+    const idx = parseInt((row as HTMLElement).dataset.rowIdx!)
+    const rowNode = store.visibleRows[idx]?.node
+    if (rowNode && subtreeIds.has(rowNode.id)) continue
     const rect = (row as HTMLElement).getBoundingClientRect()
-    if (e.clientY < rect.top + rect.height / 2) {
-      targetIdx = parseInt((row as HTMLElement).dataset.rowIdx!)
+    const y = e.clientY - rect.top
+    const h = rect.height
+
+    if (y < 0) {
+      // Cursor is above this row — drop before it
+      targetIdx = idx
       break
     }
+    if (y < h * 0.25) {
+      targetIdx = idx
+      break
+    }
+    if (y < h * 0.75) {
+      childId = rowNode!.id
+      break
+    }
+    // Bottom 25% — continue to next row (will become "before next" or "end")
   }
-  if (targetIdx === -1) targetIdx = store.visibleRows.length
-  dropTargetIdx.value = targetIdx
+
+  if (childId) {
+    dropTargetIdx.value = null
+    dropAsChildId.value = childId
+  } else {
+    dropTargetIdx.value = targetIdx ?? store.visibleRows.length
+    dropAsChildId.value = null
+  }
 }
 
 function createFloatingRow() {
-  const rowEl = containerRef.value?.querySelector(`[data-row-idx] [aria-label="${CSS.escape(store.nodes.get(pendingDragNodeId!)?.text || '(empty)')}"]`)?.closest('[data-row-idx]') as HTMLElement | null
-  // Fallback: find by iterating rows
-  let source: HTMLElement | null = rowEl
-  if (!source) {
-    const allRows = containerRef.value?.querySelectorAll('[data-row-idx]')
-    if (allRows) {
-      const rows = store.visibleRows
-      for (const el of allRows) {
-        const idx = parseInt((el as HTMLElement).dataset.rowIdx!)
-        if (rows[idx]?.node.id === pendingDragNodeId) {
-          source = el as HTMLElement
-          break
-        }
-      }
+  const allRowEls = containerRef.value?.querySelectorAll('[data-row-idx]')
+  if (!allRowEls) return
+
+  const rows = store.visibleRows
+  const subtreeIds = dragSubtreeIds.value
+
+  // Collect all DOM elements that belong to the dragged subtree
+  const sources: HTMLElement[] = []
+  for (const el of allRowEls) {
+    const idx = parseInt((el as HTMLElement).dataset.rowIdx!)
+    const rowNode = rows[idx]?.node
+    if (rowNode && subtreeIds.has(rowNode.id)) {
+      sources.push(el as HTMLElement)
     }
   }
-  if (!source) return
+  if (sources.length === 0) return
 
-  const clone = source.cloneNode(true) as HTMLElement
-  const rect = source.getBoundingClientRect()
+  const firstRect = sources[0]!.getBoundingClientRect()
 
-  clone.style.position = 'fixed'
-  clone.style.left = `${rect.left}px`
-  clone.style.top = `${rect.top}px`
-  clone.style.width = `${rect.width}px`
-  clone.style.zIndex = '9999'
-  clone.style.pointerEvents = 'none'
-  clone.style.opacity = '0.9'
-  clone.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)'
-  clone.style.background = 'var(--bg-secondary)'
-  clone.style.borderRadius = '4px'
+  const wrapper = document.createElement('div')
+  wrapper.style.position = 'fixed'
+  wrapper.style.left = `${firstRect.left}px`
+  wrapper.style.top = `${firstRect.top}px`
+  wrapper.style.width = `${firstRect.width}px`
+  wrapper.style.zIndex = '9999'
+  wrapper.style.pointerEvents = 'none'
+  wrapper.style.opacity = '0.9'
+  wrapper.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)'
+  wrapper.style.background = 'var(--bg-secondary)'
+  wrapper.style.borderRadius = '4px'
+  wrapper.style.overflow = 'hidden'
 
-  document.body.appendChild(clone)
-  floatingEl = clone
+  for (const src of sources) {
+    const clone = src.cloneNode(true) as HTMLElement
+    clone.style.opacity = '1'
+    wrapper.appendChild(clone)
+  }
+
+  document.body.appendChild(wrapper)
+  floatingEl = wrapper
 }
 
 function destroyFloatingRow() {
@@ -291,32 +512,67 @@ function onDocumentPointerUp() {
   document.removeEventListener('pointerup', onDocumentPointerUp)
   document.removeEventListener('selectstart', onSelectStart)
 
-  if (isDragging.value && dragNodeId.value && dropTargetIdx.value !== null) {
-    const nodeId = dragNodeId.value
-    const targetIdx = dropTargetIdx.value
+  if (isDragging.value && dragNodeId.value) {
+    const rootIds = dragRootIds.value
     const rows = store.visibleRows
+    const subtreeIds = dragSubtreeIds.value
 
-    if (targetIdx === 0) {
-      const siblings = store.getChildren(store.effectiveZoomId)
-      const firstSibling = siblings[0]
-      if (firstSibling && firstSibling.id !== nodeId) {
-        store.moveNode(nodeId, store.effectiveZoomId, rankBefore(firstSibling.pos))
+    if (dropAsChildId.value) {
+      // Drop as last child of target node
+      const targetId = dropAsChildId.value
+      const children = store.getChildren(targetId)
+      const lastChild = children.filter((c) => !subtreeIds.has(c.id)).pop()
+      let pos = lastChild ? rankAfter(lastChild.pos) : initialRank()
+      for (const id of rootIds) {
+        store.moveNode(id, targetId, pos)
+        pos = rankAfter(pos)
       }
-    } else if (targetIdx <= rows.length) {
-      const aboveRow = rows[targetIdx - 1]
-      if (aboveRow && aboveRow.node.id !== nodeId) {
-        const aboveNode = aboveRow.node
-        const siblings = store.getChildren(aboveNode.parentId!)
-        const aboveIdx = siblings.findIndex((s) => s.id === aboveNode.id)
-        const nextSibling = siblings[aboveIdx + 1]
 
-        let pos: string
-        if (nextSibling && nextSibling.id !== nodeId) {
-          pos = rankBetween(aboveNode.pos, nextSibling.pos)
-        } else {
-          pos = rankAfter(aboveNode.pos)
+      // Ensure target is expanded so the dropped nodes are visible
+      const targetNode = store.nodes.get(targetId)
+      if (targetNode && targetNode.collapsed) {
+        store.toggleCollapsed(targetId)
+      }
+    } else if (dropTargetIdx.value !== null) {
+      const targetIdx = dropTargetIdx.value
+
+      if (targetIdx === 0) {
+        const siblings = store.getChildren(store.effectiveZoomId)
+        const firstSibling = siblings.find((s) => !subtreeIds.has(s.id))
+        if (firstSibling) {
+          let pos = rankBefore(firstSibling.pos)
+          for (const id of rootIds) {
+            store.moveNode(id, store.effectiveZoomId, pos)
+            pos = rankBetween(pos, firstSibling.pos)
+          }
         }
-        store.moveNode(nodeId, aboveNode.parentId, pos)
+      } else if (targetIdx <= rows.length) {
+        // Find the nearest non-subtree row above the drop target
+        let aboveRow = null
+        for (let i = targetIdx - 1; i >= 0; i--) {
+          if (!subtreeIds.has(rows[i]!.node.id)) {
+            aboveRow = rows[i]
+            break
+          }
+        }
+
+        if (aboveRow) {
+          const aboveNode = aboveRow.node
+          const siblings = store.getChildren(aboveNode.parentId!)
+          const aboveIdx = siblings.findIndex((s) => s.id === aboveNode.id)
+          const nextSibling = siblings.slice(aboveIdx + 1).find((s) => !subtreeIds.has(s.id))
+
+          let pos: string
+          if (nextSibling) {
+            pos = rankBetween(aboveNode.pos, nextSibling.pos)
+          } else {
+            pos = rankAfter(aboveNode.pos)
+          }
+          for (const id of rootIds) {
+            store.moveNode(id, aboveNode.parentId, pos)
+            pos = rankAfter(pos)
+          }
+        }
       }
     }
   }
@@ -325,7 +581,17 @@ function onDocumentPointerUp() {
   pendingDragNodeId = null
   dragNodeId.value = null
   dropTargetIdx.value = null
+  dropAsChildId.value = null
   isDragging.value = false
+}
+
+function onContainerClick(e: MouseEvent) {
+  // Clear selection when clicking empty space (not on a row)
+  const target = e.target as HTMLElement
+  if (target.closest('[data-row-idx]')) return
+  if (store.selectedId || store.selectedIds.size > 0) {
+    store.clearSelection()
+  }
 }
 
 function onContainerDblClick(e: MouseEvent) {
@@ -383,6 +649,7 @@ watch(
     aria-label="Outline"
     @keydown="onKeydown"
     @scroll="onScroll"
+    @click="onContainerClick"
     @dblclick="onContainerDblClick"
   >
     <!-- Rows -->
@@ -397,7 +664,10 @@ watch(
           />
           <div
             :data-row-idx="row.globalIdx"
-            :class="{ 'opacity-30': dragNodeId === row.node.id }"
+            :class="{
+              'opacity-30': dragSubtreeIds.has(row.node.id),
+              'ring-2 ring-(--accent-500) rounded': dropAsChildId === row.node.id,
+            }"
           >
             <OutlineRow
               :node="row.node"
@@ -419,7 +689,10 @@ watch(
           />
           <div
             :data-row-idx="idx"
-            :class="{ 'opacity-30': dragNodeId === row.node.id }"
+            :class="{
+              'opacity-30': dragSubtreeIds.has(row.node.id),
+              'ring-2 ring-(--accent-500) rounded': dropAsChildId === row.node.id,
+            }"
           >
             <OutlineRow
               :node="row.node"
@@ -450,6 +723,14 @@ watch(
       :x="ctxMenu.x"
       :y="ctxMenu.y"
       @close="closeContextMenu"
+      @history="historyNodeId = $event"
+    />
+
+    <!-- Node history -->
+    <NodeHistory
+      v-if="historyNodeId"
+      :node-id="historyNodeId"
+      @close="historyNodeId = null"
     />
   </div>
 </template>

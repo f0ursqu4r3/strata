@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   Pencil,
   Trash2,
@@ -9,6 +9,7 @@ import {
   ChevronRight,
   CircleDot,
   Calendar,
+  Clock,
 } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { resolveStatusIcon } from '@/lib/status-icons'
@@ -23,12 +24,15 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
+  history: [nodeId: string]
 }>()
 
 const store = useDocStore()
 const menuRef = ref<HTMLElement | null>(null)
 const showStatusSub = ref(false)
 const showDatePicker = ref(false)
+
+const isMultiSelect = computed(() => store.selectedIds.size > 1 && store.selectedIds.has(props.nodeId))
 
 function onSetDueDate(dueDate: number | null) {
   store.setDueDate(props.nodeId, dueDate)
@@ -60,16 +64,24 @@ function onZoomIn() {
 }
 
 function onDelete() {
-  const rows = store.visibleRows
-  const idx = rows.findIndex((r) => r.node.id === props.nodeId)
-  const nextId = rows[idx + 1]?.node.id ?? rows[idx - 1]?.node.id ?? null
-  store.tombstone(props.nodeId)
-  if (nextId) store.selectNode(nextId)
+  if (isMultiSelect.value) {
+    store.bulkTombstone()
+  } else {
+    const rows = store.visibleRows
+    const idx = rows.findIndex((r) => r.node.id === props.nodeId)
+    const nextId = rows[idx + 1]?.node.id ?? rows[idx - 1]?.node.id ?? null
+    store.tombstone(props.nodeId)
+    if (nextId) store.selectNode(nextId)
+  }
   emit('close')
 }
 
 function onSetStatus(status: Status) {
-  store.setStatus(props.nodeId, status)
+  if (isMultiSelect.value) {
+    store.bulkSetStatus(status)
+  } else {
+    store.setStatus(props.nodeId, status)
+  }
   emit('close')
 }
 
@@ -97,6 +109,7 @@ onUnmounted(() => {
     :style="{ left: x + 'px', top: y + 'px' }"
   >
     <button
+      v-if="!isMultiSelect"
       class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
       role="menuitem"
       @click="onEdit"
@@ -141,6 +154,7 @@ onUnmounted(() => {
     </div>
 
     <button
+      v-if="!isMultiSelect"
       class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
       role="menuitem"
       @click="onTags"
@@ -150,7 +164,7 @@ onUnmounted(() => {
     </button>
 
     <!-- Due date -->
-    <div class="relative">
+    <div v-if="!isMultiSelect" class="relative">
       <button
         class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
         role="menuitem"
@@ -171,6 +185,7 @@ onUnmounted(() => {
     </div>
 
     <button
+      v-if="!isMultiSelect"
       class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
       role="menuitem"
       @click="onZoomIn"
@@ -180,12 +195,23 @@ onUnmounted(() => {
     </button>
 
     <button
+      v-if="!isMultiSelect"
       class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
       role="menuitem"
       @click="onDuplicate"
     >
       <Copy class="w-3.5 h-3.5 text-(--text-faint)" />
       Duplicate
+    </button>
+
+    <button
+      v-if="!isMultiSelect"
+      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
+      role="menuitem"
+      @click="emit('history', props.nodeId); emit('close')"
+    >
+      <Clock class="w-3.5 h-3.5 text-(--text-faint)" />
+      History
     </button>
 
     <div class="border-t border-(--border-primary) my-1" />
@@ -196,7 +222,7 @@ onUnmounted(() => {
       @click="onDelete"
     >
       <Trash2 class="w-3.5 h-3.5" />
-      Delete
+      {{ isMultiSelect ? `Delete ${store.selectedIds.size} items` : 'Delete' }}
     </button>
   </div>
 </template>
