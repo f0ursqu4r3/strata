@@ -120,6 +120,25 @@ onMounted(async () => {
     }
   }
 
+  // Check for app updates (Tauri only, non-blocking)
+  if (isTauri()) {
+    import("@tauri-apps/plugin-updater").then(({ check }) => {
+      check().then(async (update) => {
+        if (!update) return;
+        const { ask } = await import("@tauri-apps/plugin-dialog");
+        const yes = await ask(
+          `A new version (${update.version}) is available. Update and restart now?`,
+          { title: "Update Available", kind: "info" },
+        );
+        if (yes) {
+          await update.downloadAndInstall();
+          const { relaunch } = await import("@tauri-apps/plugin-process");
+          await relaunch();
+        }
+      }).catch(() => {});
+    });
+  }
+
   // Global ? shortcut
   document.addEventListener("keydown", onGlobalKeydown);
 });

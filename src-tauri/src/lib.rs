@@ -342,6 +342,7 @@ fn build_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
         .manage(AppState {
             watcher: Mutex::new(None),
             write_guard: Arc::new(Mutex::new(HashSet::new())),
@@ -354,6 +355,8 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
 
             build_menu(app)?;
 
