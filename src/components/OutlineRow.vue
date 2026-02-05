@@ -29,6 +29,7 @@ const bodyInputRef = ref<HTMLTextAreaElement | null>(null);
 const showTagPicker = ref(false);
 const showDatePicker = ref(false);
 const datePickerWrapperRef = ref<HTMLElement | null>(null);
+const focusBodyOnEdit = ref(false);
 
 function onDatePickerClickOutside(e: MouseEvent) {
   if (datePickerWrapperRef.value && !datePickerWrapperRef.value.contains(e.target as HTMLElement)) {
@@ -118,9 +119,9 @@ function autoResizeBody() {
 }
 
 watch(
-  () => props.node.text,
+  () => store.nodes.get(props.node.id)?.text,
   (v) => {
-    if (!isEditing.value) {
+    if (!isEditing.value && v !== undefined) {
       localText.value = v;
       nextTick(autoResizeBody);
     }
@@ -133,6 +134,12 @@ watch(isEditing, async (editing) => {
     localText.value = props.node.text;
     await nextTick();
     autoResizeBody();
+    // Skip title focus if we want to focus body instead
+    if (focusBodyOnEdit.value) {
+      focusBodyOnEdit.value = false;
+      bodyInputRef.value?.focus();
+      return;
+    }
     const input = titleInputRef.value;
     if (input) {
       if (document.activeElement !== input) {
@@ -161,7 +168,12 @@ function onBodyInput(e: Event) {
   autoResizeBody();
 }
 
-function onBlur() {
+function onBlur(e: FocusEvent) {
+  // Don't stop editing if focus is moving to another input in this row
+  const relatedTarget = e.relatedTarget as HTMLElement | null;
+  if (relatedTarget === titleInputRef.value || relatedTarget === bodyInputRef.value) {
+    return;
+  }
   // Only stop editing if this node is still the one being edited.
   // When Enter creates a sibling, editingId moves to the new node
   // before this blur fires — don't clear it.
@@ -261,12 +273,8 @@ function onBodyKeydown(e: KeyboardEvent) {
   if (handleCommonKeydown(e)) return;
 
   const input = bodyInputRef.value;
-  if (e.key === "Enter" && !e.shiftKey) {
-    // Plain Enter in body stops editing (Shift+Enter for newline)
-    e.preventDefault();
-    store.stopEditing();
-    (titleInputRef.value?.closest(".outline-focus-target") as HTMLElement)?.focus();
-  } else if (e.key === "Backspace" && input && input.value === "") {
+  // Enter in body creates newlines naturally (no preventDefault)
+  if (e.key === "Backspace" && input && input.value === "") {
     // Empty body - remove the body entirely and move back to title
     e.preventDefault();
     localText.value = localTitle.value;
@@ -329,6 +337,12 @@ function onClick(e: MouseEvent) {
 
   store.selectNode(props.node.id);
   if (!isEditing.value) {
+    // Check if click was on body area
+    const clickedBody = (e.target as HTMLElement).closest?.("[data-body-display]");
+    if (clickedBody && localText.value.includes("\n")) {
+      // Set flag so watch focuses body instead of title
+      focusBodyOnEdit.value = true;
+    }
     store.startEditing(props.node.id, "click");
   }
 }
@@ -471,51 +485,57 @@ function onStatusPickerBlur() {
       </div>
     </div>
 
-    <!-- Text: read-only display or editable title/body inputs -->
-    <div v-if="isEditing" class="flex-1 py-1.5">
-      <input
-        ref="titleInputRef"
-        type="text"
-        class="w-full border-none outline-none bg-transparent font-[inherit] text-(--text-secondary) p-0 strata-text leading-5 placeholder:text-(--text-faint) placeholder:italic select-text"
-        :value="localTitle"
-        placeholder="(empty)"
-        tabindex="-1"
-        spellcheck="false"
-        @focus="onTitleFocus"
-        @input="onTitleInput"
-        @blur="onBlur"
-        @keydown="onTitleKeydown"
-      />
-      <textarea
-        v-if="localBody"
-        ref="bodyInputRef"
-        class="w-full border-none outline-none bg-transparent font-[inherit] text-(--text-muted) p-0 mt-1.5 strata-text resize-none overflow-hidden leading-5 placeholder:text-(--text-faint) placeholder:italic select-text"
-        :value="localBody"
-        placeholder=""
-        rows="1"
-        tabindex="-1"
-        spellcheck="false"
-        @focus="onBodyFocus"
-        @input="onBodyInput"
-        @blur="onBlur"
-        @keydown="onBodyKeydown"
-      />
-    </div>
-    <div
-      v-else
-      class="flex-1 py-1.5 strata-text leading-5 min-h-5 select-text"
-      :class="localText ? 'text-(--text-secondary)' : 'text-(--text-faint) italic'"
-    >
-      <template v-if="renderedLines">
-        <!-- eslint-disable vue/no-v-html -->
-        <div v-html="renderedLines.first" />
-        <div
-          v-if="renderedLines.rest"
-          class="mt-1.5 text-(--text-muted) leading-5 whitespace-pre-wrap"
-          v-html="renderedLines.rest.join('\n')"
+    <!-- Text: read-only display with overlaid inputs when editing -->
+    <div class="flex-1 py-1.5 strata-text leading-5 min-h-5 grid [grid-template-areas:'stack'] *:[grid-area:stack]">
+      <!-- Display layer (always rendered, invisible when editing) -->
+      <div
+        :class="[
+          isEditing ? 'invisible pointer-events-none' : 'select-text',
+          localText ? 'text-(--text-secondary)' : 'text-(--text-faint) italic'
+        ]"
+      >
+        <template v-if="renderedLines">
+          <!-- eslint-disable vue/no-v-html -->
+          <div v-html="renderedLines.first" />
+          <div
+            v-if="renderedLines.rest"
+            data-body-display
+            class="mt-1.5 text-(--text-muted) leading-5 whitespace-pre-wrap"
+            v-html="renderedLines.rest.join('\n')"
+          />
+        </template>
+        <template v-else>(empty)</template>
+      </div>
+      <!-- Edit layer (overlaid when editing) -->
+      <div v-if="isEditing" class="flex flex-col">
+        <input
+          ref="titleInputRef"
+          type="text"
+          class="w-full border-none outline-none bg-transparent font-[inherit] text-(--text-secondary) p-0 strata-text leading-5 placeholder:text-(--text-faint) placeholder:italic select-text"
+          :value="localTitle"
+          placeholder="(empty)"
+          tabindex="-1"
+          spellcheck="false"
+          @focus="onTitleFocus"
+          @input="onTitleInput"
+          @blur="onBlur"
+          @keydown="onTitleKeydown"
         />
-      </template>
-      <template v-else>(empty)</template>
+        <textarea
+          v-if="localText.includes('\n')"
+          ref="bodyInputRef"
+          class="w-full border-none outline-none bg-transparent font-[inherit] text-(--text-muted) p-0 mt-1.5 strata-text resize-none overflow-hidden leading-5 placeholder:text-(--text-faint) placeholder:italic select-text"
+          :value="localBody"
+          placeholder=""
+          rows="1"
+          tabindex="-1"
+          spellcheck="false"
+          @focus="onBodyFocus"
+          @input="onBodyInput"
+          @blur="onBlur"
+          @keydown="onBodyKeydown"
+        />
+      </div>
     </div>
 
     <!-- Tag pills -->
