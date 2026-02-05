@@ -186,8 +186,13 @@ function onCardDblClick(node: Node) {
   if (isDragging.value) return;
   editingCardId.value = node.id;
   nextTick(() => {
-    editInputRef.value?.focus();
-    editInputRef.value?.select();
+    // editInputRef is an array because it's inside a v-for
+    const input = Array.isArray(editInputRef.value) ? editInputRef.value[0] : editInputRef.value;
+    if (input) {
+      input.focus();
+      const len = input.value.length;
+      input.setSelectionRange(len, len);
+    }
   });
 }
 
@@ -227,8 +232,6 @@ function closeContextMenu() {
 // Tag and date pickers
 const editingTagsCardId = ref<string | null>(null);
 const editingDateCardId = ref<string | null>(null);
-const tagPickerRef = ref<HTMLElement | null>(null);
-const datePickerRef = ref<HTMLElement | null>(null);
 
 function onTagsClick(e: MouseEvent, nodeId: string) {
   e.stopPropagation();
@@ -241,13 +244,17 @@ function onDateClick(e: MouseEvent, nodeId: string) {
 }
 
 function onTagPickerClickOutside(e: MouseEvent) {
-  if (tagPickerRef.value && !tagPickerRef.value.contains(e.target as HTMLElement)) {
+  const target = e.target as HTMLElement;
+  // Check if click is inside any tag picker wrapper
+  if (!target.closest("[data-tag-picker]")) {
     editingTagsCardId.value = null;
   }
 }
 
 function onDatePickerClickOutside(e: MouseEvent) {
-  if (datePickerRef.value && !datePickerRef.value.contains(e.target as HTMLElement)) {
+  const target = e.target as HTMLElement;
+  // Check if click is inside any date picker wrapper
+  if (!target.closest("[data-date-picker]")) {
     editingDateCardId.value = null;
   }
 }
@@ -349,10 +356,17 @@ watch(editingDateCardId, (open) => {
                 @dblclick="onCardDblClick(node)"
                 @contextmenu="onCardContextMenu($event, node)"
               >
-                <div v-if="editingCardId === node.id">
+                <div class="relative">
+                  <!-- eslint-disable vue/no-v-html -->
+                  <div
+                    class="text-(--text-secondary) leading-snug overflow-hidden text-ellipsis whitespace-nowrap strata-text"
+                    :class="{ 'invisible': editingCardId === node.id }"
+                    v-html="renderInlineMarkdown(getTitle(node.text) || '(empty)')"
+                  />
                   <input
+                    v-if="editingCardId === node.id"
                     ref="editInputRef"
-                    class="w-full text-(--text-secondary) leading-snug border-none outline-none bg-transparent p-0 font-[inherit] strata-text"
+                    class="absolute inset-0 w-full text-(--text-secondary) leading-snug border-none outline-none bg-(--bg-secondary) p-0 font-[inherit] strata-text"
                     :value="getTitle(node.text)"
                     @input="onCardInput($event, node)"
                     @blur="onCardEditBlur"
@@ -360,12 +374,6 @@ watch(editingDateCardId, (open) => {
                     spellcheck="false"
                   />
                 </div>
-                <!-- eslint-disable vue/no-v-html -->
-                <div
-                  v-else
-                  class="text-(--text-secondary) leading-snug overflow-hidden text-ellipsis whitespace-nowrap strata-text"
-                  v-html="renderInlineMarkdown(getTitle(node.text) || '(empty)')"
-                />
                 <div class="flex gap-2 mt-1 text-[11px] text-(--text-faint)">
                   <span
                     v-if="store.breadcrumb(node.id)"
@@ -394,7 +402,7 @@ watch(editingDateCardId, (open) => {
                   </span>
                   <div
                     v-if="editingDateCardId === node.id"
-                    ref="datePickerRef"
+                    data-date-picker
                     class="absolute left-0 top-0 z-40"
                   >
                     <DatePicker
@@ -430,7 +438,7 @@ watch(editingDateCardId, (open) => {
                   </div>
                   <div
                     v-if="editingTagsCardId === node.id"
-                    ref="tagPickerRef"
+                    data-tag-picker
                     class="bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2"
                   >
                     <TagPicker :node-id="node.id" :tags="node.tags ?? []" />

@@ -27,7 +27,6 @@ const settings = useSettingsStore();
 const titleInputRef = ref<HTMLInputElement | null>(null);
 const bodyInputRef = ref<HTMLTextAreaElement | null>(null);
 const showTagPicker = ref(false);
-const tagPickerWrapperRef = ref<HTMLElement | null>(null);
 const showDatePicker = ref(false);
 const datePickerWrapperRef = ref<HTMLElement | null>(null);
 
@@ -47,7 +46,9 @@ watch(showDatePicker, (open) => {
 });
 
 function onTagPickerClickOutside(e: MouseEvent) {
-  if (tagPickerWrapperRef.value && !tagPickerWrapperRef.value.contains(e.target as HTMLElement)) {
+  const target = e.target as HTMLElement;
+  // Check if click is inside tag picker wrapper or is the trigger button
+  if (!target.closest("[data-tag-picker]")) {
     showTagPicker.value = false;
   }
 }
@@ -519,23 +520,27 @@ function onStatusPickerBlur() {
 
     <!-- Tag pills -->
     <div
-      v-if="settings.showTags && (node.tags?.length > 0 || showTagPicker)"
-      ref="tagPickerWrapperRef"
-      class="flex items-start gap-1 shrink-0 self-start pt-1.5"
+      v-if="settings.showTags && node.tags?.length > 0"
+      class="relative flex items-start gap-1 shrink-0 self-start pt-1.5"
+      data-tag-picker
       @mousedown.prevent
       @click.stop
     >
-      <template v-if="!showTagPicker">
-        <span
-          v-for="tag in node.tags"
-          :key="tag"
-          class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-(--accent-100) text-(--accent-700) cursor-pointer hover:bg-(--accent-200)"
-          @click.stop="showTagPicker = true"
-        >
-          {{ tag }}
-        </span>
-      </template>
-      <TagPicker v-if="showTagPicker" :node-id="node.id" :tags="node.tags ?? []" />
+      <span
+        v-for="tag in node.tags"
+        :key="tag"
+        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-(--accent-100) text-(--accent-700) cursor-pointer hover:bg-(--accent-200)"
+        @click.stop="showTagPicker = !showTagPicker"
+      >
+        {{ tag }}
+      </span>
+      <!-- Inline tag picker dropdown -->
+      <div
+        v-if="showTagPicker"
+        class="absolute right-0 top-full z-40 mt-1 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2 min-w-48"
+      >
+        <TagPicker :node-id="node.id" :tags="node.tags ?? []" />
+      </div>
     </div>
 
     <!-- Due date badge -->
@@ -576,15 +581,22 @@ function onStatusPickerBlur() {
       @mousedown.prevent
       @click.stop
     >
-      <!-- Add tag icon -->
-      <button
-        v-if="settings.showTags && !showTagPicker"
-        class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
-        title="Add tag"
-        @click="showTagPicker = true"
-      >
-        <Tag class="w-3.5 h-3.5" />
-      </button>
+      <!-- Add tag (only when no tags exist) -->
+      <div v-if="settings.showTags && !(node.tags?.length > 0)" class="relative" data-tag-picker>
+        <button
+          class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+          title="Add tag"
+          @click="showTagPicker = !showTagPicker"
+        >
+          <Tag class="w-3.5 h-3.5" />
+        </button>
+        <div
+          v-if="showTagPicker"
+          class="absolute right-0 top-full z-40 mt-1 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2 min-w-48"
+        >
+          <TagPicker :node-id="node.id" :tags="node.tags ?? []" />
+        </div>
+      </div>
       <!-- Add/edit due date icon -->
       <button
         v-if="!showDatePicker"
