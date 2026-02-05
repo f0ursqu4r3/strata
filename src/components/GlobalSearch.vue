@@ -4,6 +4,7 @@ import { Search, X, FileText } from 'lucide-vue-next'
 import { searchAllDocs, type SearchResult } from '@/lib/search-index'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocStore } from '@/stores/doc'
+import { UiKbd } from '@/components/ui'
 
 const emit = defineEmits<{
   close: []
@@ -268,9 +269,9 @@ onUnmounted(() => {
 
       <!-- Footer hint -->
       <div v-if="hasResults" class="px-4 py-2 border-t border-(--border-primary) text-[11px] text-(--text-faint) flex gap-3">
-        <span><kbd class="px-1 py-px rounded border border-(--border-primary) font-mono text-[10px]">↑↓</kbd> navigate</span>
-        <span><kbd class="px-1 py-px rounded border border-(--border-primary) font-mono text-[10px]">Enter</kbd> open</span>
-        <span><kbd class="px-1 py-px rounded border border-(--border-primary) font-mono text-[10px]">Esc</kbd> close</span>
+        <span><UiKbd size="xs">↑↓</UiKbd> navigate</span>
+        <span><UiKbd size="xs">Enter</UiKbd> open</span>
+        <span><UiKbd size="xs">Esc</UiKbd> close</span>
       </div>
     </div>
   </div>

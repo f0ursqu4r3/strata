@@ -4,6 +4,7 @@ import { Command, X } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
 import { comboToString } from '@/lib/shortcuts'
+import { UiKbd } from '@/components/ui'
 
 const emit = defineEmits<{
   close: []
@@ -206,18 +207,15 @@ onUnmounted(() => {
           @mouseenter="selectedIdx = idx"
         >
           <span class="overflow-hidden text-ellipsis whitespace-nowrap">{{ cmd.label }}</span>
-          <span
-            v-if="cmd.shortcut"
-            class="shrink-0 text-[11px] text-(--text-faint) font-mono"
-          >{{ cmd.shortcut }}</span>
+          <UiKbd v-if="cmd.shortcut" size="xs">{{ cmd.shortcut }}</UiKbd>
         </button>
       </div>
 
       <!-- Footer -->
       <div class="px-4 py-2 border-t border-(--border-primary) text-[11px] text-(--text-faint) flex gap-3">
-        <span><kbd class="px-1 py-px rounded border border-(--border-primary) font-mono text-[10px]">↑↓</kbd> navigate</span>
-        <span><kbd class="px-1 py-px rounded border border-(--border-primary) font-mono text-[10px]">Enter</kbd> run</span>
-        <span><kbd class="px-1 py-px rounded border border-(--border-primary) font-mono text-[10px]">Esc</kbd> close</span>
+        <span><UiKbd size="xs">↑↓</UiKbd> navigate</span>
+        <span><UiKbd size="xs">Enter</UiKbd> run</span>
+        <span><UiKbd size="xs">Esc</UiKbd> close</span>
       </div>
     </div>
   </div>

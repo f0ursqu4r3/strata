@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import { X } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -9,8 +9,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: number | null]
 }>()
-
-const pickerRef = ref<HTMLElement | null>(null)
 
 const dateString = computed({
   get() {
@@ -29,34 +27,73 @@ const dateString = computed({
   },
 })
 
-function onClear() {
-  emit('update:modelValue', null)
+function getDateAtNoon(daysFromNow: number): number {
+  const date = new Date()
+  date.setDate(date.getDate() + daysFromNow)
+  date.setHours(12, 0, 0, 0)
+  return date.getTime()
 }
 
-function onClickOutside(e: MouseEvent) {
-  // Parent handles closing
+function setToday() {
+  emit('update:modelValue', getDateAtNoon(0))
+}
+
+function setTomorrow() {
+  emit('update:modelValue', getDateAtNoon(1))
+}
+
+function setNextWeek() {
+  emit('update:modelValue', getDateAtNoon(7))
+}
+
+function onClear() {
+  emit('update:modelValue', null)
 }
 </script>
 
 <template>
   <div
-    ref="pickerRef"
-    class="bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2 flex items-center gap-2"
+    class="bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2 min-w-48"
     @click.stop
   >
-    <input
-      type="date"
-      :value="dateString"
-      class="text-xs bg-transparent border border-(--border-primary) rounded px-2 py-1 text-(--text-secondary) outline-none focus:border-(--accent-400)"
-      @input="dateString = ($event.target as HTMLInputElement).value"
-    />
-    <button
-      v-if="modelValue"
-      class="p-0.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--color-danger) cursor-pointer"
-      title="Clear due date"
-      @click="onClear"
-    >
-      <X class="w-3 h-3" />
-    </button>
+    <!-- Quick presets -->
+    <div class="flex gap-1 mb-2">
+      <button
+        class="flex-1 px-2 py-1 text-[11px] rounded hover:bg-(--bg-hover) text-(--text-secondary) cursor-pointer transition-colors"
+        @click="setToday"
+      >
+        Today
+      </button>
+      <button
+        class="flex-1 px-2 py-1 text-[11px] rounded hover:bg-(--bg-hover) text-(--text-secondary) cursor-pointer transition-colors"
+        @click="setTomorrow"
+      >
+        Tomorrow
+      </button>
+      <button
+        class="flex-1 px-2 py-1 text-[11px] rounded hover:bg-(--bg-hover) text-(--text-secondary) cursor-pointer transition-colors"
+        @click="setNextWeek"
+      >
+        Next week
+      </button>
+    </div>
+
+    <!-- Date input row -->
+    <div class="flex items-center gap-2">
+      <input
+        type="date"
+        :value="dateString"
+        class="flex-1 text-xs bg-transparent border border-(--border-primary) rounded px-2 py-1 text-(--text-secondary) outline-none focus:border-(--accent-400)"
+        @input="dateString = ($event.target as HTMLInputElement).value"
+      />
+      <button
+        v-if="modelValue"
+        class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--color-danger) cursor-pointer"
+        title="Clear due date"
+        @click="onClear"
+      >
+        <X class="w-3.5 h-3.5" />
+      </button>
+    </div>
   </div>
 </template>

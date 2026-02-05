@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import {
   Pencil,
   Trash2,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { resolveStatusIcon } from '@/lib/status-icons'
+import { useClickOutside, UiMenuItem, UiMenuDivider } from '@/components/ui'
 import type { Status } from '@/types'
 import DatePicker from '@/components/DatePicker.vue'
 
@@ -34,6 +35,8 @@ const showDatePicker = ref(false)
 
 const isMultiSelect = computed(() => store.selectedIds.size > 1 && store.selectedIds.has(props.nodeId))
 
+useClickOutside(menuRef, () => emit('close'))
+
 function onSetDueDate(dueDate: number | null) {
   store.setDueDate(props.nodeId, dueDate)
   emit('close')
@@ -48,7 +51,6 @@ function onEdit() {
 function onTags() {
   store.selectNode(props.nodeId)
   store.startEditing(props.nodeId)
-  // The OutlineRow will show the tag picker when editing starts
   emit('close')
 }
 
@@ -85,19 +87,10 @@ function onSetStatus(status: Status) {
   emit('close')
 }
 
-function onClickOutside(e: MouseEvent) {
-  if (menuRef.value && !menuRef.value.contains(e.target as HTMLElement)) {
-    emit('close')
-  }
+function onHistory() {
+  emit('history', props.nodeId)
+  emit('close')
 }
-
-onMounted(() => {
-  document.addEventListener('mousedown', onClickOutside, true)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('mousedown', onClickOutside, true)
-})
 </script>
 
 <template>
@@ -108,15 +101,9 @@ onUnmounted(() => {
     aria-label="Node actions"
     :style="{ left: x + 'px', top: y + 'px' }"
   >
-    <button
-      v-if="!isMultiSelect"
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
-      role="menuitem"
-      @click="onEdit"
-    >
-      <Pencil class="w-3.5 h-3.5 text-(--text-faint)" />
+    <UiMenuItem v-if="!isMultiSelect" :icon="Pencil" @click="onEdit">
       Edit
-    </button>
+    </UiMenuItem>
 
     <!-- Status submenu -->
     <div
@@ -125,13 +112,13 @@ onUnmounted(() => {
       @mouseleave="showStatusSub = false"
     >
       <button
-        class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
+        class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary) cursor-pointer"
         role="menuitem"
         aria-haspopup="true"
       >
         <CircleDot class="w-3.5 h-3.5 text-(--text-faint)" />
-        Set status
-        <ChevronRight class="w-3.5 h-3.5 text-(--text-faint) ml-auto" />
+        <span class="flex-1">Set status</span>
+        <ChevronRight class="w-3.5 h-3.5 text-(--text-faint)" />
       </button>
 
       <div
@@ -143,7 +130,7 @@ onUnmounted(() => {
         <button
           v-for="s in store.statusDefs"
           :key="s.id"
-          class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
+          class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary) cursor-pointer"
           role="menuitem"
           @click="onSetStatus(s.id)"
         >
@@ -153,30 +140,21 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <button
-      v-if="!isMultiSelect"
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
-      role="menuitem"
-      @click="onTags"
-    >
-      <Tag class="w-3.5 h-3.5 text-(--text-faint)" />
+    <UiMenuItem v-if="!isMultiSelect" :icon="Tag" @click="onTags">
       Tags
-    </button>
+    </UiMenuItem>
 
     <!-- Due date -->
     <div v-if="!isMultiSelect" class="relative">
       <button
-        class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
+        class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary) cursor-pointer"
         role="menuitem"
         @click="showDatePicker = !showDatePicker"
       >
         <Calendar class="w-3.5 h-3.5 text-(--text-faint)" />
-        Due date
+        <span class="flex-1">Due date</span>
       </button>
-      <div
-        v-if="showDatePicker"
-        class="absolute left-full top-0 z-10"
-      >
+      <div v-if="showDatePicker" class="absolute left-full top-0 z-10">
         <DatePicker
           :model-value="store.nodes.get(nodeId)?.dueDate ?? null"
           @update:model-value="onSetDueDate($event)"
@@ -184,45 +162,22 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <button
-      v-if="!isMultiSelect"
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
-      role="menuitem"
-      @click="onZoomIn"
-    >
-      <ZoomIn class="w-3.5 h-3.5 text-(--text-faint)" />
+    <UiMenuItem v-if="!isMultiSelect" :icon="ZoomIn" @click="onZoomIn">
       Zoom in
-    </button>
+    </UiMenuItem>
 
-    <button
-      v-if="!isMultiSelect"
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
-      role="menuitem"
-      @click="onDuplicate"
-    >
-      <Copy class="w-3.5 h-3.5 text-(--text-faint)" />
+    <UiMenuItem v-if="!isMultiSelect" :icon="Copy" @click="onDuplicate">
       Duplicate
-    </button>
+    </UiMenuItem>
 
-    <button
-      v-if="!isMultiSelect"
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary)"
-      role="menuitem"
-      @click="emit('history', props.nodeId); emit('close')"
-    >
-      <Clock class="w-3.5 h-3.5 text-(--text-faint)" />
+    <UiMenuItem v-if="!isMultiSelect" :icon="Clock" @click="onHistory">
       History
-    </button>
+    </UiMenuItem>
 
-    <div class="border-t border-(--border-primary) my-1" />
+    <UiMenuDivider />
 
-    <button
-      class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--color-danger-bg) text-left text-(--color-danger)"
-      role="menuitem"
-      @click="onDelete"
-    >
-      <Trash2 class="w-3.5 h-3.5" />
+    <UiMenuItem :icon="Trash2" danger @click="onDelete">
       {{ isMultiSelect ? `Delete ${store.selectedIds.size} items` : 'Delete' }}
-    </button>
+    </UiMenuItem>
   </div>
 </template>

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { X, Clock } from 'lucide-vue-next'
+import { ref, onMounted } from 'vue'
+import { Clock } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { isTauri } from '@/lib/platform'
 import { useSettingsStore } from '@/stores/settings'
+import { UiModal } from '@/components/ui'
 import type { Op } from '@/types'
 
 const props = defineProps<{
@@ -75,81 +76,55 @@ onMounted(async () => {
   }
   loading.value = false
 })
-
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') {
-    emit('close')
-    e.preventDefault()
-  }
-}
-
-onMounted(() => document.addEventListener('keydown', onKeydown))
-onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Node history"
-    @mousedown.self="emit('close')"
-  >
-    <div class="bg-(--bg-secondary) rounded-xl shadow-2xl w-full max-w-md max-h-[70vh] flex flex-col">
-      <!-- Header -->
-      <div class="flex items-center justify-between px-5 py-4 border-b border-(--border-primary)">
-        <div class="flex items-center gap-2">
-          <Clock class="w-4 h-4 text-(--text-faint)" />
-          <h2 class="text-base font-semibold text-(--text-primary)">Node History</h2>
-        </div>
-        <button
-          class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) cursor-pointer"
-          @click="emit('close')"
-        >
-          <X class="w-4 h-4" />
-        </button>
+  <UiModal max-width="md" @close="emit('close')">
+    <template #header>
+      <div class="flex items-center gap-2">
+        <Clock class="w-4 h-4 text-(--text-faint)" />
+        <h2 class="text-base font-semibold text-(--text-primary)">Node History</h2>
+      </div>
+    </template>
+
+    <div class="p-5">
+      <div v-if="loading" class="text-center text-sm text-(--text-faint) py-8">
+        Loading history...
       </div>
 
-      <!-- Content -->
-      <div class="flex-1 overflow-y-auto p-5">
-        <div v-if="loading" class="text-center text-sm text-(--text-faint) py-8">
-          Loading history...
-        </div>
+      <div v-else-if="unavailable" class="text-center text-sm text-(--text-faint) py-8">
+        History is not available in file-based mode.<br />
+        Op-log history is only stored when using browser storage (IndexedDB).
+      </div>
 
-        <div v-else-if="unavailable" class="text-center text-sm text-(--text-faint) py-8">
-          History is not available in file-based mode.<br />
-          Op-log history is only stored when using browser storage (IndexedDB).
-        </div>
+      <div v-else-if="ops.length === 0" class="text-center text-sm text-(--text-faint) py-8">
+        No history found for this node.
+      </div>
 
-        <div v-else-if="ops.length === 0" class="text-center text-sm text-(--text-faint) py-8">
-          No history found for this node.
-        </div>
+      <!-- Timeline -->
+      <div v-else class="relative pl-6">
+        <!-- Vertical line -->
+        <div class="absolute left-2 top-1 bottom-1 w-px bg-(--border-primary)" />
 
-        <!-- Timeline -->
-        <div v-else class="relative pl-6">
-          <!-- Vertical line -->
-          <div class="absolute left-2 top-1 bottom-1 w-px bg-(--border-primary)" />
-
+        <div
+          v-for="op in ops"
+          :key="op.opId"
+          class="relative mb-4 last:mb-0"
+        >
+          <!-- Dot -->
           <div
-            v-for="op in ops"
-            :key="op.opId"
-            class="relative mb-4 last:mb-0"
-          >
-            <!-- Dot -->
-            <div
-              class="absolute -left-4 top-1 w-2.5 h-2.5 rounded-full border-2 border-(--bg-secondary)"
-              :class="op.type === 'create' ? 'bg-(--accent-500)' : 'bg-(--text-faint)'"
-            />
+            class="absolute -left-4 top-1 w-2.5 h-2.5 rounded-full border-2 border-(--bg-secondary)"
+            :class="op.type === 'create' ? 'bg-(--accent-500)' : 'bg-(--text-faint)'"
+          />
 
-            <div class="text-sm text-(--text-secondary)">
-              {{ opLabel(op) }}
-            </div>
-            <div class="text-[11px] text-(--text-faint) mt-0.5">
-              {{ formatTime(op.ts) }}
-            </div>
+          <div class="text-sm text-(--text-secondary)">
+            {{ opLabel(op) }}
+          </div>
+          <div class="text-[11px] text-(--text-faint) mt-0.5">
+            {{ formatTime(op.ts) }}
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </UiModal>
 </template>

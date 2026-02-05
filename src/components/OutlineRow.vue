@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed, onMounted, onUnmounted } from "vue";
-import { ChevronRight, ChevronDown, Calendar } from "lucide-vue-next";
+import { ChevronRight, ChevronDown, Calendar, Tag } from "lucide-vue-next";
 import { useDocStore } from "@/stores/doc";
 import { useSettingsStore } from "@/stores/settings";
 import { matchesCombo, type ShortcutAction } from "@/lib/shortcuts";
@@ -9,6 +9,7 @@ import { renderInlineMarkdown } from "@/lib/inline-markdown";
 import { resolveStatusIcon } from "@/lib/status-icons";
 import { dueDateUrgency, formatDueDate } from "@/lib/due-date";
 import DatePicker from "@/components/DatePicker.vue";
+import { getTitle, getBody, combineText } from "@/lib/text-utils";
 import type { Node, Status } from "@/types";
 
 const props = defineProps<{
@@ -18,12 +19,13 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   contextmenu: [nodeId: string, x: number, y: number];
-  'row-pointerdown': [nodeId: string, event: PointerEvent];
+  "row-pointerdown": [nodeId: string, event: PointerEvent];
 }>();
 
 const store = useDocStore();
 const settings = useSettingsStore();
-const inputRef = ref<HTMLTextAreaElement | null>(null);
+const titleInputRef = ref<HTMLInputElement | null>(null);
+const bodyInputRef = ref<HTMLTextAreaElement | null>(null);
 const showTagPicker = ref(false);
 const tagPickerWrapperRef = ref<HTMLElement | null>(null);
 const showDatePicker = ref(false);
@@ -74,6 +76,10 @@ const hasChildren = computed(() => store.getChildren(props.node.id).length > 0);
 
 const localText = ref(props.node.text);
 
+// Computed title/body from localText for split editing
+const localTitle = computed(() => getTitle(localText.value));
+const localBody = computed(() => getBody(localText.value));
+
 // Rendered HTML lines for read-only display (first line + rest with gap)
 const renderedLines = computed(() => {
   const text = localText.value;
@@ -87,11 +93,11 @@ const renderedLines = computed(() => {
 
 onMounted(async () => {
   await nextTick();
-  autoResize();
+  autoResizeBody();
   // If this row is already in editing state when mounted (e.g. Enter created
   // a new sibling), the watch won't fire so we need to focus here.
   if (isEditing.value) {
-    const input = inputRef.value;
+    const input = titleInputRef.value;
     if (input && document.activeElement !== input) {
       input.focus();
       if (store.editingTrigger === "keyboard") {
@@ -102,8 +108,8 @@ onMounted(async () => {
   }
 });
 
-function autoResize() {
-  const el = inputRef.value;
+function autoResizeBody() {
+  const el = bodyInputRef.value;
   if (el) {
     el.style.height = "auto";
     el.style.height = el.scrollHeight + "px";
@@ -115,7 +121,7 @@ watch(
   (v) => {
     if (!isEditing.value) {
       localText.value = v;
-      nextTick(autoResize);
+      nextTick(autoResizeBody);
     }
   },
 );
@@ -125,8 +131,8 @@ watch(isEditing, async (editing) => {
   if (editing) {
     localText.value = props.node.text;
     await nextTick();
-    autoResize();
-    const input = inputRef.value;
+    autoResizeBody();
+    const input = titleInputRef.value;
     if (input) {
       if (document.activeElement !== input) {
         input.focus();
@@ -139,11 +145,19 @@ watch(isEditing, async (editing) => {
   }
 });
 
-function onInput(e: Event) {
-  const val = (e.target as HTMLTextAreaElement).value;
-  localText.value = val;
-  store.updateText(props.node.id, val);
-  autoResize();
+function onTitleInput(e: Event) {
+  const newTitle = (e.target as HTMLInputElement).value;
+  const combined = combineText(newTitle, localBody.value);
+  localText.value = combined;
+  store.updateText(props.node.id, combined);
+}
+
+function onBodyInput(e: Event) {
+  const newBody = (e.target as HTMLTextAreaElement).value;
+  const combined = combineText(localTitle.value, newBody);
+  localText.value = combined;
+  store.updateText(props.node.id, combined);
+  autoResizeBody();
 }
 
 function onBlur() {
@@ -163,56 +177,112 @@ function findEditingAction(e: KeyboardEvent): ShortcutAction | null {
   return null;
 }
 
-function onKeydown(e: KeyboardEvent) {
-  const input = inputRef.value;
-
+function handleCommonKeydown(e: KeyboardEvent): boolean {
   // Status shortcuts work while editing: Ctrl+1..N
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
     const idx = parseInt(e.key) - 1;
     if (idx >= 0 && idx < store.statusDefs.length) {
       store.setStatus(props.node.id, store.statusDefs[idx]!.id);
       e.preventDefault();
-      return;
+      return true;
     }
   }
 
   const action = findEditingAction(e);
   if (action === "stopEditing") {
     store.stopEditing();
-    (inputRef.value?.closest(".outline-focus-target") as HTMLElement)?.focus();
+    (titleInputRef.value?.closest(".outline-focus-target") as HTMLElement)?.focus();
     e.preventDefault();
-    return;
+    return true;
   }
   if (action === "newSibling") {
     store.flushTextDebounce();
     store.createSiblingBelowAndEdit();
     e.preventDefault();
-    return;
+    return true;
   }
   if (action === "indent") {
     e.preventDefault();
     store.indentAndKeepEditing(props.node.id);
-    return;
+    return true;
   }
   if (action === "outdent") {
     e.preventDefault();
     store.outdentAndKeepEditing(props.node.id);
-    return;
+    return true;
   }
+  return false;
+}
 
-  // Non-customizable editing behaviors (cursor-position aware)
+function onTitleKeydown(e: KeyboardEvent) {
+  if (handleCommonKeydown(e)) return;
+
+  const input = titleInputRef.value;
   if (e.key === "Enter" && !e.shiftKey) {
-    nextTick(autoResize);
-  } else if (e.key === "Backspace" && input && input.value === "") {
+    e.preventDefault();
+    // If no body exists, create one by adding a newline
+    if (!localBody.value) {
+      localText.value = localTitle.value + "\n";
+      store.updateText(props.node.id, localTitle.value + "\n");
+    }
+    nextTick(() => {
+      autoResizeBody();
+      bodyInputRef.value?.focus();
+    });
+  } else if (e.key === "Backspace" && input && input.value === "" && !localBody.value) {
     e.preventDefault();
     store.deleteNodeAndEditPrevious(props.node.id);
+  } else if (e.key === "ArrowUp" && !e.shiftKey && input) {
+    const pos = input.selectionStart ?? 0;
+    if (pos === 0 && input.selectionEnd === 0) {
+      e.preventDefault();
+      store.flushTextDebounce();
+      store.editPreviousNode(props.node.id);
+    }
+  } else if (e.key === "ArrowDown" && !e.shiftKey && input) {
+    const pos = input.selectionStart ?? 0;
+    const len = input.value.length;
+    if (pos === len && input.selectionEnd === len) {
+      e.preventDefault();
+      // If there's body content, move to body; otherwise go to next node
+      if (localBody.value) {
+        bodyInputRef.value?.focus();
+        bodyInputRef.value?.setSelectionRange(0, 0);
+      } else {
+        store.flushTextDebounce();
+        store.editNextNode(props.node.id);
+      }
+    }
+  }
+}
+
+function onBodyKeydown(e: KeyboardEvent) {
+  if (handleCommonKeydown(e)) return;
+
+  const input = bodyInputRef.value;
+  if (e.key === "Enter" && !e.shiftKey) {
+    // Plain Enter in body stops editing (Shift+Enter for newline)
+    e.preventDefault();
+    store.stopEditing();
+    (titleInputRef.value?.closest(".outline-focus-target") as HTMLElement)?.focus();
+  } else if (e.key === "Backspace" && input && input.value === "") {
+    // Empty body - remove the body entirely and move back to title
+    e.preventDefault();
+    localText.value = localTitle.value;
+    store.updateText(props.node.id, localTitle.value);
+    nextTick(() => {
+      titleInputRef.value?.focus();
+      const len = titleInputRef.value?.value.length ?? 0;
+      titleInputRef.value?.setSelectionRange(len, len);
+    });
   } else if (e.key === "ArrowUp" && !e.shiftKey && input) {
     const pos = input.selectionStart ?? 0;
     const onFirstLine = input.value.lastIndexOf("\n", pos - 1) === -1;
     if (onFirstLine && pos === 0 && input.selectionEnd === 0) {
       e.preventDefault();
-      store.flushTextDebounce();
-      store.editPreviousNode(props.node.id);
+      titleInputRef.value?.focus();
+      const len = titleInputRef.value?.value.length ?? 0;
+      titleInputRef.value?.setSelectionRange(len, len);
     }
   } else if (e.key === "ArrowDown" && !e.shiftKey && input) {
     const pos = input.selectionStart ?? 0;
@@ -226,7 +296,14 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-function onFocus() {
+function onTitleFocus() {
+  if (!isEditing.value) {
+    store.selectNode(props.node.id);
+    store.startEditing(props.node.id, "click");
+  }
+}
+
+function onBodyFocus() {
   if (!isEditing.value) {
     store.selectNode(props.node.id);
     store.startEditing(props.node.id, "click");
@@ -286,7 +363,7 @@ function onBulletDblClick(e: MouseEvent) {
 function onRowPointerDown(e: PointerEvent) {
   // Only primary button, not while editing
   if (e.button !== 0 || isEditing.value) return;
-  emit('row-pointerdown', props.node.id, e);
+  emit("row-pointerdown", props.node.id, e);
 }
 
 // ── Inline status picker ──
@@ -317,7 +394,7 @@ function onStatusPickerBlur() {
 
 <template>
   <div
-    class="flex items-start min-h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-(--bg-hover)"
+    class="group flex items-start min-h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-(--bg-hover)"
     :class="{
       'bg-(--bg-active)': isSelected && !isEditing,
       'bg-(--bg-editing)': isEditing,
@@ -393,21 +470,36 @@ function onStatusPickerBlur() {
       </div>
     </div>
 
-    <!-- Text: read-only display or editable textarea -->
-    <textarea
-      v-if="isEditing"
-      ref="inputRef"
-      class="flex-1 border-none outline-none bg-transparent font-[inherit] text-(--text-secondary) p-0 py-1.5 strata-text resize-none overflow-hidden leading-5 placeholder:text-(--text-faint) placeholder:italic select-text"
-      :value="localText"
-      placeholder="(empty)"
-      rows="1"
-      tabindex="-1"
-      spellcheck="false"
-      @focus="onFocus"
-      @input="onInput"
-      @blur="onBlur"
-      @keydown="onKeydown"
-    />
+    <!-- Text: read-only display or editable title/body inputs -->
+    <div v-if="isEditing" class="flex-1 py-1.5">
+      <input
+        ref="titleInputRef"
+        type="text"
+        class="w-full border-none outline-none bg-transparent font-[inherit] text-(--text-secondary) p-0 strata-text leading-5 placeholder:text-(--text-faint) placeholder:italic select-text"
+        :value="localTitle"
+        placeholder="(empty)"
+        tabindex="-1"
+        spellcheck="false"
+        @focus="onTitleFocus"
+        @input="onTitleInput"
+        @blur="onBlur"
+        @keydown="onTitleKeydown"
+      />
+      <textarea
+        v-if="localBody"
+        ref="bodyInputRef"
+        class="w-full border-none outline-none bg-transparent font-[inherit] text-(--text-muted) p-0 mt-1.5 strata-text resize-none overflow-hidden leading-5 placeholder:text-(--text-faint) placeholder:italic select-text"
+        :value="localBody"
+        placeholder=""
+        rows="1"
+        tabindex="-1"
+        spellcheck="false"
+        @focus="onBodyFocus"
+        @input="onBodyInput"
+        @blur="onBlur"
+        @keydown="onBodyKeydown"
+      />
+    </div>
     <div
       v-else
       class="flex-1 py-1.5 strata-text leading-5 min-h-5 select-text"
@@ -429,7 +521,7 @@ function onStatusPickerBlur() {
     <div
       v-if="settings.showTags && (node.tags?.length > 0 || showTagPicker)"
       ref="tagPickerWrapperRef"
-      class="flex items-start gap-1 shrink-0 pr-2 self-start pt-1.5"
+      class="flex items-start gap-1 shrink-0 self-start pt-1.5"
       @mousedown.prevent
       @click.stop
     >
@@ -446,23 +538,11 @@ function onStatusPickerBlur() {
       <TagPicker v-if="showTagPicker" :node-id="node.id" :tags="node.tags ?? []" />
     </div>
 
-    <!-- Add tag button (when no tags and showTags is on) -->
-    <button
-      v-if="
-        settings.showTags && !showTagPicker && (!node.tags || node.tags.length === 0) && isEditing
-      "
-      class="shrink-0 pr-2 self-start pt-1.5 text-[10px] text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
-      @mousedown.prevent
-      @click.stop="showTagPicker = true"
-    >
-      + tag
-    </button>
-
     <!-- Due date badge -->
     <div
       v-if="nodeDueLabel || showDatePicker"
       ref="datePickerWrapperRef"
-      class="relative shrink-0 self-start pt-1.5 pr-2"
+      class="relative shrink-0 self-start pt-1.5"
       @click.stop
     >
       <span
@@ -490,14 +570,30 @@ function onStatusPickerBlur() {
       </div>
     </div>
 
-    <!-- Add due date button (when editing and no date set) -->
-    <button
-      v-if="!node.dueDate && !showDatePicker && isEditing"
-      class="shrink-0 pr-2 self-start pt-1.5 text-[10px] text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+    <!-- Hover action icons -->
+    <div
+      class="flex items-center gap-0.5 shrink-0 self-start pt-1.5 pr-2 opacity-0 group-hover:opacity-100 transition-opacity"
       @mousedown.prevent
-      @click.stop="showDatePicker = true"
+      @click.stop
     >
-      + due
-    </button>
+      <!-- Add tag icon -->
+      <button
+        v-if="settings.showTags && !showTagPicker"
+        class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+        title="Add tag"
+        @click="showTagPicker = true"
+      >
+        <Tag class="w-3.5 h-3.5" />
+      </button>
+      <!-- Add/edit due date icon -->
+      <button
+        v-if="!showDatePicker"
+        class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+        title="Set due date"
+        @click="showDatePicker = true"
+      >
+        <Calendar class="w-3.5 h-3.5" />
+      </button>
+    </div>
   </div>
 </template>

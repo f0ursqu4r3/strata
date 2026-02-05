@@ -28,6 +28,8 @@
 
 ### Priority
 
+- [ ] Cmd/Ctrl + F for in-node search (with count and jump to next/prev)
+- [ ] Cmd/Ctrl + Shift + F for global search (with results panel and jump to node)
 - [ ] Git operations from UI: commit, pull, push (via Tauri command bridge)
 
 ### Backlog

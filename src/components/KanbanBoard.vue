@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onUnmounted } from "vue";
+import { ref, computed, nextTick, onUnmounted, watch } from "vue";
 import { Settings2, Calendar, Tag } from "lucide-vue-next";
 import { useDocStore } from "@/stores/doc";
 import { useSettingsStore } from "@/stores/settings";
 import { renderInlineMarkdown } from "@/lib/inline-markdown";
 import { dueDateUrgency, formatDueDate } from "@/lib/due-date";
+import { getTitle, getBody, combineText } from "@/lib/text-utils";
 import type { Node } from "@/types";
 import ContextMenu from "./ContextMenu.vue";
+import TagPicker from "./TagPicker.vue";
+import DatePicker from "./DatePicker.vue";
 
 const store = useDocStore();
 const settings = useSettingsStore();
@@ -139,6 +142,8 @@ onUnmounted(() => {
   document.removeEventListener("pointermove", onDocumentPointerMove);
   document.removeEventListener("pointerup", onDocumentPointerUp);
   document.removeEventListener("selectstart", onSelectStart);
+  document.removeEventListener("mousedown", onTagPickerClickOutside, true);
+  document.removeEventListener("mousedown", onDatePickerClickOutside, true);
   destroyFloatingCard();
 });
 
@@ -187,7 +192,8 @@ function onCardDblClick(node: Node) {
 }
 
 function onCardInput(e: Event, node: Node) {
-  store.updateText(node.id, (e.target as HTMLInputElement).value);
+  const newTitle = (e.target as HTMLInputElement).value;
+  store.updateText(node.id, combineText(newTitle, getBody(node.text)));
 }
 
 function onCardEditBlur() {
@@ -217,6 +223,50 @@ function onCardContextMenu(e: MouseEvent, node: Node) {
 function closeContextMenu() {
   ctxMenu.value = null;
 }
+
+// Tag and date pickers
+const editingTagsCardId = ref<string | null>(null);
+const editingDateCardId = ref<string | null>(null);
+const tagPickerRef = ref<HTMLElement | null>(null);
+const datePickerRef = ref<HTMLElement | null>(null);
+
+function onTagsClick(e: MouseEvent, nodeId: string) {
+  e.stopPropagation();
+  editingTagsCardId.value = nodeId;
+}
+
+function onDateClick(e: MouseEvent, nodeId: string) {
+  e.stopPropagation();
+  editingDateCardId.value = nodeId;
+}
+
+function onTagPickerClickOutside(e: MouseEvent) {
+  if (tagPickerRef.value && !tagPickerRef.value.contains(e.target as HTMLElement)) {
+    editingTagsCardId.value = null;
+  }
+}
+
+function onDatePickerClickOutside(e: MouseEvent) {
+  if (datePickerRef.value && !datePickerRef.value.contains(e.target as HTMLElement)) {
+    editingDateCardId.value = null;
+  }
+}
+
+watch(editingTagsCardId, (open) => {
+  if (open) {
+    setTimeout(() => document.addEventListener("mousedown", onTagPickerClickOutside, true), 0);
+  } else {
+    document.removeEventListener("mousedown", onTagPickerClickOutside, true);
+  }
+});
+
+watch(editingDateCardId, (open) => {
+  if (open) {
+    setTimeout(() => document.addEventListener("mousedown", onDatePickerClickOutside, true), 0);
+  } else {
+    document.removeEventListener("mousedown", onDatePickerClickOutside, true);
+  }
+});
 </script>
 
 <template>
@@ -244,137 +294,214 @@ function closeContextMenu() {
       </button>
     </div>
 
-    <div
-      class="flex flex-col justify-center sm:flex-row gap-3 flex-1 p-3 pt-1 overflow-x-auto overflow-y-auto"
-      role="region"
-      aria-label="Kanban board"
-    >
-      <div
-        v-for="col in store.kanbanColumns"
-        :key="col.def.id"
-        ref="columnRefs"
-        :data-status-id="col.def.id"
-        class="flex-1 min-w-0 sm:min-w-50 max-w-full sm:max-w-80 bg-(--bg-tertiary) rounded-lg flex flex-col border-2 transition-colors"
-        :class="
-          dragOverColumn === col.def.id &&
-          dragOverColumn !== store.nodes.get(dragNodeId ?? '')?.status
-            ? 'border-(--highlight-drag-border) bg-(--highlight-drag-bg)'
-            : 'border-transparent'
-        "
-      >
-        <!-- Column header -->
+    <div class="flex-1 overflow-x-auto overflow-y-auto" role="region" aria-label="Kanban board">
+      <div class="flex flex-col justify-center sm:flex-row gap-3 p-3 pt-1 min-w-max min-h-full">
         <div
-          class="flex items-center gap-2 px-3 pt-3 pb-2 text-[13px] font-semibold text-(--text-tertiary)"
+          v-for="col in store.kanbanColumns"
+          :key="col.def.id"
+          ref="columnRefs"
+          :data-status-id="col.def.id"
+          class="flex-1 min-w-0 sm:min-w-50 max-w-full sm:max-w-80 bg-(--bg-tertiary) rounded-lg flex flex-col border-2 transition-colors"
+          :class="
+            dragOverColumn === col.def.id &&
+            dragOverColumn !== store.nodes.get(dragNodeId ?? '')?.status
+              ? 'border-(--highlight-drag-border) bg-(--highlight-drag-bg)'
+              : 'border-transparent'
+          "
         >
-          <span
-            class="w-2.5 h-2.5 rounded-full shrink-0"
-            :style="{ backgroundColor: col.def.color }"
-          />
-          <span>{{ col.def.label }}</span>
-          <span
-            class="ml-auto bg-(--bg-active) rounded-full px-2 py-px text-[11px] font-medium text-(--text-muted)"
+          <!-- Column header -->
+          <div
+            class="flex items-center gap-2 px-3 pt-3 pb-2 text-[13px] font-semibold text-(--text-tertiary)"
           >
-            {{ col.nodes.length }}
-          </span>
-        </div>
+            <span
+              class="w-2.5 h-2.5 rounded-full shrink-0"
+              :style="{ backgroundColor: col.def.color }"
+            />
+            <span>{{ col.def.label }}</span>
+            <span
+              class="ml-auto bg-(--bg-active) rounded-full px-2 py-px text-[11px] font-medium text-(--text-muted)"
+            >
+              {{ col.nodes.length }}
+            </span>
+          </div>
 
-        <!-- Cards -->
-        <div class="flex-1 overflow-y-auto px-2 pb-2 flex flex-col gap-1.5">
-          <template v-for="(node, nodeIdx) in col.nodes" :key="node.id">
-            <!-- Drop placeholder before this card -->
+          <!-- Cards -->
+          <div class="flex-1 overflow-y-auto px-2 pb-2 flex flex-col gap-1.5">
+            <template v-for="(node, nodeIdx) in col.nodes" :key="node.id">
+              <!-- Drop placeholder before this card -->
+              <div
+                v-if="dragOverColumn === col.def.id && dropInsertIndex === nodeIdx"
+                class="border-2 border-dashed border-(--accent-400) rounded-md h-10 bg-(--accent-50) opacity-60"
+              />
+              <div
+                :data-card-id="node.id"
+                class="group/card bg-(--bg-secondary) border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color] hover:border-(--border-hover) hover:shadow-sm active:cursor-grabbing select-none"
+                :class="{
+                  'border-(--accent-500) shadow-[0_0_0_1px_var(--accent-500)]':
+                    store.selectedId === node.id && dragNodeId !== node.id,
+                  'opacity-30! border-dashed! border-(--border-secondary)! shadow-none! cursor-grabbing!':
+                    dragNodeId === node.id,
+                  'border-(--border-primary)':
+                    store.selectedId !== node.id && dragNodeId !== node.id,
+                }"
+                @pointerdown="onCardPointerDown($event, node)"
+                @click="onCardClick(node)"
+                @dblclick="onCardDblClick(node)"
+                @contextmenu="onCardContextMenu($event, node)"
+              >
+                <div v-if="editingCardId === node.id">
+                  <input
+                    ref="editInputRef"
+                    class="w-full text-(--text-secondary) leading-snug border-none outline-none bg-transparent p-0 font-[inherit] strata-text"
+                    :value="getTitle(node.text)"
+                    @input="onCardInput($event, node)"
+                    @blur="onCardEditBlur"
+                    @keydown="onCardEditKeydown"
+                    spellcheck="false"
+                  />
+                </div>
+                <!-- eslint-disable vue/no-v-html -->
+                <div
+                  v-else
+                  class="text-(--text-secondary) leading-snug overflow-hidden text-ellipsis whitespace-nowrap strata-text"
+                  v-html="renderInlineMarkdown(getTitle(node.text) || '(empty)')"
+                />
+                <div class="flex gap-2 mt-1 text-[11px] text-(--text-faint)">
+                  <span
+                    v-if="store.breadcrumb(node.id)"
+                    class="overflow-hidden text-ellipsis whitespace-nowrap"
+                  >
+                    {{ store.breadcrumb(node.id) }}
+                  </span>
+                  <span v-if="childCount(node) > 0"> {{ childCount(node) }} children </span>
+                </div>
+                <!-- Due date -->
+                <div class="relative mt-1" v-if="node.dueDate || editingDateCardId === node.id">
+                  <span
+                    v-if="node.dueDate && editingDateCardId !== node.id"
+                    class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:opacity-80"
+                    :class="{
+                      'bg-red-100 text-red-700': dueDateUrgency(node.dueDate) === 'overdue',
+                      'bg-amber-100 text-amber-700': dueDateUrgency(node.dueDate) === 'today',
+                      'bg-blue-100 text-blue-700': dueDateUrgency(node.dueDate) === 'soon',
+                      'bg-(--bg-active) text-(--text-muted)':
+                        dueDateUrgency(node.dueDate) === 'normal',
+                    }"
+                    @click="onDateClick($event, node.id)"
+                  >
+                    <Calendar class="w-2.5 h-2.5" />
+                    {{ formatDueDate(node.dueDate) }}
+                  </span>
+                  <div
+                    v-if="editingDateCardId === node.id"
+                    ref="datePickerRef"
+                    class="absolute left-0 top-0 z-40"
+                  >
+                    <DatePicker
+                      :model-value="node.dueDate ?? null"
+                      @update:model-value="
+                        store.setDueDate(node.id, $event);
+                        editingDateCardId = null;
+                      "
+                    />
+                  </div>
+                </div>
+
+                <!-- Tags -->
+                <div
+                  v-if="settings.showBoardTags && (node.tags?.length > 0 || editingTagsCardId === node.id)"
+                  class="relative mt-1.5"
+                >
+                  <div
+                    v-if="editingTagsCardId !== node.id"
+                    class="flex flex-wrap gap-1 cursor-pointer"
+                    @click="onTagsClick($event, node.id)"
+                  >
+                    <span
+                      v-for="tag in node.tags?.slice(0, 3)"
+                      :key="tag"
+                      class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-(--accent-100) text-(--accent-700) hover:bg-(--accent-200)"
+                    >
+                      {{ tag }}
+                    </span>
+                    <span v-if="(node.tags?.length ?? 0) > 3" class="text-[10px] text-(--text-faint)">
+                      +{{ node.tags!.length - 3 }}
+                    </span>
+                  </div>
+                  <div
+                    v-if="editingTagsCardId === node.id"
+                    ref="tagPickerRef"
+                    class="bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2"
+                  >
+                    <TagPicker :node-id="node.id" :tags="node.tags ?? []" />
+                  </div>
+                </div>
+
+                <!-- Hover actions for adding tag/date -->
+                <div
+                  v-if="!node.dueDate && editingDateCardId !== node.id && (!node.tags?.length && editingTagsCardId !== node.id)"
+                  class="flex gap-1 mt-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                  @click.stop
+                >
+                  <button
+                    class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+                    title="Set due date"
+                    @click="onDateClick($event, node.id)"
+                  >
+                    <Calendar class="w-3 h-3" />
+                  </button>
+                  <button
+                    v-if="settings.showBoardTags"
+                    class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+                    title="Add tag"
+                    @click="onTagsClick($event, node.id)"
+                  >
+                    <Tag class="w-3 h-3" />
+                  </button>
+                </div>
+
+                <!-- Show add icons when only one of tag/date exists -->
+                <div
+                  v-else-if="(node.dueDate && !node.tags?.length && settings.showBoardTags) || (!node.dueDate && node.tags?.length)"
+                  class="flex gap-1 mt-1 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                  @click.stop
+                >
+                  <button
+                    v-if="!node.dueDate && editingDateCardId !== node.id"
+                    class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+                    title="Set due date"
+                    @click="onDateClick($event, node.id)"
+                  >
+                    <Calendar class="w-3 h-3" />
+                  </button>
+                  <button
+                    v-if="settings.showBoardTags && !node.tags?.length && editingTagsCardId !== node.id"
+                    class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+                    title="Add tag"
+                    @click="onTagsClick($event, node.id)"
+                  >
+                    <Tag class="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <!-- Drop placeholder at end of column -->
             <div
-              v-if="dragOverColumn === col.def.id && dropInsertIndex === nodeIdx"
+              v-if="dragOverColumn === col.def.id && dropInsertIndex === col.nodes.length"
               class="border-2 border-dashed border-(--accent-400) rounded-md h-10 bg-(--accent-50) opacity-60"
             />
+
+            <!-- Empty column state -->
             <div
-              :data-card-id="node.id"
-              class="bg-(--bg-secondary) border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color] hover:border-(--border-hover) hover:shadow-sm active:cursor-grabbing select-none"
-              :class="{
-                'border-(--accent-500) shadow-[0_0_0_1px_var(--accent-500)]':
-                  store.selectedId === node.id && dragNodeId !== node.id,
-                'opacity-30! border-dashed! border-(--border-secondary)! shadow-none! cursor-grabbing!':
-                  dragNodeId === node.id,
-                'border-(--border-primary)': store.selectedId !== node.id && dragNodeId !== node.id,
-              }"
-              @pointerdown="onCardPointerDown($event, node)"
-              @click="onCardClick(node)"
-              @dblclick="onCardDblClick(node)"
-              @contextmenu="onCardContextMenu($event, node)"
+              v-if="
+                col.nodes.length === 0 &&
+                !(dragNodeId && dragOverColumn === col.def.id && dropInsertIndex === 0)
+              "
+              class="text-center text-(--text-faint) text-xs py-6"
             >
-              <div v-if="editingCardId === node.id">
-                <input
-                  ref="editInputRef"
-                  class="w-full text-(--text-secondary) leading-snug border-none outline-none bg-transparent p-0 font-[inherit] strata-text"
-                  :value="node.text"
-                  @input="onCardInput($event, node)"
-                  @blur="onCardEditBlur"
-                  @keydown="onCardEditKeydown"
-                  spellcheck="false"
-                />
-              </div>
-              <!-- eslint-disable vue/no-v-html -->
-              <div
-                v-else
-                class="text-(--text-secondary) leading-snug overflow-hidden text-ellipsis whitespace-nowrap strata-text"
-                v-html="renderInlineMarkdown((node.text || '(empty)').split('\n')[0]!)"
-              />
-              <div class="flex gap-2 mt-1 text-[11px] text-(--text-faint)">
-                <span
-                  v-if="store.breadcrumb(node.id)"
-                  class="overflow-hidden text-ellipsis whitespace-nowrap"
-                >
-                  {{ store.breadcrumb(node.id) }}
-                </span>
-                <span v-if="childCount(node) > 0"> {{ childCount(node) }} children </span>
-              </div>
-              <div v-if="node.dueDate" class="mt-1">
-                <span
-                  class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
-                  :class="{
-                    'bg-red-100 text-red-700': dueDateUrgency(node.dueDate) === 'overdue',
-                    'bg-amber-100 text-amber-700': dueDateUrgency(node.dueDate) === 'today',
-                    'bg-blue-100 text-blue-700': dueDateUrgency(node.dueDate) === 'soon',
-                    'bg-(--bg-active) text-(--text-muted)':
-                      dueDateUrgency(node.dueDate) === 'normal',
-                  }"
-                >
-                  <Calendar class="w-2.5 h-2.5" />
-                  {{ formatDueDate(node.dueDate) }}
-                </span>
-              </div>
-              <div
-                v-if="settings.showBoardTags && node.tags?.length > 0"
-                class="flex flex-wrap gap-1 mt-1.5"
-              >
-                <span
-                  v-for="tag in node.tags.slice(0, 3)"
-                  :key="tag"
-                  class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-(--accent-100) text-(--accent-700)"
-                >
-                  {{ tag }}
-                </span>
-                <span v-if="node.tags.length > 3" class="text-[10px] text-(--text-faint)">
-                  +{{ node.tags.length - 3 }}
-                </span>
-              </div>
+              No items
             </div>
-          </template>
-
-          <!-- Drop placeholder at end of column -->
-          <div
-            v-if="dragOverColumn === col.def.id && dropInsertIndex === col.nodes.length"
-            class="border-2 border-dashed border-(--accent-400) rounded-md h-10 bg-(--accent-50) opacity-60"
-          />
-
-          <!-- Empty column state -->
-          <div
-            v-if="
-              col.nodes.length === 0 &&
-              !(dragNodeId && dragOverColumn === col.def.id && dropInsertIndex === 0)
-            "
-            class="text-center text-(--text-faint) text-xs py-6"
-          >
-            No items
           </div>
         </div>
       </div>
