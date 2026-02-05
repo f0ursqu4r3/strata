@@ -32,6 +32,10 @@ export async function findGitRoot(): Promise<string> {
   return invoke('find_git_root')
 }
 
+export async function gitBranchName(workspace: string): Promise<string> {
+  return invoke('git_branch_name', { workspace })
+}
+
 export async function ensureDir(path: string): Promise<void> {
   return invoke('ensure_dir', { path })
 }

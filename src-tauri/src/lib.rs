@@ -125,6 +125,24 @@ fn find_git_root() -> String {
     String::new()
 }
 
+/// Read the current git branch name from HEAD.
+#[tauri::command]
+fn git_branch_name(workspace: String) -> String {
+    let head_path = PathBuf::from(&workspace).join(".git").join("HEAD");
+    match fs::read_to_string(&head_path) {
+        Ok(content) => {
+            let trimmed = content.trim();
+            if let Some(branch) = trimmed.strip_prefix("ref: refs/heads/") {
+                branch.to_string()
+            } else {
+                // Detached HEAD — return short hash
+                trimmed.chars().take(7).collect()
+            }
+        }
+        Err(_) => String::new(),
+    }
+}
+
 /// Create a directory if it doesn't already exist.
 #[tauri::command]
 fn ensure_dir(path: String) -> Result<(), String> {
@@ -349,6 +367,7 @@ pub fn run() {
             rename_file,
             is_git_repo,
             find_git_root,
+            git_branch_name,
             ensure_dir,
             mark_file_write,
             start_watching,

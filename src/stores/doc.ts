@@ -123,6 +123,13 @@ export const useDocStore = defineStore("doc", () => {
   const redoStack: UndoEntry[] = [];
   const MAX_UNDO = 200;
 
+  // Per-document undo/redo history — preserved across document switches
+  const _docUndoHistory = new Map<string, { undo: UndoEntry[]; redo: UndoEntry[] }>();
+
+  function clearSavedHistory(docId: string) {
+    _docUndoHistory.delete(docId);
+  }
+
   // ── Helpers: children lookup (cached per trigger) ──
   const childrenMap = computed(() => {
     const map = new Map<string | null, Node[]>();
@@ -913,10 +920,25 @@ export const useDocStore = defineStore("doc", () => {
 
   async function loadDocument(docId: string) {
     flushTextDebounce();
+    // Force-flush any pending file save so the current document is written
+    // to disk before we reset state and load the new one.
+    if (_fileSaveTimer) {
+      clearTimeout(_fileSaveTimer);
+      _fileSaveTimer = null;
+      await saveToFile();
+    }
     if (!isTauri()) {
       await flushOpBuffer();
       setCurrentDocId(docId);
     }
+    // Save current document's undo/redo history before switching
+    if (currentDocId.value) {
+      _docUndoHistory.set(currentDocId.value, {
+        undo: undoStack.splice(0),
+        redo: redoStack.splice(0),
+      });
+    }
+
     currentDocId.value = docId;
 
     // Reset state
@@ -932,6 +954,14 @@ export const useDocStore = defineStore("doc", () => {
     setSeq(0);
 
     await init();
+
+    // Restore undo/redo history for the loaded document
+    const saved = _docUndoHistory.get(docId);
+    if (saved) {
+      undoStack.push(...saved.undo);
+      redoStack.push(...saved.redo);
+      _docUndoHistory.delete(docId);
+    }
   }
 
   async function init() {
@@ -1373,6 +1403,42 @@ export const useDocStore = defineStore("doc", () => {
     URL.revokeObjectURL(url);
   }
 
+  /**
+   * Import parsed flat nodes as children of the given parent.
+   * Used by drag-and-drop file import.
+   */
+  async function importNodes(
+    flatNodes: Array<{
+      id: string;
+      parentId: string;
+      pos: string;
+      text: string;
+      status: string;
+      tags: string[];
+    }>,
+  ) {
+    for (const fn of flatNodes) {
+      const op = makeOp("create", {
+        type: "create",
+        id: fn.id,
+        parentId: fn.parentId,
+        pos: fn.pos,
+        text: fn.text,
+        status: fn.status as Status,
+      });
+      await dispatch(op);
+
+      for (const tag of fn.tags) {
+        const tagOp = makeOp("addTag", {
+          type: "addTag",
+          id: fn.id,
+          tag,
+        });
+        await dispatch(tagOp);
+      }
+    }
+  }
+
   async function importJSON(json: string) {
     const doc = JSON.parse(json);
     if (!doc.version || !doc.rootId || !Array.isArray(doc.nodes)) {
@@ -1487,6 +1553,7 @@ export const useDocStore = defineStore("doc", () => {
     breadcrumb,
     init,
     loadDocument,
+    clearSavedHistory,
     createNode,
     updateText,
     flushTextDebounce,
@@ -1534,6 +1601,7 @@ export const useDocStore = defineStore("doc", () => {
     exportJSON,
     downloadExport,
     importJSON,
+    importNodes,
     resetDocument,
     suppressTransitions,
     saveToFile,

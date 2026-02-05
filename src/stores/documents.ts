@@ -29,6 +29,20 @@ export const useDocumentsStore = defineStore("documents", () => {
   const documents = ref<DocumentMeta[]>([]);
   const activeId = ref<string>("");
 
+  /** Generate a unique document name like "Untitled", "Untitled 2", etc. */
+  function nextUntitledName(): string {
+    const names = new Set(documents.value.map((d) => {
+      // Use base name without directory prefix or .md extension
+      const n = d.name;
+      const slash = n.lastIndexOf("/");
+      return slash >= 0 ? n.substring(slash + 1) : n;
+    }));
+    if (!names.has("Untitled")) return "Untitled";
+    let i = 2;
+    while (names.has(`Untitled ${i}`)) i++;
+    return `Untitled ${i}`;
+  }
+
   const sortedDocuments = computed(() =>
     [...documents.value].sort((a, b) => a.name.localeCompare(b.name)),
   );
@@ -142,7 +156,19 @@ export const useDocumentsStore = defineStore("documents", () => {
     }
   }
 
+  /** Check if a document name already exists (case-insensitive for filesystem safety). */
+  function nameConflicts(name: string, excludeId?: string): boolean {
+    return documents.value.some((d) => {
+      if (excludeId && d.id === excludeId) return false;
+      const n = d.name;
+      const slash = n.lastIndexOf("/");
+      const base = slash >= 0 ? n.substring(slash + 1) : n;
+      return base.toLowerCase() === name.toLowerCase();
+    });
+  }
+
   function renameDocument(docId: string, name: string): void {
+    if (nameConflicts(name, docId)) return; // silently skip if name taken
     if (isTauri()) {
       renameDocumentFile(docId, name);
       return;
@@ -265,6 +291,8 @@ export const useDocumentsStore = defineStore("documents", () => {
     createDocument,
     switchDocument,
     renameDocument,
+    nameConflicts,
+    nextUntitledName,
     deleteDocument,
     touch,
     setupFileWatching,

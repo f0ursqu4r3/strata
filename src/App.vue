@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import {
   Layers,
   Search,
   Upload,
-  RotateCcw,
   Keyboard,
   Settings,
   ChevronRight,
@@ -52,6 +51,15 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 const outlineRef = ref<InstanceType<typeof OutlineView> | null>(null);
 const needsWorkspacePicker = ref(false);
 const isGitWorkspace = ref(false);
+const gitBranch = ref("");
+
+const activeDocName = computed(() => {
+  const doc = docsStore.documents.find((d) => d.id === docsStore.activeId);
+  if (!doc) return "";
+  const name = doc.name;
+  const slash = name.lastIndexOf("/");
+  return slash >= 0 ? name.substring(slash + 1) : name;
+});
 
 onMounted(async () => {
   settings.init();
@@ -64,6 +72,8 @@ onMounted(async () => {
       if (gitRoot) {
         settings.setWorkspacePath(gitRoot);
         isGitWorkspace.value = true;
+        const { gitBranchName } = await import("@/lib/tauri-fs");
+        gitBranch.value = await gitBranchName(gitRoot);
       } else {
         needsWorkspacePicker.value = true;
         return;
@@ -87,9 +97,14 @@ onMounted(async () => {
 
   // Check git status in Tauri mode
   if (isTauri() && settings.workspacePath && !isGitWorkspace.value) {
-    import("@/lib/tauri-fs").then(({ isGitRepo }) => {
+    import("@/lib/tauri-fs").then(({ isGitRepo, gitBranchName }) => {
       isGitRepo(settings.workspacePath).then((v) => {
         isGitWorkspace.value = v;
+        if (v) {
+          gitBranchName(settings.workspacePath).then((b) => {
+            gitBranch.value = b;
+          });
+        }
       });
     });
   }
@@ -132,9 +147,14 @@ async function onWorkspaceSelected() {
 
   // Check git status after manual workspace selection
   if (isTauri() && settings.workspacePath) {
-    import("@/lib/tauri-fs").then(({ isGitRepo }) => {
+    import("@/lib/tauri-fs").then(({ isGitRepo, gitBranchName }) => {
       isGitRepo(settings.workspacePath).then((v) => {
         isGitWorkspace.value = v;
+        if (v) {
+          gitBranchName(settings.workspacePath).then((b) => {
+            gitBranch.value = b;
+          });
+        }
       });
     });
   }
@@ -204,10 +224,6 @@ async function onFileSelected(e: Event) {
   if (fileInputRef.value) fileInputRef.value.value = "";
 }
 
-async function onReset() {
-  if (!confirm("Reset document? This will delete all data and start fresh.")) return;
-  await store.resetDocument();
-}
 
 function onZoomCrumb(id: string) {
   store.zoomIn(id);
@@ -229,29 +245,39 @@ function onZoomRoot() {
   <div v-else-if="store.ready" class="flex flex-col h-full bg-(--bg-primary) text-(--text-secondary)">
     <!-- Top bar -->
     <header
-      class="flex flex-wrap items-center min-h-12 px-3 sm:px-4 gap-2 py-2 border-b border-(--border-primary) bg-(--bg-primary) shrink-0"
+      class="grid grid-cols-[1fr_auto_1fr] items-center min-h-11 px-3 sm:px-4 py-1.5 border-b border-(--border-primary) bg-(--bg-primary) shrink-0"
     >
-      <div class="flex items-center gap-2">
+      <!-- Left: branding + doc context -->
+      <div class="flex items-center gap-2 min-w-0">
         <button
-          class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
+          class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer shrink-0"
           title="Toggle sidebar"
           @click="settings.setSidebarOpen(!settings.sidebarOpen)"
         >
           <PanelLeft class="w-4 h-4" />
         </button>
-        <Layers class="w-4.5 h-4.5" style="color: var(--accent-500)" />
-        <span class="font-bold text-base text-(--text-primary) tracking-tight">Strata</span>
-        <span
-          v-if="isGitWorkspace"
-          class="flex items-center gap-1 text-[11px] text-(--text-faint) bg-(--bg-hover) rounded px-1.5 py-0.5"
-          title="Workspace is a git repository"
-        >
-          <GitBranch class="w-3 h-3" />
-          git
-        </span>
+        <Layers class="w-4 h-4 shrink-0" style="color: var(--accent-500)" />
+        <span class="font-semibold text-sm text-(--text-primary) tracking-tight shrink-0">Strata</span>
+        <template v-if="isGitWorkspace || activeDocName">
+          <span class="text-(--text-faint) text-xs shrink-0">/</span>
+          <span
+            v-if="isGitWorkspace && gitBranch"
+            class="text-xs text-(--text-faint) shrink-0"
+            :title="`Branch: ${gitBranch}`"
+          >
+            <GitBranch class="w-3 h-3 inline -mt-px" />
+            {{ gitBranch }}
+          </span>
+          <span v-if="isGitWorkspace && gitBranch && activeDocName" class="text-(--text-faint) text-xs shrink-0">/</span>
+          <span
+            v-if="activeDocName"
+            class="text-sm text-(--text-secondary) truncate"
+          >{{ activeDocName }}</span>
+        </template>
       </div>
 
-      <div class="flex items-center gap-2 order-3 sm:order-0 sm:ml-auto sm:mr-auto">
+      <!-- Center: view mode selector -->
+      <div class="flex items-center justify-center">
         <div class="flex bg-(--bg-hover) rounded-md p-0.5">
           <button
             v-for="m in modes"
@@ -269,7 +295,8 @@ function onZoomRoot() {
         </div>
       </div>
 
-      <div class="flex items-center gap-1.5 ml-auto">
+      <!-- Right: actions -->
+      <div class="flex items-center gap-1 justify-end">
         <!-- Search -->
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
@@ -282,7 +309,7 @@ function onZoomRoot() {
         <!-- Tag filter -->
         <div v-if="store.allTags.length > 0" class="relative hidden sm:block">
           <button
-            class="flex items-center gap-1 px-2 py-1 rounded-md border text-[13px] cursor-pointer"
+            class="flex items-center gap-1 px-1.5 py-1 rounded-md border text-[12px] cursor-pointer"
             :class="
               store.tagFilter
                 ? 'border-(--accent-500) bg-(--accent-50) text-(--accent-700)'
@@ -290,7 +317,7 @@ function onZoomRoot() {
             "
             @click="showTagFilter = !showTagFilter"
           >
-            <Tag class="w-3.5 h-3.5" />
+            <Tag class="w-3 h-3" />
             <span v-if="store.tagFilter">{{ store.tagFilter }}</span>
             <span v-else>Tags</span>
             <button
@@ -327,7 +354,7 @@ function onZoomRoot() {
         <!-- Due date filter -->
         <div class="relative hidden sm:block">
           <button
-            class="flex items-center gap-1 px-2 py-1 rounded-md border text-[13px] cursor-pointer"
+            class="flex items-center gap-1 px-1.5 py-1 rounded-md border text-[12px] cursor-pointer"
             :class="
               store.dueDateFilter !== 'all'
                 ? 'border-(--accent-500) bg-(--accent-50) text-(--accent-700)'
@@ -335,8 +362,8 @@ function onZoomRoot() {
             "
             @click="showDueDateFilter = !showDueDateFilter"
           >
-            <Calendar class="w-3.5 h-3.5" />
-            <span v-if="store.dueDateFilter !== 'all'">{{ { overdue: 'Overdue', today: 'Due Today', week: 'This Week' }[store.dueDateFilter] }}</span>
+            <Calendar class="w-3 h-3" />
+            <span v-if="store.dueDateFilter !== 'all'">{{ { overdue: 'Overdue', today: 'Today', week: 'Week' }[store.dueDateFilter] }}</span>
             <span v-else>Due</span>
             <button
               v-if="store.dueDateFilter !== 'all'"
@@ -367,23 +394,15 @@ function onZoomRoot() {
           </div>
         </div>
 
-        <!-- Toolbar buttons -->
         <div class="hidden sm:block">
           <ExportMenu />
         </div>
         <button
-          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) hidden sm:block"
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer hidden sm:block"
           title="Import JSON"
           @click="onImportClick"
         >
           <Upload class="w-4 h-4" />
-        </button>
-        <button
-          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) hidden sm:block"
-          title="Reset document"
-          @click="onReset"
-        >
-          <RotateCcw class="w-4 h-4" />
         </button>
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
@@ -393,14 +412,14 @@ function onZoomRoot() {
           <Trash2 class="w-4 h-4" />
         </button>
         <button
-          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) hidden sm:block"
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer hidden sm:block"
           title="Keyboard shortcuts (?)"
           @click="showShortcuts = true"
         >
           <Keyboard class="w-4 h-4" />
         </button>
         <button
-          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary)"
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="Settings"
           @click="showSettings = true"
         >

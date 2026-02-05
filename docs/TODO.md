@@ -20,18 +20,15 @@
 - Vim keyboard mode: j/k nav, i edit, o new sibling, dd delete, gg/G jump, zc/zo collapse, / search
 - Node history: per-node changelog timeline from the op-log
 - Multi-select: shift-click range, cmd-click toggle, bulk delete and status change
+- Unique document names ("Untitled", "Untitled 2", etc.), conflict detection on rename, file rename on disk
+- Drag-and-drop file import: Markdown, OPML, plain text, JSON with visual drop zone
+- Git branch name displayed in header badge when workspace is a git repo
 
 ## Remaining
 
 ### Priority
 
 - [ ] Git operations from UI: commit, pull, push (via Tauri command bridge)
-
-### Quality of Life
-
-- [ ] Documents names should be unique by default (e.g. "Untitled", "Untitled 2", etc.) when creating new docs and should rename files on disk when renamed in-app, if there is no naming conflict.
-- [ ] Drag-and-drop file import (Markdown, OPML, text, images)
-- [ ] When a git repo is detected, show repo and branch name in the workspace picker
 
 ### Backlog
 

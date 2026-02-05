@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { Plus, FileText, Trash2, X } from 'lucide-vue-next'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocStore } from '@/stores/doc'
+import { isTauri } from '@/lib/platform'
 
 const emit = defineEmits<{ close: [] }>()
 const docsStore = useDocumentsStore()
@@ -13,12 +14,14 @@ const renameInputRef = ref<HTMLInputElement[]>([])
 const renameText = ref('')
 
 async function onCreateNew() {
-  const id = docsStore.createDocument('Untitled')
+  docStore.flushTextDebounce()
+  const name = docsStore.nextUntitledName()
+  const id = docsStore.createDocument(name)
   await docsStore.switchDocument(id)
   await docStore.loadDocument(id)
   // Start renaming immediately
   renamingId.value = id
-  renameText.value = 'Untitled'
+  renameText.value = name
   await nextTick()
   renameInputRef.value[0]?.focus()
   renameInputRef.value[0]?.select()
@@ -51,8 +54,13 @@ function startRename(docId: string, name: string, e: MouseEvent) {
   })
 }
 
+const renameConflict = computed(() => {
+  if (!renamingId.value || !renameText.value.trim()) return false
+  return docsStore.nameConflicts(renameText.value.trim(), renamingId.value)
+})
+
 function finishRename() {
-  if (renamingId.value && renameText.value.trim()) {
+  if (renamingId.value && renameText.value.trim() && !renameConflict.value) {
     docsStore.renameDocument(renamingId.value, renameText.value.trim())
   }
   renamingId.value = null
@@ -69,9 +77,21 @@ function onRenameKeydown(e: KeyboardEvent) {
 async function onDelete(docId: string, e: MouseEvent) {
   e.stopPropagation()
   if (docsStore.documents.length <= 1) return
-  if (!confirm('Delete this document? This cannot be undone.')) return
+
+  let confirmed = false
+  if (isTauri()) {
+    const { ask } = await import('@tauri-apps/plugin-dialog')
+    confirmed = await ask('Delete this document? This cannot be undone.', {
+      title: 'Delete Document',
+      kind: 'warning',
+    })
+  } else {
+    confirmed = confirm('Delete this document? This cannot be undone.')
+  }
+  if (!confirmed) return
+
   await docsStore.deleteDocument(docId)
-  // If we switched documents, reload
+  docStore.clearSavedHistory(docId)
   await docStore.loadDocument(docsStore.activeId)
 }
 </script>
@@ -116,15 +136,20 @@ async function onDelete(docId: string, e: MouseEvent) {
         <FileText class="w-3.5 h-3.5 shrink-0 text-(--text-faint)" />
 
         <!-- Rename input -->
-        <input
-          v-if="renamingId === doc.id"
-          ref="renameInputRef"
-          v-model="renameText"
-          class="flex-1 min-w-0 bg-transparent border border-(--border-secondary) rounded px-1 py-0.5 text-sm text-(--text-primary) outline-none focus:ring-1 focus:ring-(--accent-400)"
-          @blur="finishRename"
-          @keydown="onRenameKeydown"
-          @click.stop
-        />
+        <div v-if="renamingId === doc.id" class="flex-1 min-w-0 relative">
+          <input
+            ref="renameInputRef"
+            v-model="renameText"
+            class="w-full bg-transparent border rounded px-1 py-0.5 text-sm text-(--text-primary) outline-none focus:ring-1"
+            :class="renameConflict ? 'border-(--color-danger) focus:ring-(--color-danger)' : 'border-(--border-secondary) focus:ring-(--accent-400)'"
+            @blur="finishRename"
+            @keydown="onRenameKeydown"
+            @click.stop
+          />
+          <div v-if="renameConflict" class="absolute left-0 top-full text-[10px] text-(--color-danger) mt-0.5">
+            Name already exists
+          </div>
+        </div>
 
         <!-- Document name -->
         <span
