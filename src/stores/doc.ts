@@ -1496,6 +1496,31 @@ export const useDocStore = defineStore("doc", () => {
     editingId.value = null;
   }
 
+  function clearToEmpty() {
+    nodes.value.clear();
+    nodes.value.set(rootId.value, {
+      id: rootId.value,
+      parentId: null,
+      pos: "",
+      text: "",
+      status: "none" as Status,
+      collapsed: false,
+      deleted: false,
+      tags: [],
+    });
+    triggerRef(nodes);
+    undoStack.length = 0;
+    redoStack.length = 0;
+    selectedId.value = "";
+    editingId.value = null;
+    editingTrigger.value = null;
+    zoomId.value = null;
+    searchQuery.value = "";
+    tagFilter.value = null;
+    dueDateFilter.value = "all";
+    currentDocId.value = "";
+  }
+
   async function resetDocument() {
     await clearAll();
     undoStack.length = 0;
@@ -1554,6 +1579,7 @@ export const useDocStore = defineStore("doc", () => {
     init,
     loadDocument,
     clearSavedHistory,
+    clearToEmpty,
     createNode,
     updateText,
     flushTextDebounce,

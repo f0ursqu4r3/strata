@@ -76,7 +76,6 @@ function onRenameKeydown(e: KeyboardEvent) {
 
 async function onDelete(docId: string, e: MouseEvent) {
   e.stopPropagation()
-  if (docsStore.documents.length <= 1) return
 
   let confirmed = false
   if (isTauri()) {
@@ -92,7 +91,11 @@ async function onDelete(docId: string, e: MouseEvent) {
 
   await docsStore.deleteDocument(docId)
   docStore.clearSavedHistory(docId)
-  await docStore.loadDocument(docsStore.activeId)
+  if (docsStore.activeId) {
+    await docStore.loadDocument(docsStore.activeId)
+  } else {
+    docStore.clearToEmpty()
+  }
 }
 </script>
 
@@ -161,7 +164,7 @@ async function onDelete(docId: string, e: MouseEvent) {
 
         <!-- Delete button -->
         <button
-          v-if="docsStore.documents.length > 1 && renamingId !== doc.id"
+          v-if="renamingId !== doc.id"
           class="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:text-(--color-danger) text-(--text-faint) cursor-pointer"
           title="Delete document"
           @click="onDelete(doc.id, $event)"

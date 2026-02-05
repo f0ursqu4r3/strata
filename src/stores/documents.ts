@@ -197,12 +197,12 @@ export const useDocumentsStore = defineStore("documents", () => {
   }
 
   async function deleteDocument(docId: string): Promise<void> {
-    if (documents.value.length <= 1) return;
-
     if (activeId.value === docId) {
       const other = documents.value.find((d) => d.id !== docId);
       if (other) {
         await switchDocument(other.id);
+      } else {
+        activeId.value = "";
       }
     }
 

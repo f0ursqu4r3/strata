@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
 import { useDocStore } from '@/stores/doc'
+import { useDocumentsStore } from '@/stores/documents'
 import { useSettingsStore } from '@/stores/settings'
+import { isTauri } from '@/lib/platform'
 import { matchesCombo, type ShortcutAction } from '@/lib/shortcuts'
 import { rankBefore, rankBetween, rankAfter, initialRank } from '@/lib/rank'
 import OutlineRow from './OutlineRow.vue'
@@ -13,6 +15,7 @@ const emit = defineEmits<{
 }>()
 
 const store = useDocStore()
+const docsStore = useDocumentsStore()
 const settings = useSettingsStore()
 const containerRef = ref<HTMLElement | null>(null)
 const dropTargetIdx = ref<number | null>(null)
@@ -28,6 +31,17 @@ function onRowContextMenu(nodeId: string, x: number, y: number) {
 
 function closeContextMenu() {
   ctxMenu.value = null
+}
+
+/** If no document exists, auto-create one and load it. Returns true if a doc was created. */
+async function ensureDocument(): Promise<boolean> {
+  if (docsStore.documents.length > 0) return false
+  if (isTauri()) return false
+  const name = docsStore.nextUntitledName()
+  const id = docsStore.createDocument(name)
+  await docsStore.switchDocument(id)
+  await store.loadDocument(id)
+  return true
 }
 
 // ── Virtual scroll ──
@@ -218,7 +232,7 @@ function handleVimKey(e: KeyboardEvent): boolean {
   return false
 }
 
-function onKeydown(e: KeyboardEvent) {
+async function onKeydown(e: KeyboardEvent) {
   // Global shortcuts (undo/redo) work even while editing
   const globalAction = findAction(e, 'global')
   if (globalAction === 'undo') {
@@ -284,12 +298,13 @@ function onKeydown(e: KeyboardEvent) {
         store.startEditing(store.selectedId, 'keyboard')
         e.preventDefault()
       } else if (store.visibleRows.length === 0) {
-        // Empty outline — create first node under root
+        // Empty outline — auto-create document if needed, then first node
+        e.preventDefault()
+        await ensureDocument()
         const op = store.createNode(store.rootId, initialRank())
         const newId = (op.payload as { id: string }).id
         store.selectNode(newId)
         store.startEditing(newId, 'keyboard')
-        e.preventDefault()
       }
       break
     case 'indent':
@@ -656,10 +671,12 @@ function onContainerClick(e: MouseEvent) {
   }
 }
 
-function onContainerDblClick(e: MouseEvent) {
+async function onContainerDblClick(e: MouseEvent) {
   // Only create a new node when clicking empty space (not on a row)
   const target = e.target as HTMLElement
   if (target.closest('[data-row-idx]')) return
+
+  await ensureDocument()
 
   const siblings = store.getChildren(store.effectiveZoomId)
   const lastSibling = siblings[siblings.length - 1]
