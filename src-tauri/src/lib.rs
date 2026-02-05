@@ -317,6 +317,8 @@ fn build_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Help menu
     let help_menu = SubmenuBuilder::new(handle, "Help")
         .item(&MenuItem::with_id(handle, "shortcuts", "Keyboard Shortcuts", true, Some("CmdOrCtrl+/"))?)
+        .separator()
+        .item(&MenuItem::with_id(handle, "check-for-updates", "Check for Updates…", true, None::<&str>)?)
         .build()?;
 
     let menu = menu_builder

@@ -54,8 +54,35 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
       case 'shortcuts':
         refs.showShortcuts.value = true
         break
+      case 'check-for-updates':
+        checkForUpdates()
+        break
     }
   })
+}
+
+async function checkForUpdates() {
+  const { check } = await import('@tauri-apps/plugin-updater')
+  const { ask, message } = await import('@tauri-apps/plugin-dialog')
+
+  try {
+    const update = await check()
+    if (update) {
+      const yes = await ask(
+        `A new version (${update.version}) is available. Update and restart now?`,
+        { title: 'Update Available', kind: 'info' },
+      )
+      if (yes) {
+        await update.downloadAndInstall()
+        const { relaunch } = await import('@tauri-apps/plugin-process')
+        await relaunch()
+      }
+    } else {
+      await message('You are running the latest version.', { title: 'No Updates', kind: 'info' })
+    }
+  } catch (e) {
+    await message(`Failed to check for updates: ${e}`, { title: 'Update Error', kind: 'error' })
+  }
 }
 
 export async function updateWindowTitle(workspacePath: string) {
