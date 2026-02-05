@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -33,6 +33,7 @@ jobs:
 
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.platform }}
+    environment: production
 
     steps:
       - uses: actions/checkout@v4
@@ -75,7 +76,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
-          releaseBody: 'See the assets below to download Strata for your platform.'
+          releaseBody: "See the assets below to download Strata for your platform."
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
