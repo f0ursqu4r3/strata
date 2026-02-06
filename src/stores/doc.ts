@@ -34,6 +34,7 @@ export const useDocStore = defineStore("doc", () => {
   const selectedId = ref<string>("");
   const editingId = ref<string | null>(null);
   const editingTrigger = ref<"keyboard" | "click" | "dblclick" | null>(null);
+  const editingFocusBody = ref(false);
   const viewMode = ref<ViewMode>("split");
   const ready = ref(false);
   const searchQuery = ref("");
@@ -841,13 +842,14 @@ export const useDocStore = defineStore("doc", () => {
 
   // ── Editing-aware navigation ──
 
-  function editPreviousNode(fromId: string) {
+  function editPreviousNode(fromId: string, focusBody = false) {
     const idx = visibleRows.value.findIndex((r) => r.node.id === fromId);
     if (idx > 0) {
       const prevId = visibleRows.value[idx - 1]!.node.id;
       selectedId.value = prevId;
       editingId.value = prevId;
       editingTrigger.value = "keyboard";
+      editingFocusBody.value = focusBody;
     }
   }
 
@@ -1307,12 +1309,14 @@ export const useDocStore = defineStore("doc", () => {
 
   function startEditing(id: string, trigger: "keyboard" | "click" | "dblclick" = "keyboard") {
     editingTrigger.value = trigger;
+    editingFocusBody.value = false;
     editingId.value = id;
   }
 
   function stopEditing() {
     editingId.value = null;
     editingTrigger.value = null;
+    editingFocusBody.value = false;
   }
 
   function setViewMode(mode: ViewMode) {
@@ -1556,6 +1560,7 @@ export const useDocStore = defineStore("doc", () => {
     selectedId,
     editingId,
     editingTrigger,
+    editingFocusBody,
     viewMode,
     ready,
     searchQuery,

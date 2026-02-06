@@ -134,10 +134,19 @@ watch(isEditing, async (editing) => {
     localText.value = props.node.text;
     await nextTick();
     autoResizeBody();
-    // Skip title focus if we want to focus body instead
-    if (focusBodyOnEdit.value) {
+    // Skip title focus if we want to focus body instead (from click or arrow navigation)
+    const shouldFocusBody = focusBodyOnEdit.value || (store.editingFocusBody && localText.value.includes("\n"));
+    if (shouldFocusBody) {
       focusBodyOnEdit.value = false;
-      bodyInputRef.value?.focus();
+      store.editingFocusBody = false;
+      await nextTick(); // Ensure body textarea is rendered
+      const body = bodyInputRef.value;
+      if (body) {
+        body.focus();
+        // Position cursor at end of body
+        const len = body.value.length;
+        body.setSelectionRange(len, len);
+      }
       return;
     }
     const input = titleInputRef.value;
@@ -168,12 +177,20 @@ function onBodyInput(e: Event) {
   autoResizeBody();
 }
 
+function cleanupEmptyBody() {
+  if (localText.value.includes("\n") && localBody.value === "") {
+    localText.value = localTitle.value;
+    store.updateText(props.node.id, localTitle.value);
+  }
+}
+
 function onBlur(e: FocusEvent) {
   // Don't stop editing if focus is moving to another input in this row
   const relatedTarget = e.relatedTarget as HTMLElement | null;
   if (relatedTarget === titleInputRef.value || relatedTarget === bodyInputRef.value) {
     return;
   }
+  cleanupEmptyBody();
   // Only stop editing if this node is still the one being edited.
   // When Enter creates a sibling, editingId moves to the new node
   // before this blur fires — don't clear it.
@@ -249,8 +266,10 @@ function onTitleKeydown(e: KeyboardEvent) {
     const pos = input.selectionStart ?? 0;
     if (pos === 0 && input.selectionEnd === 0) {
       e.preventDefault();
+      cleanupEmptyBody();
       store.flushTextDebounce();
-      store.editPreviousNode(props.node.id);
+      // Pass true to focus body of previous node if it has one
+      store.editPreviousNode(props.node.id, true);
     }
   } else if (e.key === "ArrowDown" && !e.shiftKey && input) {
     const pos = input.selectionStart ?? 0;
@@ -262,6 +281,7 @@ function onTitleKeydown(e: KeyboardEvent) {
         bodyInputRef.value?.focus();
         bodyInputRef.value?.setSelectionRange(0, 0);
       } else {
+        cleanupEmptyBody();
         store.flushTextDebounce();
         store.editNextNode(props.node.id);
       }
@@ -299,6 +319,7 @@ function onBodyKeydown(e: KeyboardEvent) {
     const onLastLine = input.value.indexOf("\n", pos) === -1;
     if (onLastLine && pos === len && input.selectionEnd === len) {
       e.preventDefault();
+      cleanupEmptyBody();
       store.flushTextDebounce();
       store.editNextNode(props.node.id);
     }
