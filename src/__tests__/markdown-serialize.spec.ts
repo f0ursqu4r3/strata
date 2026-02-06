@@ -40,7 +40,7 @@ function buildTree(specs: { text: string; parentId: string | null; status?: stri
 }
 
 describe('serializeToMarkdown', () => {
-  it('serializes a simple flat list', () => {
+  it('serializes a simple flat list with checkboxes', () => {
     const rootId = 'root'
     const nodes = buildTree([
       { text: 'First item', parentId: rootId },
@@ -49,10 +49,12 @@ describe('serializeToMarkdown', () => {
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
-    expect(md).toContain('- First item')
-    expect(md).toContain('- Second item !status(done)')
+    expect(md).toContain('- [ ] First item')
+    expect(md).toContain('- [x] Second item')
     // Default status (todo) should NOT have a marker
-    expect(md).not.toContain('!status(todo)')
+    expect(md).not.toContain('!status(Todo)')
+    // Done is the only final status, so !status(Done) should be omitted (implied by [x])
+    expect(md).not.toContain('!status(Done)')
   })
 
   it('serializes nested children with indentation', () => {
@@ -64,8 +66,8 @@ describe('serializeToMarkdown', () => {
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
-    expect(md).toContain('- Parent')
-    expect(md).toContain('  - Child')
+    expect(md).toContain('- [ ] Parent')
+    expect(md).toContain('  - [ ] Child')
   })
 
   it('serializes tags', () => {
@@ -76,7 +78,7 @@ describe('serializeToMarkdown', () => {
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
-    expect(md).toContain('- Tagged item #urgent #backend')
+    expect(md).toContain('- [ ] Tagged item  #urgent #backend')
   })
 
   it('serializes due dates', () => {
@@ -153,20 +155,52 @@ describe('serializeToMarkdown', () => {
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
-    expect(md).toContain('- Line one')
+    expect(md).toContain('- [ ] Line one')
     expect(md).toContain('  Line two')
     expect(md).toContain('  Line three')
+  })
+
+  it('includes !status() when there are multiple final statuses', () => {
+    const rootId = 'root'
+    const statusConfig: StatusDef[] = [
+      { id: 'todo', label: 'Todo', color: '#aaa', icon: 'circle' },
+      { id: 'done', label: 'Done', color: '#bbb', icon: 'circle-check', final: true },
+      { id: 'archived', label: 'Archived', color: '#ccc', icon: 'archive', final: true },
+    ]
+    const nodes = buildTree([
+      { text: 'Done item', parentId: rootId, status: 'done' },
+      { text: 'Archived item', parentId: rootId, status: 'archived' },
+    ], rootId)
+
+    const md = serializeToMarkdown({ nodes, rootId, statusConfig })
+
+    // Both are [x] but need !status() to disambiguate
+    expect(md).toContain('- [x] Done item  !status(Done)')
+    expect(md).toContain('- [x] Archived item  !status(Archived)')
+  })
+
+  it('includes final flag in custom status frontmatter', () => {
+    const rootId = 'root'
+    const nodes = buildTree([], rootId)
+    const statusConfig: StatusDef[] = [
+      { id: 'open', label: 'Open', color: '#aaa', icon: 'circle' },
+      { id: 'closed', label: 'Closed', color: '#bbb', icon: 'circle-check', final: true },
+    ]
+
+    const md = serializeToMarkdown({ nodes, rootId, statusConfig })
+
+    expect(md).toContain('final: true')
   })
 })
 
 describe('parseMarkdown', () => {
-  it('parses a simple flat list with minimal frontmatter', () => {
+  it('parses a simple flat list with checkboxes', () => {
     const md = `---
 doc-type: strata
 ---
 
-- First item
-- Second item !status(done)
+- [ ] First item
+- [x] Second item
 `
     const result = parseMarkdown(md)
 
@@ -175,17 +209,31 @@ doc-type: strata
     expect(items[0]!.text).toBe('First item')
     expect(items[0]!.status).toBe('todo')
     expect(items[1]!.text).toBe('Second item')
-    expect(items[1]!.status).toBe('done')
+    expect(items[1]!.status).toBe('done') // [x] maps to first final status
   })
 
-  it('parses nested items', () => {
+  it('parses explicit status that overrides checkbox', () => {
     const md = `---
 doc-type: strata
 ---
 
-- Parent
-  - Child
-    - Grandchild
+- [x] Item with explicit status  !status(In Progress)
+`
+    const result = parseMarkdown(md)
+
+    const items = [...result.nodes.values()].filter((n) => n.parentId === result.rootId)
+    expect(items[0]!.text).toBe('Item with explicit status')
+    expect(items[0]!.status).toBe('in_progress') // Explicit status wins over [x]
+  })
+
+  it('parses nested items with checkboxes', () => {
+    const md = `---
+doc-type: strata
+---
+
+- [ ] Parent
+  - [ ] Child
+    - [x] Grandchild
 `
     const result = parseMarkdown(md)
 
@@ -200,6 +248,24 @@ doc-type: strata
     const grandchildren = [...result.nodes.values()].filter((n) => n.parentId === children[0]!.id)
     expect(grandchildren).toHaveLength(1)
     expect(grandchildren[0]!.text).toBe('Grandchild')
+    expect(grandchildren[0]!.status).toBe('done')
+  })
+
+  it('parses items without checkboxes (backwards compat)', () => {
+    const md = `---
+doc-type: strata
+---
+
+- Item without checkbox
+- Another item  !status(Done)
+`
+    const result = parseMarkdown(md)
+
+    const items = [...result.nodes.values()].filter((n) => n.parentId === result.rootId)
+    expect(items[0]!.text).toBe('Item without checkbox')
+    expect(items[0]!.status).toBe('todo')
+    expect(items[1]!.text).toBe('Another item')
+    expect(items[1]!.status).toBe('done')
   })
 
   it('parses tags', () => {
@@ -207,7 +273,7 @@ doc-type: strata
 doc-type: strata
 ---
 
-- Item with tags #urgent #backend
+- [ ] Item with tags  #urgent #backend
 `
     const result = parseMarkdown(md)
 
@@ -221,7 +287,7 @@ doc-type: strata
 doc-type: strata
 ---
 
-- Due item @due(2026-03-15)
+- [ ] Due item  @due(2026-03-15)
 `
     const result = parseMarkdown(md)
 
@@ -235,7 +301,7 @@ doc-type: strata
 doc-type: strata
 ---
 
-- Collapsed item !collapsed
+- [ ] Collapsed item  !collapsed
 `
     const result = parseMarkdown(md)
 
@@ -243,7 +309,7 @@ doc-type: strata
     expect(items[0]!.collapsed).toBe(true)
   })
 
-  it('parses custom status config from frontmatter', () => {
+  it('parses custom status config with final flag from frontmatter', () => {
     const md = `---
 doc-type: strata
 statuses:
@@ -255,21 +321,24 @@ statuses:
     label: "Closed"
     color: "#bbb"
     icon: circle-check
+    final: true
 ---
 
-- Item
+- [ ] Item
 `
     const result = parseMarkdown(md)
 
     expect(result.statusConfig).toHaveLength(2)
     expect(result.statusConfig[0]!.id).toBe('open')
     expect(result.statusConfig[0]!.label).toBe('Open')
+    expect(result.statusConfig[0]!.final).toBeFalsy()
     expect(result.statusConfig[1]!.id).toBe('closed')
+    expect(result.statusConfig[1]!.final).toBe(true)
   })
 
   it('falls back to DEFAULT_STATUSES when no frontmatter', () => {
-    const md = `- Item one
-- Item two
+    const md = `- [ ] Item one
+- [ ] Item two
 `
     const result = parseMarkdown(md)
 
@@ -290,7 +359,7 @@ statuses:
     icon: circle-dot
 ---
 
-- Complex item !status(in_progress) #urgent #frontend @due(2026-06-01) !collapsed
+- [ ] Complex item  !status(In Progress)  #urgent #frontend  @due(2026-06-01)  !collapsed
 `
     const result = parseMarkdown(md)
 
@@ -311,7 +380,7 @@ describe('round-trip', () => {
     const statusConfig: StatusDef[] = [
       { id: 'todo', label: 'Todo', color: '#94a3b8', icon: 'circle' },
       { id: 'in_progress', label: 'In Progress', color: '#3b82f6', icon: 'circle-dot' },
-      { id: 'done', label: 'Done', color: '#22c55e', icon: 'circle-check' },
+      { id: 'done', label: 'Done', color: '#22c55e', icon: 'circle-check', final: true },
     ]
 
     const nodes = buildTree([
@@ -329,5 +398,27 @@ describe('round-trip', () => {
     })
 
     expect(md2).toBe(md1)
+  })
+
+  it('round-trips with checkbox checked items', () => {
+    const md = `---
+doc-type: strata
+---
+
+- [ ] Unchecked item
+- [x] Checked item
+- [ ] Item with status  !status(In Progress)
+`
+    const parsed = parseMarkdown(md)
+    const md2 = serializeToMarkdown({
+      nodes: parsed.nodes,
+      rootId: parsed.rootId,
+      statusConfig: parsed.statusConfig,
+    })
+
+    // Verify the structure is preserved
+    expect(md2).toContain('- [ ] Unchecked item')
+    expect(md2).toContain('- [x] Checked item')
+    expect(md2).toContain('- [ ] Item with status  !status(In Progress)')
   })
 })

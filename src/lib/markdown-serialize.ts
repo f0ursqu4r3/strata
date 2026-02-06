@@ -4,6 +4,7 @@ import { initialRank, rankAfter } from "@/lib/rank";
 
 // ── Inline marker regexes ──
 
+const CHECKBOX_RE = /^\[( |x)\]\s*/;
 const STATUS_RE = /\s*!status\(([^)]+)\)/;
 const DUE_RE = /\s*@due\((\d{4}-\d{2}-\d{2})\)/;
 const COLLAPSED_RE = /\s*!collapsed\b/;
@@ -31,6 +32,9 @@ export function serializeToMarkdown(opts: SerializeOptions): string {
       lines.push(`    label: "${s.label}"`);
       lines.push(`    color: "${s.color}"`);
       lines.push(`    icon: ${s.icon}`);
+      if (s.final) {
+        lines.push(`    final: true`);
+      }
     }
   }
   lines.push("---");
@@ -40,9 +44,15 @@ export function serializeToMarkdown(opts: SerializeOptions): string {
 
   // Build id → label map for serialization
   const statusLabelById = new Map<string, string>();
+  const statusFinalById = new Map<string, boolean>();
   for (const s of statusConfig) {
     statusLabelById.set(s.id, s.label);
+    statusFinalById.set(s.id, s.final ?? false);
   }
+
+  // Find final statuses for checkbox logic
+  const finalStatuses = statusConfig.filter((s) => s.final);
+  const firstFinalStatusId = finalStatuses[0]?.id;
 
   function getOrderedChildren(parentId: string): Node[] {
     const children: Node[] = [];
@@ -61,10 +71,21 @@ export function serializeToMarkdown(opts: SerializeOptions): string {
       const textLines = (child.text || "").split("\n");
       const firstLine = textLines[0] ?? "";
 
+      // Determine checkbox state based on status finality
+      const isFinal = statusFinalById.get(child.status) ?? false;
+      const checkbox = isFinal ? "[x] " : "[ ] ";
+
       const meta: string[] = [];
 
-      // Status marker (omit if default) — use human-readable label
-      if (child.status && child.status !== defaultStatus) {
+      // Status marker logic:
+      // - Omit if default status (non-final, checkbox will be [ ])
+      // - Omit if it's the only final status (checkbox [x] implies it)
+      // - Include if non-default non-final, or if multiple final statuses exist
+      const shouldOmitStatus =
+        child.status === defaultStatus ||
+        (isFinal && finalStatuses.length === 1 && child.status === firstFinalStatusId);
+
+      if (child.status && !shouldOmitStatus) {
         const label = statusLabelById.get(child.status) ?? child.status;
         meta.push(`!status(${label})`);
       }
@@ -87,7 +108,7 @@ export function serializeToMarkdown(opts: SerializeOptions): string {
       }
 
       const suffix = meta.length > 0 ? "  " + meta.join(" ") : "";
-      lines.push(`${indent}- ${firstLine}${suffix}`);
+      lines.push(`${indent}- ${checkbox}${firstLine}${suffix}`);
 
       // Continuation lines for multiline text
       for (let i = 1; i < textLines.length; i++) {
@@ -120,6 +141,9 @@ export function parseMarkdown(content: string): ParseResult {
   for (const s of statusConfig) {
     statusIdByLabel.set(s.label.toLowerCase(), s.id);
   }
+
+  // Find first final status for checkbox mapping
+  const firstFinalStatus = statusConfig.find((s) => s.final)?.id ?? defaultStatus;
 
   const rootId = crypto.randomUUID();
   const nodes = new Map<string, Node>();
@@ -163,13 +187,29 @@ export function parseMarkdown(content: string): ParseResult {
     const depth = Math.floor(indentStr.length / 2);
     let lineContent = match[2]!;
 
+    // Extract checkbox state (if present)
+    let isChecked = false;
+    const checkboxMatch = lineContent.match(CHECKBOX_RE);
+    if (checkboxMatch) {
+      isChecked = checkboxMatch[1] === "x";
+      lineContent = lineContent.slice(checkboxMatch[0].length);
+    }
+
     // Extract status — resolve human-readable label to internal id
+    // Explicit !status() takes precedence over checkbox state
     let status = defaultStatus;
+    let hasExplicitStatus = false;
     const statusMatch = lineContent.match(STATUS_RE);
     if (statusMatch) {
       const raw = statusMatch[1]!;
       status = statusIdByLabel.get(raw.toLowerCase()) ?? raw;
       lineContent = lineContent.replace(STATUS_RE, "");
+      hasExplicitStatus = true;
+    }
+
+    // If no explicit status but checkbox is checked, use first final status
+    if (!hasExplicitStatus && isChecked) {
+      status = firstFinalStatus;
     }
 
     // Extract collapsed
@@ -237,7 +277,13 @@ function isDefaultStatuses(statuses: StatusDef[]): boolean {
   if (statuses.length !== DEFAULT_STATUSES.length) return false;
   return statuses.every((s, i) => {
     const d = DEFAULT_STATUSES[i]!;
-    return s.id === d.id && s.label === d.label && s.color === d.color && s.icon === d.icon;
+    return (
+      s.id === d.id &&
+      s.label === d.label &&
+      s.color === d.color &&
+      s.icon === d.icon &&
+      (s.final ?? false) === (d.final ?? false)
+    );
   });
 }
 
@@ -281,6 +327,7 @@ function parseFrontmatterStatuses(fm: string): StatusDef[] {
         label: obj.label,
         color: obj.color,
         icon: obj.icon,
+        final: obj.final === "true",
       });
     }
   }
