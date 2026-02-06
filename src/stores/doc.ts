@@ -35,6 +35,7 @@ export const useDocStore = defineStore("doc", () => {
   const editingId = ref<string | null>(null);
   const editingTrigger = ref<"keyboard" | "click" | "dblclick" | null>(null);
   const editingFocusBody = ref(false);
+  const editingCursorColumn = ref<number | null>(null);
   const viewMode = ref<ViewMode>("split");
   const ready = ref(false);
   const searchQuery = ref("");
@@ -842,7 +843,7 @@ export const useDocStore = defineStore("doc", () => {
 
   // ── Editing-aware navigation ──
 
-  function editPreviousNode(fromId: string, focusBody = false) {
+  function editPreviousNode(fromId: string, focusBody = false, cursorColumn: number | null = null) {
     const idx = visibleRows.value.findIndex((r) => r.node.id === fromId);
     if (idx > 0) {
       const prevId = visibleRows.value[idx - 1]!.node.id;
@@ -850,16 +851,18 @@ export const useDocStore = defineStore("doc", () => {
       editingId.value = prevId;
       editingTrigger.value = "keyboard";
       editingFocusBody.value = focusBody;
+      editingCursorColumn.value = cursorColumn;
     }
   }
 
-  function editNextNode(fromId: string) {
+  function editNextNode(fromId: string, cursorColumn: number | null = null) {
     const idx = visibleRows.value.findIndex((r) => r.node.id === fromId);
     if (idx >= 0 && idx < visibleRows.value.length - 1) {
       const nextId = visibleRows.value[idx + 1]!.node.id;
       selectedId.value = nextId;
       editingId.value = nextId;
       editingTrigger.value = "keyboard";
+      editingCursorColumn.value = cursorColumn;
     }
   }
 
@@ -1310,6 +1313,7 @@ export const useDocStore = defineStore("doc", () => {
   function startEditing(id: string, trigger: "keyboard" | "click" | "dblclick" = "keyboard") {
     editingTrigger.value = trigger;
     editingFocusBody.value = false;
+    editingCursorColumn.value = null;
     editingId.value = id;
   }
 
@@ -1317,6 +1321,7 @@ export const useDocStore = defineStore("doc", () => {
     editingId.value = null;
     editingTrigger.value = null;
     editingFocusBody.value = false;
+    editingCursorColumn.value = null;
   }
 
   function setViewMode(mode: ViewMode) {
@@ -1561,6 +1566,7 @@ export const useDocStore = defineStore("doc", () => {
     editingId,
     editingTrigger,
     editingFocusBody,
+    editingCursorColumn,
     viewMode,
     ready,
     searchQuery,

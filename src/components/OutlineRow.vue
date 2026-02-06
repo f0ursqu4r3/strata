@@ -134,8 +134,11 @@ watch(isEditing, async (editing) => {
     localText.value = props.node.text;
     await nextTick();
     autoResizeBody();
+    const cursorColumn = store.editingCursorColumn;
+    store.editingCursorColumn = null;
     // Skip title focus if we want to focus body instead (from click or arrow navigation)
-    const shouldFocusBody = focusBodyOnEdit.value || (store.editingFocusBody && localText.value.includes("\n"));
+    const shouldFocusBody =
+      focusBodyOnEdit.value || (store.editingFocusBody && localText.value.includes("\n"));
     if (shouldFocusBody) {
       focusBodyOnEdit.value = false;
       store.editingFocusBody = false;
@@ -143,9 +146,16 @@ watch(isEditing, async (editing) => {
       const body = bodyInputRef.value;
       if (body) {
         body.focus();
-        // Position cursor at end of body
-        const len = body.value.length;
-        body.setSelectionRange(len, len);
+        // Position cursor: -1 means end (last visual line), otherwise use column
+        if (cursorColumn === -1 || cursorColumn === null) {
+          // Go to end of body (last visual line)
+          const len = body.value.length;
+          body.setSelectionRange(len, len);
+        } else {
+          // Go to specific column in first logical line
+          const pos = Math.min(cursorColumn, body.value.length);
+          body.setSelectionRange(pos, pos);
+        }
       }
       return;
     }
@@ -155,8 +165,14 @@ watch(isEditing, async (editing) => {
         input.focus();
       }
       if (store.editingTrigger === "keyboard") {
-        const len = input.value.length;
-        input.setSelectionRange(len, len);
+        // Use cursor column if specified, otherwise go to end
+        if (cursorColumn !== null) {
+          const pos = Math.min(cursorColumn, input.value.length);
+          input.setSelectionRange(pos, pos);
+        } else {
+          const len = input.value.length;
+          input.setSelectionRange(len, len);
+        }
       }
     }
   }
@@ -182,6 +198,14 @@ function cleanupEmptyBody() {
     localText.value = localTitle.value;
     store.updateText(props.node.id, localTitle.value);
   }
+}
+
+// Get column position within the current line for a textarea
+function getColumnInLine(textarea: HTMLTextAreaElement): number {
+  const pos = textarea.selectionStart ?? 0;
+  const text = textarea.value;
+  const lineStart = text.lastIndexOf("\n", pos - 1) + 1;
+  return pos - lineStart;
 }
 
 function onBlur(e: FocusEvent) {
@@ -263,28 +287,30 @@ function onTitleKeydown(e: KeyboardEvent) {
     e.preventDefault();
     store.deleteNodeAndEditPrevious(props.node.id);
   } else if (e.key === "ArrowUp" && !e.shiftKey && input) {
-    const pos = input.selectionStart ?? 0;
-    if (pos === 0 && input.selectionEnd === 0) {
-      e.preventDefault();
+    // Title is single line - ArrowUp always goes to previous item's body (last visual line)
+    e.preventDefault();
+    cleanupEmptyBody();
+    store.flushTextDebounce();
+    // Pass -1 to indicate "go to end of body" (last visual line)
+    store.editPreviousNode(props.node.id, true, -1);
+  } else if (e.key === "ArrowDown" && !e.shiftKey && input) {
+    // Title is single line - ArrowDown always goes to body or next item
+    e.preventDefault();
+    const column = input.selectionStart ?? 0;
+    if (localBody.value) {
+      const body = bodyInputRef.value;
+      if (body) {
+        body.focus();
+        // Position at column (clamped to first line length)
+        const firstLineEnd = body.value.indexOf("\n");
+        const firstLineLen = firstLineEnd === -1 ? body.value.length : firstLineEnd;
+        const targetPos = Math.min(column, firstLineLen);
+        body.setSelectionRange(targetPos, targetPos);
+      }
+    } else {
       cleanupEmptyBody();
       store.flushTextDebounce();
-      // Pass true to focus body of previous node if it has one
-      store.editPreviousNode(props.node.id, true);
-    }
-  } else if (e.key === "ArrowDown" && !e.shiftKey && input) {
-    const pos = input.selectionStart ?? 0;
-    const len = input.value.length;
-    if (pos === len && input.selectionEnd === len) {
-      e.preventDefault();
-      // If there's body content, move to body; otherwise go to next node
-      if (localBody.value) {
-        bodyInputRef.value?.focus();
-        bodyInputRef.value?.setSelectionRange(0, 0);
-      } else {
-        cleanupEmptyBody();
-        store.flushTextDebounce();
-        store.editNextNode(props.node.id);
-      }
+      store.editNextNode(props.node.id, column);
     }
   }
 }
@@ -305,24 +331,39 @@ function onBodyKeydown(e: KeyboardEvent) {
       titleInputRef.value?.setSelectionRange(len, len);
     });
   } else if (e.key === "ArrowUp" && !e.shiftKey && input) {
-    const pos = input.selectionStart ?? 0;
-    const onFirstLine = input.value.lastIndexOf("\n", pos - 1) === -1;
-    if (onFirstLine && pos === 0 && input.selectionEnd === 0) {
-      e.preventDefault();
-      titleInputRef.value?.focus();
-      const len = titleInputRef.value?.value.length ?? 0;
-      titleInputRef.value?.setSelectionRange(len, len);
-    }
+    // Let browser handle visual line navigation first
+    const posBefore = input.selectionStart ?? 0;
+    const columnBefore = getColumnInLine(input);
+    // Don't prevent default - let browser handle wrapped lines
+    requestAnimationFrame(() => {
+      if (!bodyInputRef.value) return;
+      const posAfter = bodyInputRef.value.selectionStart ?? 0;
+      // If cursor didn't move (or moved to pos 0), we're at the visual top - navigate to title
+      if (posBefore === posAfter || (posBefore > 0 && posAfter === 0)) {
+        const title = titleInputRef.value;
+        if (title) {
+          title.focus();
+          const targetPos = Math.min(columnBefore, title.value.length);
+          title.setSelectionRange(targetPos, targetPos);
+        }
+      }
+    });
   } else if (e.key === "ArrowDown" && !e.shiftKey && input) {
-    const pos = input.selectionStart ?? 0;
-    const len = input.value.length;
-    const onLastLine = input.value.indexOf("\n", pos) === -1;
-    if (onLastLine && pos === len && input.selectionEnd === len) {
-      e.preventDefault();
-      cleanupEmptyBody();
-      store.flushTextDebounce();
-      store.editNextNode(props.node.id);
-    }
+    // Let browser handle visual line navigation first
+    const posBefore = input.selectionStart ?? 0;
+    const columnBefore = getColumnInLine(input);
+    const textLen = input.value.length;
+    // Don't prevent default - let browser handle wrapped lines
+    requestAnimationFrame(() => {
+      if (!bodyInputRef.value) return;
+      const posAfter = bodyInputRef.value.selectionStart ?? 0;
+      // If cursor didn't move (or moved to end), we're at the visual bottom - navigate to next item
+      if (posBefore === posAfter || (posBefore < textLen && posAfter === textLen)) {
+        cleanupEmptyBody();
+        store.flushTextDebounce();
+        store.editNextNode(props.node.id, columnBefore);
+      }
+    });
   }
 }
 
@@ -507,12 +548,14 @@ function onStatusPickerBlur() {
     </div>
 
     <!-- Text: read-only display with overlaid inputs when editing -->
-    <div class="flex-1 py-1.5 strata-text leading-5 min-h-5 grid [grid-template-areas:'stack'] *:[grid-area:stack]">
+    <div
+      class="flex-1 py-1.5 strata-text leading-5 min-h-5 grid [grid-template-areas:'stack'] *:[grid-area:stack]"
+    >
       <!-- Display layer (always rendered, invisible when editing) -->
       <div
         :class="[
           isEditing ? 'invisible pointer-events-none' : 'select-text',
-          localText ? 'text-(--text-secondary)' : 'text-(--text-faint) italic'
+          localText ? 'text-(--text-secondary)' : 'text-(--text-faint) italic',
         ]"
       >
         <template v-if="renderedLines">
