@@ -848,6 +848,7 @@ export const useDocStore = defineStore("doc", () => {
     if (idx > 0) {
       const prevId = visibleRows.value[idx - 1]!.node.id;
       selectedId.value = prevId;
+      selectedIds.value = new Set([prevId]);
       editingId.value = prevId;
       editingTrigger.value = "keyboard";
       editingFocusBody.value = focusBody;
@@ -860,6 +861,7 @@ export const useDocStore = defineStore("doc", () => {
     if (idx >= 0 && idx < visibleRows.value.length - 1) {
       const nextId = visibleRows.value[idx + 1]!.node.id;
       selectedId.value = nextId;
+      selectedIds.value = new Set([nextId]);
       editingId.value = nextId;
       editingTrigger.value = "keyboard";
       editingCursorColumn.value = cursorColumn;

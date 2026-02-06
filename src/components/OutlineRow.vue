@@ -272,6 +272,23 @@ function onTitleKeydown(e: KeyboardEvent) {
   if (handleCommonKeydown(e)) return;
 
   const input = titleInputRef.value;
+
+  // Tab navigation between items
+  if (e.key === "Tab" && !e.shiftKey) {
+    e.preventDefault();
+    cleanupEmptyBody();
+    store.flushTextDebounce();
+    store.editNextNode(props.node.id, 0);
+    return;
+  }
+  if (e.key === "Tab" && e.shiftKey) {
+    e.preventDefault();
+    cleanupEmptyBody();
+    store.flushTextDebounce();
+    store.editPreviousNode(props.node.id, false, 0);
+    return;
+  }
+
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     // If no body exists, create one by adding a newline
@@ -319,6 +336,23 @@ function onBodyKeydown(e: KeyboardEvent) {
   if (handleCommonKeydown(e)) return;
 
   const input = bodyInputRef.value;
+
+  // Tab navigation between items
+  if (e.key === "Tab" && !e.shiftKey) {
+    e.preventDefault();
+    cleanupEmptyBody();
+    store.flushTextDebounce();
+    store.editNextNode(props.node.id, 0);
+    return;
+  }
+  if (e.key === "Tab" && e.shiftKey) {
+    e.preventDefault();
+    cleanupEmptyBody();
+    store.flushTextDebounce();
+    store.editPreviousNode(props.node.id, false, 0);
+    return;
+  }
+
   // Enter in body creates newlines naturally (no preventDefault)
   if (e.key === "Backspace" && input && input.value === "") {
     // Empty body - remove the body entirely and move back to title

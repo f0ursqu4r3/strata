@@ -310,10 +310,12 @@ async function onKeydown(e: KeyboardEvent) {
     case 'indent':
       store.indentNode()
       e.preventDefault()
+      scrollSelectedIntoView()
       break
     case 'outdent':
       store.outdentNode()
       e.preventDefault()
+      scrollSelectedIntoView()
       break
     case 'delete':
       if (store.selectedIds.size > 1) {

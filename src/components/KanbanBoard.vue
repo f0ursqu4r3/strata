@@ -449,12 +449,11 @@ watch(editingDateCardId, (open) => {
                 <div
                   v-if="!node.dueDate && editingDateCardId !== node.id && (!node.tags?.length && editingTagsCardId !== node.id)"
                   class="flex gap-1 mt-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity"
-                  @click.stop
                 >
                   <button
                     class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
                     title="Set due date"
-                    @click="onDateClick($event, node.id)"
+                    @click.stop="onDateClick($event, node.id)"
                   >
                     <Calendar class="w-3 h-3" />
                   </button>
@@ -462,7 +461,7 @@ watch(editingDateCardId, (open) => {
                     v-if="settings.showBoardTags"
                     class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
                     title="Add tag"
-                    @click="onTagsClick($event, node.id)"
+                    @click.stop="onTagsClick($event, node.id)"
                   >
                     <Tag class="w-3 h-3" />
                   </button>
@@ -472,13 +471,12 @@ watch(editingDateCardId, (open) => {
                 <div
                   v-else-if="(node.dueDate && !node.tags?.length && settings.showBoardTags) || (!node.dueDate && node.tags?.length)"
                   class="flex gap-1 mt-1 opacity-0 group-hover/card:opacity-100 transition-opacity"
-                  @click.stop
                 >
                   <button
                     v-if="!node.dueDate && editingDateCardId !== node.id"
                     class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
                     title="Set due date"
-                    @click="onDateClick($event, node.id)"
+                    @click.stop="onDateClick($event, node.id)"
                   >
                     <Calendar class="w-3 h-3" />
                   </button>
@@ -486,7 +484,7 @@ watch(editingDateCardId, (open) => {
                     v-if="settings.showBoardTags && !node.tags?.length && editingTagsCardId !== node.id"
                     class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
                     title="Add tag"
-                    @click="onTagsClick($event, node.id)"
+                    @click.stop="onTagsClick($event, node.id)"
                   >
                     <Tag class="w-3 h-3" />
                   </button>

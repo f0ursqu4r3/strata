@@ -4,6 +4,10 @@ export { default as UiIconButton } from './UiIconButton.vue'
 export { default as UiKbd } from './UiKbd.vue'
 export { default as UiToggle } from './UiToggle.vue'
 
+// Picker Components
+export { default as UiColorPicker } from './UiColorPicker.vue'
+export { default as UiIconPicker } from './UiIconPicker.vue'
+
 // Overlay Components
 export { default as UiModal } from './UiModal.vue'
 export { default as UiDropdown } from './UiDropdown.vue'

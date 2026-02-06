@@ -1,31 +1,67 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-vue-next";
+import { ref, nextTick } from "vue";
+import { Plus, Trash2, ChevronUp, ChevronDown, CircleCheck } from "lucide-vue-next";
 import { useDocStore } from "@/stores/doc";
 import { resolveStatusIcon, AVAILABLE_ICONS, STATUS_COLOR_PALETTE } from "@/lib/status-icons";
-import { UiModal, UiIconButton, UiButton } from "@/components/ui";
+import { UiModal, UiIconButton, UiButton, UiColorPicker, UiIconPicker } from "@/components/ui";
 import type { StatusDef } from "@/types";
 
 const emit = defineEmits<{ close: [] }>();
 const store = useDocStore();
 
-const editingIconId = ref<string | null>(null);
-const editingColorId = ref<string | null>(null);
 const deletingId = ref<string | null>(null);
 const replacementId = ref<string>("");
+const labelInputs = ref<HTMLInputElement[]>([]);
 
 function onLabelChange(statusId: string, value: string) {
   store.updateStatus(statusId, { label: value });
 }
 
-function onSelectIcon(statusId: string, icon: string) {
-  store.updateStatus(statusId, { icon });
-  editingIconId.value = null;
+function focusInput(idx: number) {
+  nextTick(() => {
+    labelInputs.value[idx]?.focus();
+    labelInputs.value[idx]?.select();
+  });
 }
 
-function onSelectColor(statusId: string, color: string) {
+function onLabelKeydown(e: KeyboardEvent, idx: number) {
+  if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
+    e.preventDefault();
+    const nextIdx = idx + 1;
+    if (nextIdx < store.statusDefs.length) {
+      focusInput(nextIdx);
+    }
+  } else if (e.key === "Tab" && e.shiftKey) {
+    e.preventDefault();
+    const prevIdx = idx - 1;
+    if (prevIdx >= 0) {
+      focusInput(prevIdx);
+    }
+  } else if (e.key === "ArrowDown") {
+    e.preventDefault();
+    const nextIdx = idx + 1;
+    if (nextIdx < store.statusDefs.length) {
+      focusInput(nextIdx);
+    }
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    const prevIdx = idx - 1;
+    if (prevIdx >= 0) {
+      focusInput(prevIdx);
+    }
+  }
+}
+
+function onIconChange(statusId: string, icon: string) {
+  store.updateStatus(statusId, { icon });
+}
+
+function onColorChange(statusId: string, color: string) {
   store.updateStatus(statusId, { color });
-  editingColorId.value = null;
+}
+
+function onToggleFinal(statusId: string, currentFinal: boolean | undefined) {
+  store.updateStatus(statusId, { final: !currentFinal });
 }
 
 function onMoveUp(idx: number) {
@@ -33,6 +69,7 @@ function onMoveUp(idx: number) {
   const ids = store.statusDefs.map((s) => s.id);
   [ids[idx - 1], ids[idx]] = [ids[idx]!, ids[idx - 1]!];
   store.reorderStatuses(ids);
+  focusInput(idx - 1);
 }
 
 function onMoveDown(idx: number) {
@@ -40,6 +77,7 @@ function onMoveDown(idx: number) {
   const ids = store.statusDefs.map((s) => s.id);
   [ids[idx], ids[idx + 1]] = [ids[idx + 1]!, ids[idx]!];
   store.reorderStatuses(ids);
+  focusInput(idx + 1);
 }
 
 function onAddStatus() {
@@ -68,9 +106,7 @@ function onConfirmDelete() {
 }
 
 function onCloseMain() {
-  if (editingIconId.value || editingColorId.value || deletingId.value) {
-    editingIconId.value = null;
-    editingColorId.value = null;
+  if (deletingId.value) {
     deletingId.value = null;
   } else {
     emit("close");
@@ -98,65 +134,39 @@ function onCloseMain() {
         </div>
 
         <!-- Icon picker -->
-        <div class="relative shrink-0">
-          <button
-            class="p-1.5 rounded-md hover:bg-(--bg-hover) cursor-pointer"
-            @click="editingIconId = editingIconId === s.id ? null : s.id"
-          >
-            <component
-              :is="resolveStatusIcon(s.icon)"
-              class="w-4 h-4"
-              :style="{ color: s.color }"
-            />
-          </button>
-          <div
-            v-if="editingIconId === s.id"
-            class="absolute top-full left-0 mt-1 z-10 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2 flex gap-1"
-          >
-            <button
-              v-for="icon in AVAILABLE_ICONS"
-              :key="icon"
-              class="p-1.5 rounded-md hover:bg-(--bg-hover) cursor-pointer"
-              :class="{ 'bg-(--bg-active)': s.icon === icon }"
-              @click="onSelectIcon(s.id, icon)"
-            >
-              <component
-                :is="resolveStatusIcon(icon)"
-                class="w-4 h-4"
-                :style="{ color: s.color }"
-              />
-            </button>
-          </div>
-        </div>
+        <UiIconPicker
+          :model-value="s.icon"
+          :icons="AVAILABLE_ICONS"
+          :resolve-icon="resolveStatusIcon"
+          :color="s.color"
+          @update:model-value="onIconChange(s.id, $event)"
+        />
 
         <!-- Label -->
         <input
+          :ref="(el) => { if (el) labelInputs[idx] = el as HTMLInputElement }"
           :value="s.label"
           class="flex-1 min-w-0 text-sm bg-transparent border-b border-transparent focus:border-(--border-hover) text-(--text-primary) outline-none px-1 py-0.5"
           @change="onLabelChange(s.id, ($event.target as HTMLInputElement).value)"
+          @keydown="onLabelKeydown($event, idx)"
         />
 
         <!-- Color picker -->
-        <div class="relative shrink-0">
-          <button
-            class="w-5 h-5 rounded-full border-2 border-(--border-primary) cursor-pointer"
-            :style="{ backgroundColor: s.color }"
-            @click="editingColorId = editingColorId === s.id ? null : s.id"
-          />
-          <div
-            v-if="editingColorId === s.id"
-            class="absolute top-full right-0 mt-1 z-10 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2 grid grid-cols-4 gap-1"
-          >
-            <button
-              v-for="color in STATUS_COLOR_PALETTE"
-              :key="color"
-              class="w-6 h-6 rounded-full cursor-pointer border-2 transition-transform hover:scale-110"
-              :class="s.color === color ? 'border-(--text-primary)' : 'border-transparent'"
-              :style="{ backgroundColor: color }"
-              @click="onSelectColor(s.id, color)"
-            />
-          </div>
-        </div>
+        <UiColorPicker
+          :model-value="s.color"
+          :colors="STATUS_COLOR_PALETTE"
+          @update:model-value="onColorChange(s.id, $event)"
+        />
+
+        <!-- Complete toggle -->
+        <button
+          class="p-1.5 rounded-md cursor-pointer transition-colors"
+          :class="s.final ? 'bg-(--accent-100) text-(--accent-600)' : 'text-(--text-faint) hover:bg-(--bg-hover) hover:text-(--text-muted)'"
+          :title="s.final ? 'Marks items as complete' : 'Click to mark as completion status'"
+          @click="onToggleFinal(s.id, s.final)"
+        >
+          <CircleCheck class="w-4 h-4" />
+        </button>
 
         <!-- Delete -->
         <UiIconButton
