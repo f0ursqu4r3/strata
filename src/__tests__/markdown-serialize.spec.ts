@@ -251,21 +251,43 @@ doc-type: strata
     expect(grandchildren[0]!.status).toBe('done')
   })
 
-  it('parses items without checkboxes (backwards compat)', () => {
+  it('treats non-checkbox list items as body text', () => {
     const md = `---
 doc-type: strata
 ---
 
-- Item without checkbox
-- Another item  !status(Done)
+- [ ] Task with notes
+  - This is a bullet point
+  - Another bullet point
+- [ ] Another task
 `
     const result = parseMarkdown(md)
 
     const items = [...result.nodes.values()].filter((n) => n.parentId === result.rootId)
-    expect(items[0]!.text).toBe('Item without checkbox')
-    expect(items[0]!.status).toBe('todo')
-    expect(items[1]!.text).toBe('Another item')
-    expect(items[1]!.status).toBe('done')
+    expect(items).toHaveLength(2)
+    expect(items[0]!.text).toBe('Task with notes\n- This is a bullet point\n- Another bullet point')
+    expect(items[1]!.text).toBe('Another task')
+  })
+
+  it('preserves blank lines within body text', () => {
+    const md = `---
+doc-type: strata
+---
+
+- [ ] Task with mixed content
+  1. item 1
+  2. item 2
+
+  - bullet 1
+  - bullet 2
+- [ ] Another task
+`
+    const result = parseMarkdown(md)
+
+    const items = [...result.nodes.values()].filter((n) => n.parentId === result.rootId)
+    expect(items).toHaveLength(2)
+    expect(items[0]!.text).toBe('Task with mixed content\n1. item 1\n2. item 2\n\n- bullet 1\n- bullet 2')
+    expect(items[1]!.text).toBe('Another task')
   })
 
   it('parses tags', () => {

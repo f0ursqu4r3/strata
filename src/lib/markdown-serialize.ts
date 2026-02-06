@@ -4,7 +4,6 @@ import { initialRank, rankAfter } from "@/lib/rank";
 
 // ── Inline marker regexes ──
 
-const CHECKBOX_RE = /^\[( |x)\]\s*/;
 const STATUS_RE = /\s*!status\(([^)]+)\)/;
 const DUE_RE = /\s*@due\((\d{4}-\d{2}-\d{2})\)/;
 const COLLAPSED_RE = /\s*!collapsed\b/;
@@ -164,36 +163,48 @@ export function parseMarkdown(content: string): ParseResult {
   const stack: { id: string; depth: number }[] = [{ id: rootId, depth: -1 }];
   // Track last pos per parent to generate ordered positions
   const lastPosByParent = new Map<string, string>();
+  // Track pending blank lines to preserve them within body text (but not trailing)
+  let pendingBlankLines = 0;
 
   for (let li = 0; li < lines.length; li++) {
     const rawLine = lines[li]!;
-    const match = rawLine.match(/^(\s*)- (.*)$/);
+
+    // Only match bullet items with checkboxes: - [ ] or - [x]
+    const match = rawLine.match(/^(\s*)- \[( |x)\] (.*)$/);
     if (!match) {
       // Check if this is a continuation line for the previous node
       if (stack.length > 1) {
         const prevNode = nodes.get(stack[stack.length - 1]!.id);
-        if (prevNode && rawLine.trim() !== "") {
+        if (prevNode) {
           const prevDepth = stack[stack.length - 1]!.depth;
-          const expectedIndent = "  ".repeat(prevDepth) + "  ";
-          if (rawLine.startsWith(expectedIndent)) {
-            prevNode.text += "\n" + rawLine.slice(expectedIndent.length);
+          const expectedIndent = "  ".repeat(prevDepth + 1);
+
+          if (rawLine.trim() === "") {
+            // Track blank lines to preserve them if more content follows
+            pendingBlankLines++;
+          } else if (rawLine.startsWith(expectedIndent) || rawLine.match(/^\s+/)) {
+            // Flush pending blank lines before adding content
+            for (let i = 0; i < pendingBlankLines; i++) {
+              prevNode.text += "\n";
+            }
+            pendingBlankLines = 0;
+
+            // Include bullet lists and other content as body text
+            const trimmedLine = rawLine.replace(/^\s*/, "");
+            prevNode.text += "\n" + trimmedLine;
           }
         }
       }
       continue;
     }
 
+    // Reset pending blank lines when we hit a new checkbox item
+    pendingBlankLines = 0;
+
     const indentStr = match[1]!;
     const depth = Math.floor(indentStr.length / 2);
-    let lineContent = match[2]!;
-
-    // Extract checkbox state (if present)
-    let isChecked = false;
-    const checkboxMatch = lineContent.match(CHECKBOX_RE);
-    if (checkboxMatch) {
-      isChecked = checkboxMatch[1] === "x";
-      lineContent = lineContent.slice(checkboxMatch[0].length);
-    }
+    const isChecked = match[2] === "x";
+    let lineContent = match[3]!
 
     // Extract status — resolve human-readable label to internal id
     // Explicit !status() takes precedence over checkbox state
