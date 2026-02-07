@@ -71,6 +71,7 @@ jobs:
         run: bun install
 
       - name: Verify Tauri signing env
+        shell: bash
         run: |
           if [ -z "${TAURI_SIGNING_PRIVATE_KEY}" ]; then
             echo "TAURI_SIGNING_PRIVATE_KEY is missing. Check Production environment secrets."
