@@ -34,6 +34,9 @@ jobs:
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.platform }}
     environment: Production
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -66,6 +69,17 @@ jobs:
 
       - name: Install frontend dependencies
         run: bun install
+
+      - name: Verify Tauri signing env
+        run: |
+          if [ -z "${TAURI_SIGNING_PRIVATE_KEY}" ]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY is missing. Check Production environment secrets."
+            exit 1
+          fi
+          echo "TAURI_SIGNING_PRIVATE_KEY length: ${#TAURI_SIGNING_PRIVATE_KEY}"
+          if [ -z "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD}" ]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD is empty (ok if key is unencrypted)."
+          fi
 
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
