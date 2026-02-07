@@ -33,7 +33,7 @@ jobs:
 
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.platform }}
-    environment: production
+    environment: Production
 
     steps:
       - uses: actions/checkout@v4
