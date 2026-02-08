@@ -1,279 +1,53 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onUnmounted, watch } from "vue";
+import { ref } from "vue";
 import { Settings2, Calendar, Tag } from "lucide-vue-next";
 import { useDocStore } from "@/stores/doc";
 import { useSettingsStore } from "@/stores/settings";
 import { renderInlineMarkdown } from "@/lib/inline-markdown";
 import { dueDateUrgency, formatDueDate } from "@/lib/due-date";
-import { getTitle, getBody, combineText } from "@/lib/text-utils";
+import { getTitle } from "@/lib/text-utils";
 import type { Node } from "@/types";
-import ContextMenu from "./ContextMenu.vue";
-import TagPicker from "./TagPicker.vue";
-import DatePicker from "./DatePicker.vue";
+import ContextMenu from "../shared/ContextMenu.vue";
+import TagPicker from "../shared/TagPicker.vue";
+import DatePicker from "../shared/DatePicker.vue";
+import { useBoardDrag } from "@/composables/board/useBoardDrag";
+import { useBoardEditing } from "@/composables/board/useBoardEditing";
 
 const store = useDocStore();
 const settings = useSettingsStore();
 const emit = defineEmits<{ openStatusEditor: [] }>();
 
-// ── Pointer-based drag ──
-const DRAG_THRESHOLD = 5;
-
-const dragNodeId = ref<string | null>(null);
-const dragOverColumn = ref<string | null>(null);
-const isDragging = ref(false);
-
-let dragStartX = 0;
-let dragStartY = 0;
-let grabOffsetX = 0;
-let grabOffsetY = 0;
-let pendingDragNodeId: string | null = null;
-let floatingEl: HTMLElement | null = null;
-const columnRefs = ref<HTMLElement[]>([]);
-
-function onCardPointerDown(e: PointerEvent, node: Node) {
-  if (e.button !== 0 || editingCardId.value === node.id) return;
-  pendingDragNodeId = node.id;
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-
-  // Capture grab offset relative to card top-left
-  const card = (e.target as HTMLElement).closest("[data-card-id]") as HTMLElement | null;
-  if (card) {
-    const rect = card.getBoundingClientRect();
-    grabOffsetX = e.clientX - rect.left;
-    grabOffsetY = e.clientY - rect.top;
-  }
-
-  document.addEventListener("pointermove", onDocumentPointerMove);
-  document.addEventListener("pointerup", onDocumentPointerUp);
-  document.addEventListener("selectstart", onSelectStart);
-}
-
-function onSelectStart(e: Event) {
-  if (pendingDragNodeId) e.preventDefault();
-}
-
-function onDocumentPointerMove(e: PointerEvent) {
-  if (!pendingDragNodeId) return;
-
-  const dx = e.clientX - dragStartX;
-  const dy = e.clientY - dragStartY;
-
-  if (!isDragging.value) {
-    if (Math.abs(dx) + Math.abs(dy) < DRAG_THRESHOLD) return;
-    // Start drag — clone the card DOM into a floating element
-    isDragging.value = true;
-    dragNodeId.value = pendingDragNodeId;
-    window.getSelection()?.removeAllRanges();
-    createFloatingCard();
-  }
-
-  // Position the floating card at the cursor, offset by grab point
-  if (floatingEl) {
-    floatingEl.style.left = `${e.clientX - grabOffsetX}px`;
-    floatingEl.style.top = `${e.clientY - grabOffsetY}px`;
-  }
-
-  // Detect which column the pointer is over
-  dragOverColumn.value = null;
-  for (const col of columnRefs.value) {
-    const rect = col.getBoundingClientRect();
-    if (
-      e.clientX >= rect.left &&
-      e.clientX <= rect.right &&
-      e.clientY >= rect.top &&
-      e.clientY <= rect.bottom
-    ) {
-      dragOverColumn.value = col.dataset.statusId ?? null;
-      break;
-    }
-  }
-}
-
-function createFloatingCard() {
-  const source = document.querySelector(
-    `[data-card-id="${pendingDragNodeId}"]`,
-  ) as HTMLElement | null;
-  if (!source) return;
-  const clone = source.cloneNode(true) as HTMLElement;
-  const rect = source.getBoundingClientRect();
-
-  clone.style.position = "fixed";
-  clone.style.left = `${rect.left}px`;
-  clone.style.top = `${rect.top}px`;
-  clone.style.width = `${rect.width}px`;
-  clone.style.zIndex = "9999";
-  clone.style.pointerEvents = "none";
-  clone.style.opacity = "1";
-  clone.style.boxShadow = "0 8px 24px rgba(0,0,0,0.18)";
-  clone.style.transform = "scale(1.02)";
-  clone.style.transition = "box-shadow 0.15s, transform 0.15s";
-  clone.classList.remove("opacity-40");
-  clone.removeAttribute("data-card-id");
-
-  document.body.appendChild(clone);
-  floatingEl = clone;
-}
-
-function destroyFloatingCard() {
-  if (floatingEl) {
-    floatingEl.remove();
-    floatingEl = null;
-  }
-}
-
-function onDocumentPointerUp() {
-  document.removeEventListener("pointermove", onDocumentPointerMove);
-  document.removeEventListener("pointerup", onDocumentPointerUp);
-  document.removeEventListener("selectstart", onSelectStart);
-
-  if (isDragging.value && dragNodeId.value && dragOverColumn.value) {
-    store.setStatus(dragNodeId.value, dragOverColumn.value);
-  }
-
-  destroyFloatingCard();
-  pendingDragNodeId = null;
-  dragNodeId.value = null;
-  dragOverColumn.value = null;
-  isDragging.value = false;
-}
-
-onUnmounted(() => {
-  document.removeEventListener("pointermove", onDocumentPointerMove);
-  document.removeEventListener("pointerup", onDocumentPointerUp);
-  document.removeEventListener("selectstart", onSelectStart);
-  document.removeEventListener("mousedown", onTagPickerClickOutside, true);
-  document.removeEventListener("mousedown", onDatePickerClickOutside, true);
-  destroyFloatingCard();
-});
-
-// Compute where the dragged card would land in the target column based on outline order
-const dropInsertIndex = computed(() => {
-  if (!dragNodeId.value || !dragOverColumn.value) return -1;
-  const dragNode = store.nodes.get(dragNodeId.value);
-  if (!dragNode || dragNode.status === dragOverColumn.value) return -1;
-
-  // kanbanNodes is in outline order (depth-first). Find the dragged node's
-  // position relative to the other nodes that are in the target column.
-  const allNodes = store.kanbanNodes;
-  const dragIdx = allNodes.findIndex((n) => n.id === dragNodeId.value);
-  if (dragIdx === -1) return -1;
-
-  // Find the target column's current nodes
-  const targetCol = store.kanbanColumns.find((c) => c.def.id === dragOverColumn.value);
-  if (!targetCol) return -1;
-
-  // Count how many target-column nodes appear before the dragged node in outline order
-  let insertIdx = 0;
-  for (const colNode of targetCol.nodes) {
-    const colNodeIdx = allNodes.findIndex((n) => n.id === colNode.id);
-    if (colNodeIdx < dragIdx) insertIdx++;
-    else break;
-  }
-  return insertIdx;
-});
-
-// Inline editing
+// Shared ref: drag needs to read editingCardId, editing needs to read isDragging
 const editingCardId = ref<string | null>(null);
-const editInputRef = ref<HTMLInputElement | null>(null);
 
-function onCardClick(node: Node) {
-  if (isDragging.value) return;
-  store.selectNode(node.id);
-}
+const {
+  dragNodeId,
+  dragOverColumn,
+  isDragging,
+  dropInsertIndex,
+  onCardPointerDown,
+  columnRefs,
+} = useBoardDrag(editingCardId);
 
-function onCardDblClick(node: Node) {
-  if (isDragging.value) return;
-  editingCardId.value = node.id;
-  nextTick(() => {
-    // editInputRef is an array because it's inside a v-for
-    const input = Array.isArray(editInputRef.value) ? editInputRef.value[0] : editInputRef.value;
-    if (input) {
-      input.focus();
-      const len = input.value.length;
-      input.setSelectionRange(len, len);
-    }
-  });
-}
-
-function onCardInput(e: Event, node: Node) {
-  const newTitle = (e.target as HTMLInputElement).value;
-  store.updateText(node.id, combineText(newTitle, getBody(node.text)));
-}
-
-function onCardEditBlur() {
-  editingCardId.value = null;
-}
-
-function onCardEditKeydown(e: KeyboardEvent) {
-  if (e.key === "Escape" || e.key === "Enter") {
-    editingCardId.value = null;
-    e.preventDefault();
-  }
-}
+const {
+  editInputRef,
+  onCardClick,
+  onCardDblClick,
+  onCardInput,
+  onCardEditBlur,
+  onCardEditKeydown,
+  ctxMenu,
+  onCardContextMenu,
+  closeContextMenu,
+  editingTagsCardId,
+  editingDateCardId,
+  onTagsClick,
+  onDateClick,
+} = useBoardEditing(isDragging, editingCardId);
 
 function childCount(node: Node): number {
   return store.getChildren(node.id).length;
 }
-
-// Context menu
-const ctxMenu = ref<{ nodeId: string; x: number; y: number } | null>(null);
-
-function onCardContextMenu(e: MouseEvent, node: Node) {
-  e.preventDefault();
-  store.selectNode(node.id);
-  ctxMenu.value = { nodeId: node.id, x: e.clientX, y: e.clientY };
-}
-
-function closeContextMenu() {
-  ctxMenu.value = null;
-}
-
-// Tag and date pickers
-const editingTagsCardId = ref<string | null>(null);
-const editingDateCardId = ref<string | null>(null);
-
-function onTagsClick(e: MouseEvent, nodeId: string) {
-  e.stopPropagation();
-  editingTagsCardId.value = nodeId;
-}
-
-function onDateClick(e: MouseEvent, nodeId: string) {
-  e.stopPropagation();
-  editingDateCardId.value = nodeId;
-}
-
-function onTagPickerClickOutside(e: MouseEvent) {
-  const target = e.target as HTMLElement;
-  // Check if click is inside any tag picker wrapper
-  if (!target.closest("[data-tag-picker]")) {
-    editingTagsCardId.value = null;
-  }
-}
-
-function onDatePickerClickOutside(e: MouseEvent) {
-  const target = e.target as HTMLElement;
-  // Check if click is inside any date picker wrapper
-  if (!target.closest("[data-date-picker]")) {
-    editingDateCardId.value = null;
-  }
-}
-
-watch(editingTagsCardId, (open) => {
-  if (open) {
-    setTimeout(() => document.addEventListener("mousedown", onTagPickerClickOutside, true), 0);
-  } else {
-    document.removeEventListener("mousedown", onTagPickerClickOutside, true);
-  }
-});
-
-watch(editingDateCardId, (open) => {
-  if (open) {
-    setTimeout(() => document.addEventListener("mousedown", onDatePickerClickOutside, true), 0);
-  } else {
-    document.removeEventListener("mousedown", onDatePickerClickOutside, true);
-  }
-});
 </script>
 
 <template>

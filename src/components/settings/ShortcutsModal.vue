@@ -21,23 +21,59 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', onKeydown))
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
+interface ShortcutEntry {
+  keys: string[]
+  desc: string
+}
+
+interface Section {
+  title: string
+  shortcuts: ShortcutEntry[]
+}
+
 const sections = computed(() => {
-  const catMap = new Map<string, { keys: string[]; desc: string }[]>()
+  const catMap = new Map<string, ShortcutEntry[]>()
   const order: string[] = []
+  const seen = new Set<string>()
 
   for (const def of settings.resolvedShortcuts) {
+    const combo = comboToString(def.combo)
+    const dedup = `${def.category}::${def.label}::${combo}`
+    if (seen.has(dedup)) continue
+    seen.add(dedup)
+
     if (!catMap.has(def.category)) {
       catMap.set(def.category, [])
       order.push(def.category)
     }
-    catMap.get(def.category)!.push({
-      keys: [comboToString(def.combo)],
-      desc: def.label,
-    })
+    catMap.get(def.category)!.push({ keys: [combo], desc: def.label })
   }
 
-  const result = order.map((cat) => ({ title: cat, shortcuts: catMap.get(cat)! }))
+  // Add non-customizable general shortcuts
+  const general = catMap.get('General')
+  if (general) {
+    general.push({ keys: ['?'], desc: 'Show keyboard shortcuts' })
+  }
 
+  // Add non-customizable navigation shortcuts
+  const nav = catMap.get('Navigation')
+  if (nav) {
+    nav.push({ keys: ['Esc'], desc: 'Deselect / clear selection' })
+  }
+
+  const result: Section[] = order.map((cat) => ({ title: cat, shortcuts: catMap.get(cat)! }))
+
+  // Editing context tips
+  result.push({
+    title: 'While Editing',
+    shortcuts: [
+      { keys: ['Enter'], desc: 'Move to note body (from title)' },
+      { keys: ['Backspace'], desc: 'Delete empty node' },
+      { keys: ['↑', '↓'], desc: 'Navigate between nodes' },
+    ],
+  })
+
+  // Status shortcuts
   result.push({
     title: 'Status',
     shortcuts: store.statusDefs.map((s, i) => ({
@@ -45,6 +81,33 @@ const sections = computed(() => {
       desc: `Set ${s.label}`,
     })),
   })
+
+  // Selection
+  result.push({
+    title: 'Selection',
+    shortcuts: [
+      { keys: ['Shift+Click'], desc: 'Range select' },
+      { keys: ['Ctrl+Click'], desc: 'Toggle select' },
+      { keys: ['Double-click'], desc: 'Edit node' },
+    ],
+  })
+
+  // Vim mode (only when enabled)
+  if (settings.vimMode) {
+    result.push({
+      title: 'Vim Mode',
+      shortcuts: [
+        { keys: ['j', 'k'], desc: 'Move down / up' },
+        { keys: ['i'], desc: 'Start editing' },
+        { keys: ['o'], desc: 'New sibling and edit' },
+        { keys: ['dd'], desc: 'Delete node' },
+        { keys: ['gg'], desc: 'Go to first node' },
+        { keys: ['G'], desc: 'Go to last node' },
+        { keys: ['zc', 'zo'], desc: 'Collapse / expand' },
+        { keys: ['/'], desc: 'Search' },
+      ],
+    })
+  }
 
   return result
 })

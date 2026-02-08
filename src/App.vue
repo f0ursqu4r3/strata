@@ -19,20 +19,20 @@ import "splitpanes/dist/splitpanes.css";
 import { useDocStore } from "@/stores/doc";
 import { useSettingsStore } from "@/stores/settings";
 import { useDocumentsStore } from "@/stores/documents";
-import OutlineView from "@/components/OutlineView.vue";
-import KanbanBoard from "@/components/KanbanBoard.vue";
-import ShortcutsModal from "@/components/ShortcutsModal.vue";
-import SettingsPanel from "@/components/SettingsPanel.vue";
-import DocumentSidebar from "@/components/DocumentSidebar.vue";
-import TrashPanel from "@/components/TrashPanel.vue";
-import ExportMenu from "@/components/ExportMenu.vue";
-import StatusEditor from "@/components/StatusEditor.vue";
-import GlobalSearch from "@/components/GlobalSearch.vue";
-import CommandPalette from "@/components/CommandPalette.vue";
-import ShortcutEditor from "@/components/ShortcutEditor.vue";
+import OutlineView from "@/components/outline/OutlineView.vue";
+import KanbanBoard from "@/components/board/KanbanBoard.vue";
+import ShortcutsModal from "@/components/settings/ShortcutsModal.vue";
+import SettingsPanel from "@/components/settings/SettingsPanel.vue";
+import DocumentSidebar from "@/components/sidebar/DocumentSidebar.vue";
+import TrashPanel from "@/components/overlays/TrashPanel.vue";
+import ExportMenu from "@/components/overlays/ExportMenu.vue";
+import StatusEditor from "@/components/settings/StatusEditor.vue";
+import GlobalSearch from "@/components/overlays/GlobalSearch.vue";
+import CommandPalette from "@/components/overlays/CommandPalette.vue";
+import ShortcutEditor from "@/components/settings/ShortcutEditor.vue";
 import { matchesCombo } from "@/lib/shortcuts";
-import { isTauri } from "@/lib/platform";
-import WorkspacePicker from "@/components/WorkspacePicker.vue";
+import { isTauri, hasFileSystemAccess, isFileSystemMode, setFileSystemActive } from "@/lib/platform";
+import WorkspacePicker from "@/components/overlays/WorkspacePicker.vue";
 import type { ViewMode } from "@/types";
 
 const store = useDocStore();
@@ -84,9 +84,27 @@ onMounted(async () => {
     }
   }
 
+  // In browser mode with File System Access API, try to restore persisted handle
+  if (!isTauri() && hasFileSystemAccess() && settings.workspacePath) {
+    const { restoreHandle } = await import("@/lib/web-fs");
+    const restored = await restoreHandle();
+    if (restored) {
+      setFileSystemActive(true);
+      const { setWorkspacePrefix } = await import("@/lib/fs");
+      setWorkspacePrefix(settings.workspacePath + "/");
+    } else {
+      // Handle expired or permission denied — need to re-pick
+      settings.setWorkspacePath("");
+      needsWorkspacePicker.value = true;
+      return;
+    }
+  }
+
+  // Browser mode: if no stored workspace, fall through to IDB mode.
+  // Users can opt into filesystem mode via Settings → Workspace.
+
   const activeDocId = await docsStore.init();
   if (!activeDocId && !settings.workspacePath) {
-    needsWorkspacePicker.value = true;
     return;
   }
   if (activeDocId) {
@@ -95,9 +113,9 @@ onMounted(async () => {
     store.ready = true;
   }
 
-  // Check git status in Tauri mode
-  if (isTauri() && settings.workspacePath && !isGitWorkspace.value) {
-    import("@/lib/tauri-fs").then(({ isGitRepo, gitBranchName }) => {
+  // Check git status in filesystem mode
+  if (isFileSystemMode() && settings.workspacePath && !isGitWorkspace.value) {
+    import("@/lib/fs").then(({ isGitRepo, gitBranchName }) => {
       isGitRepo(settings.workspacePath).then((v) => {
         isGitWorkspace.value = v;
         if (v) {
@@ -109,14 +127,22 @@ onMounted(async () => {
     });
   }
 
-  // Tauri: set up native menu handler, file watching, and window title
+  // Tauri: set up native menu handler and window title
   if (isTauri()) {
     const { setupMenuHandler, updateWindowTitle } = await import("@/lib/menu-handler");
     await setupMenuHandler({ showShortcuts, showSettings, onOpenWorkspace: openWorkspacePicker });
 
     if (settings.workspacePath) {
-      await docsStore.setupFileWatching(settings.workspacePath);
       await updateWindowTitle(settings.workspacePath);
+    }
+  }
+
+  // Set up file watching (both Tauri and browser FS modes, non-critical)
+  if (isFileSystemMode() && settings.workspacePath) {
+    try {
+      await docsStore.setupFileWatching(settings.workspacePath);
+    } catch (err) {
+      console.warn("[strata] File watching setup failed:", err);
     }
   }
 
@@ -151,22 +177,41 @@ async function openWorkspacePicker() {
 
 async function onWorkspaceSelected() {
   needsWorkspacePicker.value = false;
-  const activeDocId = await docsStore.init();
-  if (activeDocId) {
-    await store.loadDocument(activeDocId);
-  } else {
-    store.ready = true;
+
+  try {
+    const activeDocId = await docsStore.init();
+    if (activeDocId) {
+      await store.loadDocument(activeDocId);
+    } else {
+      store.ready = true;
+    }
+  } catch (err) {
+    console.error("[strata] Failed to initialize workspace:", err);
+    // Reset filesystem mode and fall back to workspace picker
+    setFileSystemActive(false);
+    settings.setWorkspacePath("");
+    needsWorkspacePicker.value = true;
+    return;
   }
+
+  // Set up file watching in filesystem mode (non-critical)
+  if (isFileSystemMode() && settings.workspacePath) {
+    try {
+      await docsStore.setupFileWatching(settings.workspacePath);
+    } catch (err) {
+      console.warn("[strata] File watching setup failed:", err);
+    }
+  }
+
   if (isTauri() && settings.workspacePath) {
-    await docsStore.setupFileWatching(settings.workspacePath);
     import("@/lib/menu-handler").then(({ updateWindowTitle }) => {
       updateWindowTitle(settings.workspacePath);
     });
   }
 
   // Check git status after manual workspace selection
-  if (isTauri() && settings.workspacePath) {
-    import("@/lib/tauri-fs").then(({ isGitRepo, gitBranchName }) => {
+  if (isFileSystemMode() && settings.workspacePath) {
+    import("@/lib/fs").then(({ isGitRepo, gitBranchName }) => {
       isGitRepo(settings.workspacePath).then((v) => {
         isGitWorkspace.value = v;
         if (v) {
@@ -174,7 +219,7 @@ async function onWorkspaceSelected() {
             gitBranch.value = b;
           });
         }
-      });
+      }).catch(() => {});
     });
   }
 
@@ -258,7 +303,7 @@ function onZoomRoot() {
 </script>
 
 <template>
-  <!-- Workspace picker (Tauri first-run) -->
+  <!-- Workspace picker -->
   <WorkspacePicker v-if="needsWorkspacePicker" @selected="onWorkspaceSelected" />
 
   <div v-else-if="store.ready" class="flex flex-col h-full bg-(--bg-primary) text-(--text-secondary)">

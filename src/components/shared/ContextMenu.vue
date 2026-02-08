@@ -15,7 +15,7 @@ import { useDocStore } from '@/stores/doc'
 import { resolveStatusIcon } from '@/lib/status-icons'
 import { useClickOutside, UiMenuItem, UiMenuDivider } from '@/components/ui'
 import type { Status } from '@/types'
-import DatePicker from '@/components/DatePicker.vue'
+import DatePicker from './DatePicker.vue'
 
 const props = defineProps<{
   nodeId: string

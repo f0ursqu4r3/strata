@@ -169,9 +169,10 @@ export function parseMarkdown(content: string): ParseResult {
   for (let li = 0; li < lines.length; li++) {
     const rawLine = lines[li]!;
 
-    // Only match bullet items with checkboxes: - [ ] or - [x]
-    const match = rawLine.match(/^(\s*)- \[( |x)\] (.*)$/);
-    if (!match) {
+    // Match bullet items: with checkboxes (- [ ] / - [x]) or plain (- text)
+    const cbMatch = rawLine.match(/^(\s*)- \[( |x)\] (.*)$/);
+    const plainMatch = !cbMatch ? rawLine.match(/^(\s*)- (.+)$/) : null;
+    if (!cbMatch && !plainMatch) {
       // Check if this is a continuation line for the previous node
       if (stack.length > 1) {
         const prevNode = nodes.get(stack[stack.length - 1]!.id);
@@ -198,13 +199,13 @@ export function parseMarkdown(content: string): ParseResult {
       continue;
     }
 
-    // Reset pending blank lines when we hit a new checkbox item
+    // Reset pending blank lines when we hit a new bullet item
     pendingBlankLines = 0;
 
-    const indentStr = match[1]!;
+    const indentStr = cbMatch ? cbMatch[1]! : plainMatch![1]!;
     const depth = Math.floor(indentStr.length / 2);
-    const isChecked = match[2] === "x";
-    let lineContent = match[3]!
+    const isChecked = cbMatch ? cbMatch[2] === "x" : false;
+    let lineContent = cbMatch ? cbMatch[3]! : plainMatch![2]!
 
     // Extract status — resolve human-readable label to internal id
     // Explicit !status() takes precedence over checkbox state

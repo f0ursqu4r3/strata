@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { Clock } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
-import { isTauri } from '@/lib/platform'
+import { isFileSystemMode } from '@/lib/platform'
 import { useSettingsStore } from '@/stores/settings'
 import { UiModal } from '@/components/ui'
 import type { Op } from '@/types'
@@ -61,7 +61,7 @@ function formatTime(ts: number): string {
 
 onMounted(async () => {
   // In Tauri file-based mode, ops aren't in IDB
-  if (isTauri() && settings.workspacePath) {
+  if (isFileSystemMode() && settings.workspacePath) {
     unavailable.value = true
     loading.value = false
     return

@@ -2,21 +2,36 @@
 import { Minus, Plus, Settings2, FolderOpen } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
 import { themeRegistry } from '@/data/theme-registry'
-import { isTauri } from '@/lib/platform'
+import { isTauri, isFileSystemMode, hasFileSystemAccess, setFileSystemActive } from '@/lib/platform'
 import { UiModal, UiToggle, UiButton } from '@/components/ui'
 
 const emit = defineEmits<{ close: []; openStatusEditor: [] }>()
 const settings = useSettingsStore()
 
 async function changeWorkspace() {
-  const { open } = await import('@tauri-apps/plugin-dialog')
-  const selected = await open({
-    directory: true,
-    title: 'Choose Strata Workspace',
-  })
-  if (selected) {
-    settings.setWorkspacePath(selected as string)
-    window.location.reload()
+  if (isTauri()) {
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const selected = await open({
+      directory: true,
+      title: 'Choose Strata Workspace',
+    })
+    if (selected) {
+      settings.setWorkspacePath(selected as string)
+      window.location.reload()
+    }
+  } else if (hasFileSystemAccess()) {
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'readwrite' })
+      const { setHandle } = await import('@/lib/web-fs')
+      await setHandle(handle)
+      const { setWorkspacePrefix } = await import('@/lib/fs')
+      setFileSystemActive(true)
+      setWorkspacePrefix(handle.name + '/')
+      settings.setWorkspacePath(handle.name)
+      window.location.reload()
+    } catch {
+      // User cancelled
+    }
   }
 }
 </script>
@@ -130,12 +145,12 @@ async function changeWorkspace() {
         </label>
       </div>
 
-      <!-- Workspace (Tauri only) -->
-      <div v-if="isTauri()">
+      <!-- Workspace -->
+      <div v-if="isFileSystemMode() || hasFileSystemAccess()">
         <h3 class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide mb-3">
           Workspace
         </h3>
-        <div class="flex items-center gap-2">
+        <div v-if="isFileSystemMode()" class="flex items-center gap-2">
           <code class="flex-1 text-xs text-(--text-tertiary) bg-(--bg-hover) rounded px-2 py-1.5 truncate">
             {{ settings.workspacePath || '(not set)' }}
           </code>
@@ -144,7 +159,16 @@ async function changeWorkspace() {
             Change
           </UiButton>
         </div>
-        <p class="text-[11px] text-(--text-faint) mt-1.5">
+        <div v-else>
+          <p class="text-[11px] text-(--text-secondary) mb-2">
+            Store your documents as .md files in a folder on your computer.
+          </p>
+          <UiButton variant="secondary" size="xs" @click="changeWorkspace">
+            <FolderOpen class="w-3.5 h-3.5" />
+            Choose Workspace Folder
+          </UiButton>
+        </div>
+        <p v-if="isFileSystemMode()" class="text-[11px] text-(--text-faint) mt-1.5">
           Documents are saved as .md files in this folder
         </p>
       </div>

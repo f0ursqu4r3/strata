@@ -13,9 +13,9 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
-  // Tauri expects a fixed port for dev
+  // Tauri expects a fixed port for dev; override via VITE_PORT env var
   server: {
-    port: 5173,
+    port: parseInt(process.env.VITE_PORT || "5173"),
     strictPort: true,
   },
   // Prevent Vite from obscuring Rust errors

@@ -15,7 +15,7 @@
     "lint:eslint": "eslint . --fix --cache",
     "format": "oxfmt src/",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
+    "tauri:dev": "node scripts/tauri-dev.mjs",
     "tauri:build": "tauri build"
   },
   "dependencies": {

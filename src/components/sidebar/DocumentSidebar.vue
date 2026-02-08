@@ -1,17 +1,26 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { nextTick } from 'vue'
 import { Plus, FileText, Trash2, X } from 'lucide-vue-next'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocStore } from '@/stores/doc'
 import { isTauri } from '@/lib/platform'
+import { useDocumentRename } from '@/composables/sidebar/useDocumentRename'
 
 const emit = defineEmits<{ close: [] }>()
 const docsStore = useDocumentsStore()
 const docStore = useDocStore()
 
-const renamingId = ref<string | null>(null)
-const renameInputRef = ref<HTMLInputElement[]>([])
-const renameText = ref('')
+const {
+  renamingId,
+  renameInputRef,
+  renameText,
+  renameConflict,
+  baseName,
+  dirPrefix,
+  startRename,
+  finishRename,
+  onRenameKeydown,
+} = useDocumentRename()
 
 async function onCreateNew() {
   docStore.flushTextDebounce()
@@ -19,7 +28,6 @@ async function onCreateNew() {
   const id = docsStore.createDocument(name)
   await docsStore.switchDocument(id)
   await docStore.loadDocument(id)
-  // Start renaming immediately
   renamingId.value = id
   renameText.value = name
   await nextTick()
@@ -32,46 +40,6 @@ async function onSwitchDoc(docId: string) {
   docStore.flushTextDebounce()
   await docsStore.switchDocument(docId)
   await docStore.loadDocument(docId)
-}
-
-function baseName(name: string): string {
-  const slash = name.lastIndexOf('/')
-  return slash >= 0 ? name.substring(slash + 1) : name
-}
-
-function dirPrefix(name: string): string {
-  const slash = name.lastIndexOf('/')
-  return slash >= 0 ? name.substring(0, slash + 1) : ''
-}
-
-function startRename(docId: string, name: string, e: MouseEvent) {
-  e.stopPropagation()
-  renamingId.value = docId
-  renameText.value = baseName(name)
-  nextTick(() => {
-    renameInputRef.value[0]?.focus()
-    renameInputRef.value[0]?.select()
-  })
-}
-
-const renameConflict = computed(() => {
-  if (!renamingId.value || !renameText.value.trim()) return false
-  return docsStore.nameConflicts(renameText.value.trim(), renamingId.value)
-})
-
-function finishRename() {
-  if (renamingId.value && renameText.value.trim() && !renameConflict.value) {
-    docsStore.renameDocument(renamingId.value, renameText.value.trim())
-  }
-  renamingId.value = null
-}
-
-function onRenameKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter') {
-    finishRename()
-  } else if (e.key === 'Escape') {
-    renamingId.value = null
-  }
 }
 
 async function onDelete(docId: string, e: MouseEvent) {
