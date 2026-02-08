@@ -1,123 +1,79 @@
-# Strata
+<p align="center">
+  <img src="ghpages/icon.png" alt="Strata" width="96" height="96">
+</p>
 
-Your outline is the truth. Everything else is a projection.
+<h1 align="center">Strata</h1>
 
-A keyboard-first outliner with kanban, due dates, tags, and plain-text markdown files you actually own.
+<p align="center">
+  A keyboard-first outliner with kanban, due dates, tags, and plain-text markdown files you actually own.
+</p>
 
-[Download](https://github.com/f0ursqu4r3/strata/releases/latest) &middot; [Website](https://f0ursqu4r3.github.io/strata/)
+<p align="center">
+  <a href="https://github.com/f0ursqu4r3/strata/releases/latest">Download</a>&nbsp;&middot;&nbsp;<a href="https://f0ursqu4r3.github.io/strata/">Website</a>
+</p>
 
----
+![Strata split view showing outline and kanban board](ghpages/assets/screenshot.png)
 
 ## What is Strata?
 
-Strata is a desktop app for managing tasks and notes as a single nested outline. The outline can be viewed as a tree (like WorkFlowy) or projected into a kanban board grouped by status. Both views operate on the same data — changes in one are instantly reflected in the other.
+Strata is a task manager built around one idea: **your outline is the source of truth**.
 
-Documents are plain `.md` files with YAML frontmatter. Edit them in any text editor, grep them from the terminal, version them with git.
+You write everything as a nested list — tasks, notes, sub-tasks, whatever you need. That outline can be viewed as a tree (like WorkFlowy or Dynalist) or flipped into a kanban board grouped by status. Both views show the same data, so changes in one show up instantly in the other.
+
+Your documents are plain `.md` files that live on your filesystem. Open them in any text editor, grep them from the terminal, version them with git. No accounts, no cloud, no lock-in.
+
+## Features
+
+**Three ways to look at your work** — Outline tree with infinite nesting and zoom. Kanban board with drag-and-drop between columns. Split view showing both side by side.
+
+**Statuses, tags, and due dates** — Organize with custom statuses (Todo, In Progress, Done — or whatever you want). Tag items with `#hashtags`. Set due dates and filter by overdue, today, or this week.
+
+**Keyboard-driven** — Navigate, edit, indent, change status, all without touching the mouse. Vim-style navigation if you want it. Every shortcut is customizable.
+
+**Search everywhere** — Full-text search across the current document or all documents in your workspace. Command palette for quick actions.
+
+**Themes** — Light and dark modes with 13 built-in themes including GitHub, Nord, Dracula, Solarized, Catppuccin, and Tokyo Night.
+
+**Export** — JSON, Markdown, OPML, or plain text. Exports respect your current zoom level.
+
+## File format
+
+Strata documents are regular markdown files. The format is simple enough to write by hand and documented in [docs/file-format.md](docs/file-format.md).
 
 ```markdown
 ---
 doc-type: strata
 ---
 
-- Ship v1.0  #release
-  - Fix auth token refresh  !status(Done)  #api
-  - Write migration guide  !status(In Progress)  @due(2025-02-14)
-  - Update changelog
-  - Tag release on GitHub  !status(Blocked)
-- Backlog
-  - Dark mode improvements  #ui
-  - Search performance  #perf
+- [ ] Ship v1.0  #release
+  - [x] Fix auth token refresh  #api
+  - [ ] Write migration guide  !status(In Progress)  @due(2025-02-14)
+  - [ ] Update changelog
+  - [ ] Tag release on GitHub  !status(Blocked)
+- [ ] Backlog  !collapsed
+  - [ ] Dark mode improvements  #ui
+  - [ ] Search performance  #perf
 ```
 
-## Features
+## Installation
 
-### Views
+Download the latest release for your platform:
 
-- Outline tree with infinite nesting, collapse/expand, and zoom
-- Kanban board grouped by status with drag-and-drop between columns
-- Split view showing both simultaneously
+| Platform | Download |
+| --- | --- |
+| macOS | [`.dmg`](https://github.com/f0ursqu4r3/strata/releases/latest) |
+| Windows | [`.exe`](https://github.com/f0ursqu4r3/strata/releases/latest) |
+| Linux | [`.AppImage` / `.deb`](https://github.com/f0ursqu4r3/strata/releases/latest) |
 
-### Organization
+Strata also runs in the browser — just open the [web app](https://f0ursqu4r3.github.io/strata/) (Chromium-based browsers get filesystem access; others use local storage).
 
-- Statuses — Todo, In Progress, Blocked, Done (customizable per document)
-- Tags — filter outline and board by tag
-- Due dates — filter by overdue, today, or this week
-- Full-text search across current document or all documents
+## How it works
 
-### Editing
+**One tree, two views.** All data lives in a tree of nodes. The outline renders this tree directly. The kanban board is a *projection* — it groups the same nodes by status. Dragging a card between columns changes the node's status without moving it in the tree.
 
-- Keyboard-driven — navigate, indent/outdent, change status, all from the keyboard
-- Customizable shortcuts
-- Undo/redo with full operation history
-- Duplicate, delete, restore from trash
+**Op-log under the hood.** Every change goes through an append-only operation log, which gives you undo/redo and lays the groundwork for future sync between devices.
 
-### Files
-
-- Plain markdown — human-readable, no proprietary formats
-- Recursive file discovery — point at a folder, Strata finds all `.md` files with `doc-type: strata`
-- File watcher — external edits are picked up automatically
-
-### Export
-
-- JSON, Markdown, OPML, Plain Text
-- Exports respect current zoom level
-
-### Themes
-
-- Light and dark modes
-- 13 built-in themes including GitHub, Nord, Dracula, Solarized, Catppuccin, Tokyo Night
-- Adjustable font size
-
-## Keybindings
-
-| Key                   | Action                                                            |
-| --------------------- | ----------------------------------------------------------------- |
-| Up / Down             | Move selection                                                    |
-| Enter                 | Edit selected node (while editing: commit + create sibling below) |
-| Tab                   | Indent (make child of previous sibling)                           |
-| Shift+Tab             | Outdent (move to grandparent level)                               |
-| Delete / Backspace    | Delete selected node                                              |
-| Space                 | Toggle collapse                                                   |
-| Escape                | Stop editing                                                      |
-| Ctrl+1..9             | Set status (by position in status list)                           |
-| Ctrl+Z / Ctrl+Shift+Z | Undo / Redo                                                       |
-| Ctrl+Shift+F          | Global search                                                     |
-| Double-click          | Start editing / Create new node (empty area)                      |
-
-All shortcuts are customizable in Settings.
-
-## Architecture
-
-### One tree, two views
-
-All data lives in a single tree of `Node` objects. The **Outline** view renders this tree directly. The **Kanban** board is a *projection*: it groups the same nodes by their `status` field. Dragging a card between columns changes the node's status without reparenting it in the tree.
-
-### Op-log design
-
-Every mutation goes through an append-only operation log. State is derived by replaying ops over an optional snapshot. This enables:
-
-- **Undo/redo** — walk ops backward with compensating operations
-- **Future sync** — exchange op logs between clients
-- **Conflict resolution** — ops are commutative for most cases; last-writer-wins on same field
-
-Snapshots are taken every 200 ops to bound replay time on load.
-
-### Rank keys (LexoRank-lite)
-
-Sibling ordering uses lexicographically sortable strings instead of integer indices. `rankBetween(a, b)` produces a key that sorts between `a` and `b` without rewriting any other sibling's position. This makes reordering O(1) ops instead of O(n).
-
-### Persistence
-
-**Desktop (Tauri):** Documents are `.md` files on disk. The workspace folder is watched for changes. Strata recursively discovers any `.md` file with `doc-type: strata` frontmatter.
-
-**Browser fallback:** Ops and snapshots are persisted to IndexedDB via Dexie.
-
-## Tech Stack
-
-- [Tauri 2](https://v2.tauri.app/) — Rust backend, native webview
-- [Vue 3](https://vuejs.org/) + [Pinia](https://pinia.vuejs.org/) — frontend
-- [Tailwind CSS 4](https://tailwindcss.com/) — styling
-- [Vite](https://vite.dev/) — build tooling
+**Files, not databases.** On desktop, documents are `.md` files on disk. Strata watches your workspace folder and picks up external edits automatically. In the browser, data is persisted to IndexedDB with an option to connect a local folder via the File System Access API.
 
 ## Development
 
@@ -125,7 +81,8 @@ Prerequisites: [Rust](https://rustup.rs/), [Bun](https://bun.sh/), and the [Taur
 
 ```sh
 bun install
-bun run tauri:dev
+bun run tauri:dev    # desktop app
+bun run dev          # web only
 ```
 
 Build for production:
@@ -134,11 +91,9 @@ Build for production:
 bun run tauri:build
 ```
 
-Run tests:
+### Tech stack
 
-```sh
-bunx vitest run
-```
+[Tauri 2](https://v2.tauri.app/) (Rust) &middot; [Vue 3](https://vuejs.org/) + [Pinia](https://pinia.vuejs.org/) &middot; [Tailwind CSS 4](https://tailwindcss.com/) &middot; [Vite](https://vite.dev/)
 
 ## License
 

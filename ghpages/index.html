@@ -48,7 +48,7 @@
     /* ── Hero ── */
     .hero {
       text-align: center;
-      padding: 80px 24px 60px;
+      padding: 80px 24px 40px;
     }
 
     .hero-icon {
@@ -66,16 +66,17 @@
     }
 
     .hero .tagline {
-      font-family: var(--mono);
-      font-size: 1.1rem;
-      color: var(--text-muted);
-      margin-bottom: 8px;
+      font-size: 1.15rem;
+      color: var(--text);
+      max-width: 560px;
+      margin: 0 auto 8px;
+      line-height: 1.5;
     }
 
     .hero .sub {
       font-size: 1rem;
-      color: var(--text-faint);
-      max-width: 540px;
+      color: var(--text-muted);
+      max-width: 520px;
       margin: 0 auto 32px;
     }
 
@@ -116,11 +117,31 @@
     }
     .btn-secondary:hover { background: #253248; }
 
+    .btn-tertiary {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-tertiary:hover { background: var(--bg-card); color: var(--text); }
+
     .btn svg { width: 16px; height: 16px; }
+
+    /* ── Screenshot ── */
+    .screenshot {
+      padding: 0 24px 60px;
+      text-align: center;
+    }
+
+    .screenshot img {
+      max-width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+    }
 
     /* ── Features ── */
     .features {
-      padding: 40px 0 60px;
+      padding: 20px 0 60px;
     }
 
     .features-grid {
@@ -174,6 +195,13 @@
       text-align: center;
     }
 
+    .showcase-note {
+      text-align: center;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-top: 16px;
+    }
+
     .code-block {
       background: var(--bg-code);
       border: 1px solid var(--border);
@@ -218,6 +246,12 @@
       gap: 12px;
       justify-content: center;
       flex-wrap: wrap;
+    }
+
+    .download .web-note {
+      font-size: 0.85rem;
+      color: var(--text-faint);
+      margin-top: 20px;
     }
 
     .platform-btn {
@@ -267,17 +301,27 @@
   <section class="hero">
     <img src="icon.png" alt="Strata" class="hero-icon">
     <h1>Strata</h1>
-    <p class="tagline">Your outline is the truth. Everything else is a projection.</p>
-    <p class="sub">A keyboard-first outliner with kanban, due dates, tags, and plain-text markdown files you actually own.</p>
+    <p class="tagline">A task manager built around one idea: your outline is the source of truth.</p>
+    <p class="sub">Write everything as a nested list. View it as a tree or flip it into a kanban board. Your data stays in plain markdown files you actually own.</p>
     <div class="hero-buttons">
       <a href="https://github.com/f0ursqu4r3/strata/releases/latest" class="btn btn-primary">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Download
       </a>
-      <a href="https://github.com/f0ursqu4r3/strata" class="btn btn-secondary">
+      <a href="https://f0ursqu4r3.github.io/strata/app/" class="btn btn-secondary">
+        Try in browser
+      </a>
+      <a href="https://github.com/f0ursqu4r3/strata" class="btn btn-tertiary">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
         Source
       </a>
+    </div>
+  </section>
+
+  <!-- Screenshot -->
+  <section class="screenshot">
+    <div class="container">
+      <img src="assets/screenshot.png" alt="Strata split view showing outline and kanban board">
     </div>
   </section>
 
@@ -287,19 +331,27 @@
       <div class="features-grid">
         <div class="feature-card">
           <h3>Outline <span class="arrow">&rarr;</span> Kanban</h3>
-          <p>One data model, two views. Your outline tree projects into a kanban board grouped by status. Drag cards between columns, and the outline updates.</p>
+          <p>One tree, two views. Your outline projects into a kanban board grouped by status. Drag cards between columns, and the outline updates instantly. Use split view to see both at once.</p>
         </div>
         <div class="feature-card">
-          <h3>Plain Markdown</h3>
-          <p>Files are human-readable <code>.md</code> with frontmatter. Edit in VS Code, grep from terminal, version with git. No proprietary formats.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Offline-first</h3>
-          <p>No server, no sync, no account. Your files live on your filesystem. Works on macOS, Linux, and Windows.</p>
+          <h3>Statuses, tags, and due dates</h3>
+          <p>Organize with custom statuses (Todo, In Progress, Done &mdash; or whatever you want). Tag items with #hashtags. Set due dates and filter by overdue, today, or this week.</p>
         </div>
         <div class="feature-card">
           <h3>Keyboard-driven</h3>
-          <p>Navigate, edit, indent, change status &mdash; all without touching the mouse. Customizable shortcuts for every action.</p>
+          <p>Navigate, edit, indent, change status &mdash; all without touching the mouse. Vim-style navigation if you want it. Every shortcut is customizable.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Plain markdown files</h3>
+          <p>Your documents are readable <code>.md</code> files on your filesystem. Open them in any text editor, grep from terminal, version with git. No accounts, no cloud, no lock-in.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Search everywhere</h3>
+          <p>Full-text search across the current document or all documents in your workspace. Command palette for quick actions.</p>
+        </div>
+        <div class="feature-card">
+          <h3>13 built-in themes</h3>
+          <p>Light and dark modes with themes including GitHub, Nord, Dracula, Solarized, Catppuccin, and Tokyo Night.</p>
         </div>
       </div>
     </div>
@@ -314,20 +366,21 @@
 <span class="fm">---</span>
 
 <span class="bullet">-</span> <span class="text">Ship v1.0</span>  <span class="tag">#release</span>
-  <span class="bullet">-</span> <span class="text">Fix auth token refresh</span>  <span class="status">!status(Done)</span>  <span class="tag">#api</span>
+  <span class="bullet">-</span> <span class="done">[x]</span> <span class="text">Fix auth token refresh</span>  <span class="tag">#api</span>
   <span class="bullet">-</span> <span class="text">Write migration guide</span>  <span class="status">!status(In Progress)</span>  <span class="due">@due(2025-02-14)</span>
   <span class="bullet">-</span> <span class="text">Update changelog</span>
   <span class="bullet">-</span> <span class="text">Tag release on GitHub</span>  <span class="status">!status(Blocked)</span>
 <span class="bullet">-</span> <span class="text">Backlog</span>
   <span class="bullet">-</span> <span class="text">Dark mode improvements</span>  <span class="tag">#ui</span>
   <span class="bullet">-</span> <span class="text">Search performance</span>  <span class="tag">#perf</span></div>
+      <p class="showcase-note">Simple enough to write by hand. Documented in <a href="https://github.com/f0ursqu4r3/strata/blob/main/docs/file-format.md">the file format spec</a>.</p>
     </div>
   </section>
 
   <!-- Download -->
   <section class="download" id="download">
     <div class="container">
-      <h2>Download</h2>
+      <h2>Get Strata</h2>
       <p class="note" id="dl-version">macOS, Linux, Windows</p>
       <div class="download-buttons">
         <a href="https://github.com/f0ursqu4r3/strata/releases/latest" class="platform-btn" id="btn-mac">
@@ -343,6 +396,7 @@
           Windows
         </a>
       </div>
+      <p class="web-note">Or <a href="https://f0ursqu4r3.github.io/strata/app/">try it in your browser</a> &mdash; no install needed. Chromium-based browsers get full filesystem access; others use local storage.</p>
     </div>
   </section>
 
