@@ -49,43 +49,91 @@ All scripts work with `npm run` as well.
 
 ```
 src/
-├── __tests__/          # Unit tests (Vitest + jsdom)
+├── __tests__/              # Unit tests (Vitest + jsdom)
 │   ├── ops.spec.ts
 │   └── rank.spec.ts
-├── components/         # Vue SFCs
-│   ├── OutlineView.vue       # Main outline tree
-│   ├── OutlineRow.vue        # Single outline row
-│   ├── KanbanBoard.vue       # Kanban board view
-│   ├── DocumentSidebar.vue   # Multi-document sidebar
-│   ├── ContextMenu.vue       # Right-click menu
-│   ├── TagPicker.vue         # Tag autocomplete
-│   ├── DatePicker.vue        # Due date picker
-│   ├── GlobalSearch.vue      # Search modal
-│   ├── ShortcutsModal.vue    # Keyboard shortcuts reference
-│   ├── ShortcutEditor.vue    # Shortcut customization
-│   ├── SettingsPanel.vue     # Settings UI
-│   ├── StatusEditor.vue      # Custom status management
-│   ├── TrashPanel.vue        # Deleted items
-│   └── ExportMenu.vue        # Export format picker
+├── components/
+│   ├── board/              # Kanban board
+│   │   ├── KanbanBoard.vue
+│   │   └── ColumnContextMenu.vue
+│   ├── outline/            # Outline tree
+│   │   ├── OutlineView.vue
+│   │   ├── OutlineRow.vue
+│   │   └── NodeHistory.vue
+│   ├── overlays/           # Modals & floating panels
+│   │   ├── CommandPalette.vue
+│   │   ├── ExportMenu.vue
+│   │   ├── GlobalSearch.vue
+│   │   ├── TrashPanel.vue
+│   │   └── WorkspacePicker.vue
+│   ├── settings/           # Settings UIs
+│   │   ├── SettingsPanel.vue         # Global settings (theme, font, display)
+│   │   ├── DocumentSettingsPanel.vue # Per-doc settings (statuses, tag colors)
+│   │   ├── ShortcutsModal.vue
+│   │   ├── ShortcutEditor.vue
+│   │   └── StatusEditor.vue
+│   ├── shared/             # Reusable components
+│   │   ├── ContextMenu.vue
+│   │   ├── TagPicker.vue
+│   │   └── DatePicker.vue
+│   ├── sidebar/            # Document browser
+│   │   ├── DocumentSidebar.vue
+│   │   └── DocumentContextMenu.vue
+│   └── ui/                 # Generic UI primitives
+│       ├── UiButton.vue, UiToggle.vue, UiModal.vue, ...
+│       └── index.ts
+├── composables/
+│   ├── board/              # Board-specific logic
+│   │   ├── useBoardDrag.ts
+│   │   └── useBoardEditing.ts
+│   ├── outline/            # Outline-specific logic
+│   │   ├── useDragReorder.ts
+│   │   ├── useFileDrop.ts
+│   │   ├── useRowEditing.ts
+│   │   ├── useVimMode.ts
+│   │   └── useVirtualScroll.ts
+│   ├── overlays/
+│   │   ├── useCommandPalette.ts
+│   │   └── useGlobalSearch.ts
+│   ├── settings/
+│   │   ├── useShortcutCapture.ts
+│   │   └── useStatusCrud.ts
+│   ├── sidebar/
+│   │   └── useDocumentRename.ts
+│   ├── useClickOutside.ts
+│   ├── useEscapeKey.ts
+│   └── useMenuPosition.ts  # Viewport-aware context menu positioning
 ├── data/
-│   └── theme-registry.ts     # Theme definitions (11 themes)
+│   └── theme-registry.ts   # Theme definitions (11 themes)
 ├── lib/
-│   ├── ops.ts                # Op-log: create, apply, rebuild
-│   ├── rank.ts               # LexoRank-style ordering
-│   ├── shortcuts.ts          # Keyboard shortcut definitions
-│   ├── search-index.ts       # Cross-document search index
-│   ├── due-date.ts           # Due date helpers
-│   ├── inline-markdown.ts    # Markdown rendering
-│   ├── export.ts             # Export to MD/OPML/TXT
-│   └── status-icons.ts       # Status icon resolver
+│   ├── ops.ts              # Op-log: create, apply, rebuild
+│   ├── rank.ts             # LexoRank-style ordering
+│   ├── shortcuts.ts        # Keyboard shortcut definitions
+│   ├── search-index.ts     # Cross-document search index
+│   ├── due-date.ts         # Due date helpers
+│   ├── inline-markdown.ts  # Markdown rendering
+│   ├── export-formats.ts   # Export to MD/OPML/TXT
+│   ├── import-formats.ts   # Import from MD/OPML/TXT/JSON
+│   ├── markdown-serialize.ts # .md file read/write with frontmatter
+│   ├── tag-colors.ts       # Per-tag color presets and helpers
+│   ├── text-utils.ts       # Title/body text helpers
+│   ├── status-icons.ts     # Status icon resolver
+│   ├── doc-registry.ts     # Document registry helpers
+│   ├── platform.ts         # Platform detection (Tauri/web/FS)
+│   ├── fs.ts               # Unified filesystem adapter
+│   ├── tauri-fs.ts         # Tauri filesystem operations
+│   ├── web-fs.ts           # File System Access API adapter
+│   ├── idb.ts              # IndexedDB persistence (Dexie)
+│   ├── menu-handler.ts     # Tauri native menu handler
+│   └── migrate-to-files.ts # IDB → filesystem migration
 ├── stores/
-│   ├── doc.ts                # Main document store (nodes, ops, undo)
-│   ├── documents.ts          # Multi-document management
-│   └── settings.ts           # User preferences
+│   ├── doc.ts              # Main document store (nodes, ops, undo)
+│   ├── documents.ts        # Multi-document management
+│   └── settings.ts         # User preferences (localStorage)
 ├── types/
-│   └── index.ts              # TypeScript interfaces
-├── App.vue                   # Root component
-└── main.ts                   # Entry point
+│   └── index.ts            # TypeScript interfaces
+├── App.vue                 # Root component
+└── main.ts                 # Entry point
 ```
 
 ## Architecture
@@ -101,10 +149,13 @@ Strata uses an **op-log** (event sourcing) architecture:
 
 ### Persistence
 
-- Each document is stored in its own **IndexedDB** database via Dexie.
-- Three tables per database: `ops` (operation log), `meta` (snapshots, custom statuses), `nodes` (latest state).
-- Document list and settings are stored in **localStorage**.
-- A cross-document search index is maintained in localStorage.
+Strata supports three storage modes:
+
+- **Tauri (desktop)**: Documents are `.md` files on disk with YAML frontmatter. Strata watches the workspace folder for external changes via the `notify` crate.
+- **Web FS (Chromium)**: Uses the File System Access API to read/write `.md` files in a user-selected folder. Same file format as Tauri.
+- **Web IDB (fallback)**: Each document is stored in its own **IndexedDB** database via Dexie. Three tables per database: `ops` (operation log), `meta` (snapshots, custom statuses, tag colors), `nodes` (latest state).
+
+In all modes, user settings and the document list are stored in **localStorage**. A cross-document search index is also maintained in localStorage.
 
 ### Reactivity
 

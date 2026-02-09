@@ -87,12 +87,12 @@ Markdown syntax is shown as-is while editing, and rendered when you're not.
 
 Every node has a status. The defaults are:
 
-| Status | Icon | Color |
-|---|---|---|
-| Todo | ○ | Gray |
-| In Progress | ◉ | Blue |
-| Blocked | ⊘ | Red |
-| Done | ✓ | Green |
+| Status      | Icon | Color |
+| ----------- | ---- | ----- |
+| Todo        | ○    | Gray  |
+| In Progress | ◉    | Blue  |
+| Blocked     | ⊘    | Red   |
+| Done        | ✓    | Green |
 
 ### Changing Status
 
@@ -122,7 +122,7 @@ At least one status must exist at all times.
 ### Adding Tags
 
 1. While editing a node, click **+ tag** on the right side of the row.
-2. Type a tag name. An autocomplete dropdown shows existing tags.
+2. The autocomplete dropdown shows all existing tags immediately. Type to filter.
 3. Press **Enter** to add the tag (either the highlighted suggestion or a new tag).
 4. Add multiple tags by continuing to type.
 
@@ -132,14 +132,27 @@ You can also right-click → **Tags** to open the tag picker.
 
 In the tag picker, click the **X** next to any tag. Or press **Backspace** on an empty input to remove the last tag.
 
+### Tag Colors
+
+Each tag can have a custom color. To change a tag's color:
+
+1. In the tag picker, click the **color dot** on any tag pill to open the color picker.
+2. Choose from 8 presets: red, orange, yellow, green, teal, blue, purple, pink.
+3. Click **Default** to revert to the theme's accent color.
+
+Tag colors can also be managed from **Document Settings → Tags**, where all document tags are listed with their color pickers.
+
+Tag colors are stored per-document (in the file's YAML frontmatter for filesystem mode, or IndexedDB for browser mode).
+
 ### Tag Filtering
 
-If any tags exist in the document, a **Tags** button appears in the toolbar. Click it to open a dropdown and select a tag to filter by. Only nodes with that tag (and their ancestors) will be shown. Click **All** or the **X** to clear the filter.
+If any tags exist in the document, a **Tags** button appears in the toolbar. Click it to open a dropdown and select a tag to filter by. You can also type an arbitrary value to filter by tags not in the list. Only nodes with the matching tag (and their ancestors) will be shown. Click **All** or the **X** to clear the filter.
 
 ### Display
 
 - Tag pills appear to the right of each node in the outline (when "Show tags" is enabled in Settings).
 - Tags on kanban cards have a separate toggle — the **Tag icon** button in the board header.
+- Tags display with their custom color if one is set.
 
 ---
 
@@ -156,12 +169,12 @@ If any tags exist in the document, a **Tags** button appears in the toolbar. Cli
 
 Due dates display as color-coded badges:
 
-| Color | Meaning |
-|---|---|
-| Red | Overdue |
-| Amber | Due today |
-| Blue | Due within 3 days |
-| Gray | More than 3 days away |
+| Color | Meaning               |
+| ----- | --------------------- |
+| Red   | Overdue               |
+| Amber | Due today             |
+| Blue  | Due within 3 days     |
+| Gray  | More than 3 days away |
 
 Labels are smart: "Today", "Tomorrow", "Yesterday", or a formatted date like "Jan 15".
 
@@ -190,7 +203,8 @@ The board view shows one column per status. Each card displays:
 
 - **Drag** a card between columns to change its status.
 - **Double-click** a card to edit it inline.
-- **Right-click** a card for the context menu.
+- **Right-click a card** for the context menu (edit, set status, tags, due date, zoom, duplicate, history, delete).
+- **Right-click a column** for column actions (add card, manage statuses).
 - **Tag toggle** (Tag icon, top-right): Show/hide tags on cards. This is independent of the outline's "Show tags" setting.
 - **Manage statuses** (gear icon, top-right): Open the status editor.
 
@@ -208,6 +222,7 @@ The search modal has two sections:
 Type to search. Results update as you type (200ms debounce). Matching text is highlighted.
 
 **Keyboard navigation:**
+
 - **↑ / ↓**: Move through results
 - **Enter**: Jump to the selected result (switches documents if needed)
 - **Escape**: Close search
@@ -222,10 +237,15 @@ Click the **sidebar toggle** (left side of toolbar) to open the document sidebar
 
 - **Create**: Click the **+** button in the sidebar header. A new "Untitled" document is created and you can immediately rename it.
 - **Switch**: Click any document name.
-- **Rename**: Double-click a document name.
-- **Delete**: Click the trash icon that appears on hover. You must have at least 2 documents — the last one can't be deleted.
+- **Rename**: Double-click a document name, or right-click → **Rename**.
+- **Delete**: Click the trash icon that appears on hover, or right-click → **Delete**.
+- **Context menu**: Right-click any document for quick access to rename and delete.
 
 When you delete the active document, Strata switches to the most recently modified remaining document.
+
+### Workspace
+
+In filesystem mode (Tauri desktop or Chrome File System Access), the workspace path is shown at the bottom of the document sidebar. Click **Change** to switch to a different folder.
 
 ---
 
@@ -249,12 +269,12 @@ Restoring a node brings it back to its original position with all metadata intac
 
 Click the **Export** button (download icon) in the toolbar. Choose a format:
 
-| Format | Description |
-|---|---|
-| **JSON** | Complete document data. Can be re-imported. Best for backups. |
-| **Markdown** | Hierarchical bullet list with status indicators and #tags. |
-| **OPML** | XML outline format. Compatible with other outliner apps. |
-| **Plain Text** | Simple indented text with status labels in brackets. |
+| Format         | Description                                                   |
+| -------------- | ------------------------------------------------------------- |
+| **JSON**       | Complete document data. Can be re-imported. Best for backups. |
+| **Markdown**   | Hierarchical bullet list with status indicators and #tags.    |
+| **OPML**       | XML outline format. Compatible with other outliner apps.      |
+| **Plain Text** | Simple indented text with status labels in brackets.          |
 
 All exports respect the current zoom level — if you're zoomed into a subtree, only that subtree is exported.
 
@@ -268,22 +288,22 @@ Click the **Import** button (upload icon) to import a JSON file previously expor
 
 ### Default Shortcuts
 
-| Shortcut | Action | Context |
-|---|---|---|
-| **↑** | Move selection up | Outline navigation |
-| **↓** | Move selection down | Outline navigation |
-| **Enter** | Start editing | Outline navigation |
-| **Space** | Toggle collapse/expand | Outline navigation |
-| **Tab** | Indent node | Outline navigation / Editing |
-| **Shift+Tab** | Outdent node | Outline navigation / Editing |
-| **Delete** | Delete node | Outline navigation |
-| **Escape** | Stop editing | Editing |
-| **Shift+Enter** | New sibling below | Editing |
-| **Ctrl+Z** | Undo | Global |
-| **Ctrl+Shift+Z** | Redo | Global |
-| **Ctrl+Shift+F** | Search | Global |
-| **Ctrl+1–9** | Set status | Global |
-| **?** | Keyboard shortcuts | Global |
+| Shortcut         | Action                 | Context                      |
+| ---------------- | ---------------------- | ---------------------------- |
+| **↑**            | Move selection up      | Outline navigation           |
+| **↓**            | Move selection down    | Outline navigation           |
+| **Enter**        | Start editing          | Outline navigation           |
+| **Space**        | Toggle collapse/expand | Outline navigation           |
+| **Tab**          | Indent node            | Outline navigation / Editing |
+| **Shift+Tab**    | Outdent node           | Outline navigation / Editing |
+| **Delete**       | Delete node            | Outline navigation           |
+| **Escape**       | Stop editing           | Editing                      |
+| **Shift+Enter**  | New sibling below      | Editing                      |
+| **Ctrl+Z**       | Undo                   | Global                       |
+| **Ctrl+Shift+Z** | Redo                   | Global                       |
+| **Ctrl+Shift+F** | Search                 | Global                       |
+| **Ctrl+1–9**     | Set status             | Global                       |
+| **?**            | Keyboard shortcuts     | Global                       |
 
 On Mac, **Ctrl** maps to **Cmd** automatically.
 
@@ -302,47 +322,59 @@ Custom shortcuts are saved to your browser's local storage.
 
 ## Settings
 
-Click the **gear icon** in the toolbar to open the settings panel.
+Click the **gear icon** in the toolbar to open the settings panel. These are global settings that apply across all documents.
 
 ### Themes
 
 Strata includes 11 themes:
 
-| Theme | Appearance |
-|---|---|
-| GitHub Light | Light |
-| GitHub Dark | Dark |
-| Monokai | Dark |
-| Nord | Dark |
-| Dracula | Dark |
-| Solarized Light | Light |
-| Solarized Dark | Dark |
-| One Dark | Dark |
-| Catppuccin | Dark |
-| Gruvbox | Dark |
-| Tokyo Night | Dark |
+| Theme           | Appearance |
+| --------------- | ---------- |
+| GitHub Light    | Light      |
+| GitHub Dark     | Dark       |
+| Monokai         | Dark       |
+| Nord            | Dark       |
+| Dracula         | Dark       |
+| Solarized Light | Light      |
+| Solarized Dark  | Dark       |
+| One Dark        | Dark       |
+| Catppuccin      | Dark       |
+| Gruvbox         | Dark       |
+| Tokyo Night     | Dark       |
 
-Click any theme to switch. The appearance toggle (sun/moon icon) switches between the current theme's light/dark pair.
+Click any theme to switch.
 
 ### Font Size
 
-Adjust from 11px to 20px using the slider or +/- buttons.
+Adjust from 11px to 20px using the slider or +/- buttons. Applies to outline rows and kanban cards.
 
 ### Display
 
+- **Vim keyboard mode**: Enable j/k navigation, i to edit, dd to delete, o for new sibling.
 - **Show tags on rows**: Toggle tag pill visibility on outline rows.
+
+---
+
+## Document Settings
+
+Click the **document icon** in the toolbar to open document settings. These are per-document settings stored alongside the document data.
 
 ### Statuses
 
 Click **Manage Statuses** to open the status editor (see [Statuses](#statuses) above).
 
+### Manage Tag Colors
+
+All tags used in the current document are listed here. Click any tag to open a color picker and assign a custom color. See [Tag Colors](#tag-colors) for details.
+
 ---
 
 ## Tips
 
-- **Everything is local.** Your data lives in your browser's IndexedDB. No account, no server, no internet required.
+- **Everything is local.** Your data lives in your browser's IndexedDB or as `.md` files on disk. No account, no server, no internet required.
 - **Export regularly.** JSON export is a full backup. Keep copies if your data is important.
 - **Large documents perform well.** Strata uses virtual scrolling for outlines with 100+ items.
-- **Right-click everything.** Context menus are available on outline rows and kanban cards.
+- **Right-click everything.** Context menus are available on outline rows, kanban cards, kanban columns, and documents in the sidebar.
 - **Zoom for focus.** Double-click a bullet to zoom into a subtree. Great for focusing on one part of a large outline.
 - **Keyboard-first.** Almost everything can be done without a mouse — navigation, editing, status changes, search.
+- **Command palette.** Press **Ctrl+K** (or **Cmd+K** on Mac) to quickly access any action.

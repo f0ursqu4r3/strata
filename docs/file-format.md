@@ -42,15 +42,33 @@ statuses:
 
 Each status has:
 
-| Field | Description |
-| --- | --- |
-| `id` | Internal identifier (snake_case) |
-| `label` | Human-readable name shown in the UI and used in `!status()` markers |
-| `color` | Hex color for the status badge |
-| `icon` | Lucide icon name |
+| Field   | Description                                                                                                         |
+| ------- | ------------------------------------------------------------------------------------------------------------------- |
+| `id`    | Internal identifier (snake_case)                                                                                    |
+| `label` | Human-readable name shown in the UI and used in `!status()` markers                                                 |
+| `color` | Hex color for the status badge                                                                                      |
+| `icon`  | Lucide icon name                                                                                                    |
 | `final` | (optional) If `true`, this status represents completion. Items with this status are serialized with `[x]` checkbox. |
 
 The **first status** in the list is the default. Nodes without an explicit `!status()` marker are assigned this status.
+
+### Tag colors
+
+Per-document tag colors can be defined in frontmatter. Each entry maps a tag name to a color preset key.
+
+```yaml
+---
+doc-type: strata
+tag-colors:
+  backend: orange
+  design: purple
+  docs: blue
+---
+```
+
+Available color keys: `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple`, `pink`. If omitted, tags use the default accent color.
+
+Tag colors are optional. If the `tag-colors` block is absent, all tags render with the theme's accent color.
 
 ## Document body
 
@@ -143,7 +161,7 @@ Marks the node as collapsed in the outline view. No arguments.
 
 Markers can appear in any order. The conventional order is:
 
-```
+```text
 - [ ] Text  !status(Label)  #tag1 #tag2  @due(YYYY-MM-DD)  !collapsed
 ```
 
@@ -152,6 +170,11 @@ Markers can appear in any order. The conventional order is:
 ```markdown
 ---
 doc-type: strata
+tag-colors:
+  release: blue
+  api: green
+  ui: purple
+  perf: orange
 ---
 
 - [ ] Ship v1.0  #release
@@ -179,3 +202,4 @@ doc-type: strata
 11. **Preserve ordering**. The order of items in the file is their display order. Do not reorder items unless asked to.
 12. **Do not add blank lines** between list items — blank lines are treated as continuation line separators.
 13. **Round-trip fidelity**. If you read a file and write it back without changes, the output should be identical to the input.
+14. **Preserve tag-colors**. If the file has a `tag-colors` block, keep it. Valid color keys are: `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple`, `pink`.

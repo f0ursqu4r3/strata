@@ -26,13 +26,13 @@ Your documents are plain `.md` files that live on your filesystem. Open them in 
 
 **Three ways to look at your work** — Outline tree with infinite nesting and zoom. Kanban board with drag-and-drop between columns. Split view showing both side by side.
 
-**Statuses, tags, and due dates** — Organize with custom statuses (Todo, In Progress, Done — or whatever you want). Tag items with `#hashtags`. Set due dates and filter by overdue, today, or this week.
+**Statuses, tags, and due dates** — Organize with custom statuses (Todo, In Progress, Done — or whatever you want). Tag items with `#hashtags` and customize per-tag colors. Set due dates and filter by overdue, today, or this week.
 
 **Keyboard-driven** — Navigate, edit, indent, change status, all without touching the mouse. Vim-style navigation if you want it. Every shortcut is customizable.
 
 **Search everywhere** — Full-text search across the current document or all documents in your workspace. Command palette for quick actions.
 
-**Themes** — Light and dark modes with 13 built-in themes including GitHub, Nord, Dracula, Solarized, Catppuccin, and Tokyo Night.
+**Themes** — Light and dark modes with 11 built-in themes including GitHub, Nord, Dracula, Solarized, Catppuccin, and Tokyo Night.
 
 **Export** — JSON, Markdown, OPML, or plain text. Exports respect your current zoom level.
 
@@ -43,6 +43,10 @@ Strata documents are regular markdown files. The format is simple enough to writ
 ```markdown
 ---
 doc-type: strata
+tag-colors:
+  release: blue
+  api: green
+  ui: purple
 ---
 
 - [ ] Ship v1.0  #release

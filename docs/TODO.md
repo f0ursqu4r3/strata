@@ -23,13 +23,20 @@
 - Unique document names ("Untitled", "Untitled 2", etc.), conflict detection on rename, file rename on disk
 - Drag-and-drop file import: Markdown, OPML, plain text, JSON with visual drop zone
 - Git branch name displayed in header badge when workspace is a git repo
+- Per-tag colors: 8 color presets (red, orange, yellow, green, teal, blue, purple, pink) with light/dark variants, stored in YAML frontmatter (`tag-colors:`) for filesystem mode, IDB meta for web mode
+- Tag autocomplete shows suggestions on focus, not just when typing
+- Tag filter accepts arbitrary typed values (not just existing tags), closes on click outside
+- Separate Document Settings modal (statuses, tag colors) from global Settings (theme, font, display)
+- Workspace path shown in document sidebar footer with change button
+- Context menus: document browser (rename, delete), kanban columns (add card, manage statuses)
+- Viewport-aware menu positioning (context menus, submenus flip to avoid overflow)
+- All popovers (context menus, tag picker, date picker, color picker) teleported to body to avoid overflow clipping
 
 ## Remaining
 
 ### Priority
 
 - [ ] Cmd/Ctrl + F for in-node search (with count and jump to next/prev)
-- [ ] Cmd/Ctrl + Shift + F for global search (with results panel and jump to node)
 - [ ] Git operations from UI: commit, pull, push (via Tauri command bridge)
 
 ### Backlog
