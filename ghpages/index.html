@@ -359,13 +359,10 @@
     <section class="hero">
       <img src="icon.png" alt="Strata" class="hero-icon" />
       <h1>Strata</h1>
-      <p class="tagline">
-        A task manager built around one idea: your outline is the source of
-        truth.
-      </p>
+      <p class="tagline">An outliner that doubles as a kanban board.</p>
       <p class="sub">
-        Write everything as a nested list. View it as a tree or flip it into a
-        kanban board. Your data stays in plain markdown files you actually own.
+        Write tasks as a nested list, then view them as a board grouped by
+        status. Everything is stored in plain markdown files on your computer.
       </p>
       <div class="hero-buttons">
         <a
@@ -420,47 +417,54 @@
           <div class="feature-card">
             <h3>Outline <span class="arrow">&rarr;</span> Kanban</h3>
             <p>
-              One tree, two views. Your outline projects into a kanban board
-              grouped by status. Drag cards between columns, and the outline
-              updates instantly. Use split view to see both at once.
+              The outline and the board show the same data. Drag a card to a
+              different column and its status changes in the outline too. You
+              can use the outline view, the board view, or split them
+              side-by-side. Nesting is unlimited &mdash; zoom into any node to
+              focus on just that subtree.
             </p>
           </div>
           <div class="feature-card">
-            <h3>Statuses, tags, and due dates</h3>
+            <h3>Statuses, tags, due dates</h3>
             <p>
-              Organize with custom statuses (Todo, In Progress, Done &mdash; or
-              whatever you want). Tag items with #hashtags. Set due dates and
-              filter by overdue, today, or this week.
+              Every item can have a status, tags, and a due date. Statuses are
+              fully customizable &mdash; rename them, recolor them, add new
+              ones. Tags are just <code>#hashtags</code> in the text. Due dates
+              show up as overdue, today, or this week so you know what needs
+              attention.
             </p>
           </div>
           <div class="feature-card">
-            <h3>Keyboard-driven</h3>
+            <h3>Keyboard-first</h3>
             <p>
-              Navigate, edit, indent, change status &mdash; all without touching
-              the mouse. Vim-style navigation if you want it. Every shortcut is
-              customizable.
+              Navigate, edit, indent, and change status without the mouse.
+              There's optional vim-style navigation (hjkl, dd, yy/p, etc.) and
+              every shortcut can be rebound to whatever you prefer.
             </p>
           </div>
           <div class="feature-card">
             <h3>Plain markdown files</h3>
             <p>
-              Your documents are readable <code>.md</code> files on your
-              filesystem. Open them in any text editor, grep from terminal,
-              version with git. No accounts, no cloud, no lock-in.
+              Documents are <code>.md</code> files on disk. Open them in any
+              editor, grep them, commit them to git. Strata watches your
+              workspace folder and picks up external edits automatically. No
+              account needed, no cloud, nothing proprietary.
             </p>
           </div>
           <div class="feature-card">
-            <h3>Search everywhere</h3>
+            <h3>Search</h3>
             <p>
               Full-text search across the current document or all documents in
-              your workspace. Command palette for quick actions.
+              your workspace. There's also a command palette for jumping to
+              actions quickly. Export to JSON, Markdown, OPML, or plain text.
             </p>
           </div>
           <div class="feature-card">
-            <h3>13 built-in themes</h3>
+            <h3>Themes</h3>
             <p>
-              Light and dark modes with themes including GitHub, Nord, Dracula,
-              Solarized, Catppuccin, and Tokyo Night.
+              Light and dark modes. 13 built-in themes including GitHub, Nord,
+              Dracula, Solarized, Catppuccin, and Tokyo Night. The app runs on
+              macOS, Linux, and Windows, or in the browser with no install.
             </p>
           </div>
         </div>
@@ -471,36 +475,64 @@
     <section class="showcase">
       <div class="container">
         <p class="showcase-label">What your files look like</p>
-        <div class="code-block">
-          <span class="fm">---</span>
-          <span class="fm">doc-type: strata</span>
-          <span class="fm">---</span>
+        <!-- prettier-ignore -->
+        <div class="code-block"><span class="fm">---</span>
+<span class="fm">doc-type: strata</span>
+<span class="fm">---</span>
 
-          <span class="bullet">-</span> <span class="text">Ship v1.0</span>
-          <span class="tag">#release</span> <span class="bullet">-</span>
-          <span class="done">[x]</span>
-          <span class="text">Fix auth token refresh</span>
-          <span class="tag">#api</span> <span class="bullet">-</span>
-          <span class="text">Write migration guide</span>
-          <span class="status">!status(In Progress)</span>
-          <span class="due">@due(2025-02-14)</span>
-          <span class="bullet">-</span>
-          <span class="text">Update changelog</span>
-          <span class="bullet">-</span>
-          <span class="text">Tag release on GitHub</span>
-          <span class="status">!status(Blocked)</span>
-          <span class="bullet">-</span> <span class="text">Backlog</span>
-          <span class="bullet">-</span>
-          <span class="text">Dark mode improvements</span>
-          <span class="tag">#ui</span> <span class="bullet">-</span>
-          <span class="text">Search performance</span>
-          <span class="tag">#perf</span>
-        </div>
+<span class="bullet">- [ ]</span> <span class="text">Ship v1.0</span>  <span class="tag">#release</span>
+  <span class="bullet">- [<span class="done">x</span>]</span> <span class="text">Fix auth token refresh</span>  <span class="tag">#api</span>
+  <span class="bullet">- [ ]</span> <span class="text">Write migration guide</span>  <span class="status">!status(In Progress)</span>  <span class="due">@due(2025-02-14)</span>
+  <span class="bullet">- [ ]</span> <span class="text">Update changelog</span>
+  <span class="bullet">- [ ]</span> <span class="text">Tag release on GitHub</span>  <span class="status">!status(Blocked)</span>
+<span class="bullet">- [ ]</span> <span class="text">Backlog</span>
+  <span class="bullet">- [ ]</span> <span class="text">Dark mode improvements</span>  <span class="tag">#ui</span>
+  <span class="bullet">- [ ]</span> <span class="text">Search performance</span>  <span class="tag">#perf</span></div>
+
+        <p class="showcase-label" style="margin-top: 32px">
+          With custom statuses
+        </p>
+        <!-- prettier-ignore -->
+        <div class="code-block"><span class="fm">---</span>
+<span class="fm">doc-type: strata</span>
+<span class="fm">statuses:</span>
+<span class="fm">  - id: todo</span>
+<span class="fm">    label: To Do</span>
+<span class="fm">    color: "<span class="tag">#94a3b8</span>"</span>
+<span class="fm">    icon: circle</span>
+<span class="fm">  - id: in_progress</span>
+<span class="fm">    label: In Progress</span>
+<span class="fm">    color: "<span class="status">#3b82f6</span>"</span>
+<span class="fm">    icon: circle-dot</span>
+<span class="fm">  - id: review</span>
+<span class="fm">    label: Review</span>
+<span class="fm">    color: "<span class="due">#f59e0b</span>"</span>
+<span class="fm">    icon: circle-ellipsis</span>
+<span class="fm">  - id: done</span>
+<span class="fm">    label: Done</span>
+<span class="fm">    color: "<span class="done">#22c55e</span>"</span>
+<span class="fm">    icon: circle-check</span>
+<span class="fm">    final: true</span>
+<span class="fm">---</span>
+
+<span class="bullet">- [ ]</span> <span class="text">Authentication flow</span>  <span class="status">!status(In Progress)</span>  <span class="tag">#backend</span>  <span class="tag">#security</span>
+  <span class="bullet">- [<span class="done">x</span>]</span> <span class="text">OAuth provider integration</span>  <span class="tag">#backend</span>
+  <span class="bullet">- [ ]</span> <span class="text">Session management</span>  <span class="status">!status(In Progress)</span>  <span class="due">@due(2025-02-10)</span>
+  <span class="bullet">- [ ]</span> <span class="text">Role-based access control</span>  <span class="tag">#security</span>  <span class="due">@due(2025-02-14)</span>
+<span class="bullet">- [ ]</span> <span class="text">API endpoints</span>  <span class="status">!status(Review)</span>  <span class="tag">#backend</span>
+  <span class="bullet">- [<span class="done">x</span>]</span> <span class="text">User CRUD operations</span>  <span class="tag">#backend</span>
+  <span class="bullet">- [ ]</span> <span class="text">Rate limiting middleware</span>  <span class="status">!status(Review)</span>  <span class="due">@due(2025-02-08)</span>
+  <span class="bullet">- [ ]</span> <span class="text">WebSocket notifications</span>  <span class="tag">#backend</span>
+<span class="bullet">- [ ]</span> <span class="text">Launch checklist</span>  <span class="due">@due(2025-02-28)</span>  <span class="fm">!collapsed</span>
+  <span class="bullet">- [ ]</span> <span class="text">Performance audit</span>
+  <span class="bullet">- [ ]</span> <span class="text">Security review</span>  <span class="tag">#security</span>
+  <span class="bullet">- [ ]</span> <span class="text">Load testing</span></div>
+
         <p class="showcase-note">
-          Simple enough to write by hand. Documented in
+          Readable enough to edit by hand. See the
           <a
             href="https://github.com/f0ursqu4r3/strata/blob/main/docs/file-format.md"
-            >the file format spec</a
+            >full format spec</a
           >.
         </p>
       </div>
@@ -554,8 +586,7 @@
           <a href="https://f0ursqu4r3.github.io/strata/app/"
             >try it in your browser</a
           >
-          &mdash; no install needed. Chromium-based browsers get full filesystem
-          access; others use local storage.
+          &mdash; no install needed.
         </p>
       </div>
     </section>
