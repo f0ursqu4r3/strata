@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { nextTick } from 'vue'
+import { ref, nextTick } from 'vue'
 import { Plus, FileText, Trash2, X, FolderOpen } from 'lucide-vue-next'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
 import { isTauri, isFileSystemMode, hasFileSystemAccess, setFileSystemActive } from '@/lib/platform'
 import { useDocumentRename } from '@/composables/sidebar/useDocumentRename'
+import DocumentContextMenu from './DocumentContextMenu.vue'
 
 const emit = defineEmits<{ close: [] }>()
 const docsStore = useDocumentsStore()
@@ -23,6 +24,25 @@ const {
   finishRename,
   onRenameKeydown,
 } = useDocumentRename()
+
+// Context menu
+const ctxMenu = ref<{ docId: string; x: number; y: number } | null>(null)
+
+function onDocContextMenu(e: MouseEvent, docId: string) {
+  e.preventDefault()
+  ctxMenu.value = { docId, x: e.clientX, y: e.clientY }
+}
+
+function onCtxRename(docId: string) {
+  const doc = docsStore.documents.find((d) => d.id === docId)
+  if (doc) {
+    startRename(docId, doc.name, new MouseEvent('dblclick'))
+  }
+}
+
+async function onCtxDelete(docId: string) {
+  await onDelete(docId)
+}
 
 async function onCreateNew() {
   docStore.flushTextDebounce()
@@ -71,8 +91,8 @@ async function changeWorkspace() {
   }
 }
 
-async function onDelete(docId: string, e: MouseEvent) {
-  e.stopPropagation()
+async function onDelete(docId: string, e?: MouseEvent) {
+  e?.stopPropagation()
 
   let confirmed = false
   if (isTauri()) {
@@ -132,6 +152,7 @@ async function onDelete(docId: string, e: MouseEvent) {
         "
         @click="onSwitchDoc(doc.id)"
         @dblclick="startRename(doc.id, doc.name, $event)"
+        @contextmenu="onDocContextMenu($event, doc.id)"
       >
         <FileText class="w-3.5 h-3.5 shrink-0 text-(--text-faint)" />
 
@@ -197,5 +218,16 @@ async function onDelete(docId: string, e: MouseEvent) {
         Open workspace folder
       </button>
     </div>
+
+    <!-- Context menu -->
+    <DocumentContextMenu
+      v-if="ctxMenu"
+      :doc-id="ctxMenu.docId"
+      :x="ctxMenu.x"
+      :y="ctxMenu.y"
+      @close="ctxMenu = null"
+      @rename="onCtxRename"
+      @delete="onCtxDelete"
+    />
   </div>
 </template>

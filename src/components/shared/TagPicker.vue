@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from "vue";
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from "vue";
 import { X } from "lucide-vue-next";
 import { useDocStore } from "@/stores/doc";
 import { useSettingsStore } from "@/stores/settings";
@@ -19,6 +19,41 @@ const highlightIdx = ref(0);
 const inputFocused = ref(false);
 const colorPickerTag = ref<string | null>(null);
 
+// Fixed position for the autocomplete dropdown (teleported to body)
+const dropdownStyle = ref<Record<string, string>>({});
+
+function updateDropdownPos() {
+  const el = inputRef.value;
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const dropH = Math.min(suggestions.value.length * 30 + 4, 256);
+  const spaceBelow = vh - rect.bottom - 8;
+  const top = spaceBelow >= dropH ? rect.bottom + 4 : rect.top - dropH - 4;
+  dropdownStyle.value = {
+    left: `${rect.left}px`,
+    top: `${Math.max(4, top)}px`,
+    width: '192px',
+  };
+}
+
+// Fixed position for the color picker popover (teleported to body)
+const colorPickerStyle = ref<Record<string, string>>({});
+
+function updateColorPickerPos(tag: string) {
+  const el = pickerRef.value?.querySelector(`[data-tag-pill="${tag}"]`) as HTMLElement | null;
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const popH = 36;
+  const spaceBelow = vh - rect.bottom - 8;
+  const top = spaceBelow >= popH ? rect.bottom + 4 : rect.top - popH - 4;
+  colorPickerStyle.value = {
+    left: `${rect.left}px`,
+    top: `${Math.max(4, top)}px`,
+  };
+}
+
 const suggestions = computed(() => {
   const q = query.value.trim().toLowerCase();
   const existing = new Set(props.tags);
@@ -29,6 +64,11 @@ const suggestions = computed(() => {
 });
 
 const showDropdown = computed(() => inputFocused.value && suggestions.value.length > 0);
+
+// Update dropdown position when it becomes visible
+watch(showDropdown, (val) => {
+  if (val) nextTick(updateDropdownPos);
+});
 
 function getTagStyle(tag: string) {
   return tagStyle(tag, store.tagColors, settings.dark);
@@ -86,7 +126,9 @@ function onBlur() {
 
 function toggleColorPicker(tag: string, e: MouseEvent) {
   e.stopPropagation();
-  colorPickerTag.value = colorPickerTag.value === tag ? null : tag;
+  const next = colorPickerTag.value === tag ? null : tag;
+  colorPickerTag.value = next;
+  if (next) nextTick(() => updateColorPickerPos(next));
 }
 
 function pickColor(tag: string, colorKey: string | null) {
@@ -116,7 +158,8 @@ onUnmounted(() => {
     <span
       v-for="tag in tags"
       :key="tag"
-      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-medium shrink-0 relative"
+      :data-tag-pill="tag"
+      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-medium shrink-0"
       :class="getTagStyle(tag) ? '' : 'bg-(--accent-100) text-(--accent-700)'"
       :style="getTagStyle(tag) ?? {}"
     >
@@ -133,36 +176,39 @@ onUnmounted(() => {
       >
         <X class="w-3 h-3" />
       </button>
+    </span>
 
-      <!-- Color picker popover -->
+    <!-- Color picker popover (teleported to body) -->
+    <Teleport to="body">
       <div
-        v-if="colorPickerTag === tag"
-        class="absolute left-0 top-full z-50 mt-1 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg p-2"
+        v-if="colorPickerTag"
+        class="fixed z-50 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg p-2"
+        :style="colorPickerStyle"
         @click.stop
       >
         <div class="flex gap-1">
           <!-- Default (no color) -->
           <button
             class="w-5 h-5 rounded-full border-2 cursor-pointer bg-(--accent-100)"
-            :class="!store.tagColors[tag] ? 'border-(--accent-500)' : 'border-transparent hover:border-(--border-hover)'"
+            :class="!store.tagColors[colorPickerTag] ? 'border-(--accent-500)' : 'border-transparent hover:border-(--border-hover)'"
             title="Default"
-            @click="pickColor(tag, null)"
+            @click="pickColor(colorPickerTag!, null)"
           />
           <button
             v-for="key in TAG_COLOR_KEYS"
             :key="key"
             class="w-5 h-5 rounded-full border-2 cursor-pointer"
-            :class="store.tagColors[key] === key ? 'border-(--text-primary)' : 'border-transparent hover:border-(--border-hover)'"
+            :class="store.tagColors[colorPickerTag!] === key ? 'border-(--text-primary)' : 'border-transparent hover:border-(--border-hover)'"
             :style="{ backgroundColor: settings.dark ? TAG_COLOR_PRESETS[key]!.darkBg : TAG_COLOR_PRESETS[key]!.lightBg }"
             :title="TAG_COLOR_PRESETS[key]!.label"
-            @click="pickColor(tag, key)"
+            @click="pickColor(colorPickerTag!, key)"
           />
         </div>
       </div>
-    </span>
+    </Teleport>
 
     <!-- Input -->
-    <div class="relative flex-1 min-w-20">
+    <div class="flex-1 min-w-20">
       <input
         ref="inputRef"
         v-model="query"
@@ -172,11 +218,14 @@ onUnmounted(() => {
         @focus="onFocus"
         @blur="onBlur"
       />
+    </div>
 
-      <!-- Autocomplete dropdown -->
+    <!-- Autocomplete dropdown (teleported to body) -->
+    <Teleport to="body">
       <div
         v-if="showDropdown"
-        class="absolute top-full left-0 z-50 mt-1 w-48 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg overflow-hidden"
+        class="fixed z-50 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg overflow-hidden"
+        :style="dropdownStyle"
       >
         <button
           v-for="(s, i) in suggestions"
@@ -194,6 +243,6 @@ onUnmounted(() => {
           {{ s }}
         </button>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>

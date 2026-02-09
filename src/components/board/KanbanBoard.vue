@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Settings2, Calendar, Tag } from "lucide-vue-next";
+import { Settings2, Calendar, Tag, Plus } from "lucide-vue-next";
 import { useDocStore } from "@/stores/doc";
 import { useSettingsStore } from "@/stores/settings";
 import { renderInlineMarkdown } from "@/lib/inline-markdown";
@@ -8,6 +8,7 @@ import { dueDateUrgency, formatDueDate } from "@/lib/due-date";
 import { getTitle } from "@/lib/text-utils";
 import type { Node } from "@/types";
 import ContextMenu from "../shared/ContextMenu.vue";
+import ColumnContextMenu from "./ColumnContextMenu.vue";
 import TagPicker from "../shared/TagPicker.vue";
 import DatePicker from "../shared/DatePicker.vue";
 import { useBoardDrag } from "@/composables/board/useBoardDrag";
@@ -38,10 +39,15 @@ const {
   onCardEditBlur,
   onCardEditKeydown,
   ctxMenu,
+  columnCtxMenu,
   onCardContextMenu,
+  onColumnContextMenu,
   closeContextMenu,
+  closeColumnContextMenu,
   editingTagsCardId,
   editingDateCardId,
+  datePickerPos,
+  tagPickerPos,
   onTagsClick,
   onDateClick,
 } = useBoardEditing(isDragging, editingCardId);
@@ -76,7 +82,7 @@ function childCount(node: Node): number {
       </button>
     </div>
 
-    <div class="flex-1 overflow-x-auto overflow-y-auto" role="region" aria-label="Kanban board">
+    <div class="flex-1 overflow-x-auto overflow-y-auto" role="region" aria-label="Kanban board" @contextmenu.prevent>
       <div class="flex flex-col justify-center sm:flex-row gap-3 p-3 pt-1 min-w-max min-h-full">
         <div
           v-for="col in store.kanbanColumns"
@@ -90,6 +96,7 @@ function childCount(node: Node): number {
               ? 'border-(--highlight-drag-border) bg-(--highlight-drag-bg)'
               : 'border-transparent'
           "
+          @contextmenu="onColumnContextMenu($event, col.def.id)"
         >
           <!-- Column header -->
           <div
@@ -175,19 +182,22 @@ function childCount(node: Node): number {
                     <Calendar class="w-2.5 h-2.5" />
                     {{ formatDueDate(node.dueDate) }}
                   </span>
-                  <div
-                    v-if="editingDateCardId === node.id"
-                    data-date-picker
-                    class="absolute left-0 top-0 z-40"
-                  >
-                    <DatePicker
-                      :model-value="node.dueDate ?? null"
-                      @update:model-value="
-                        store.setDueDate(node.id, $event);
-                        editingDateCardId = null;
-                      "
-                    />
-                  </div>
+                  <Teleport to="body">
+                    <div
+                      v-if="editingDateCardId === node.id"
+                      data-date-picker
+                      class="fixed z-50"
+                      :style="datePickerPos"
+                    >
+                      <DatePicker
+                        :model-value="node.dueDate ?? null"
+                        @update:model-value="
+                          store.setDueDate(node.id, $event);
+                          editingDateCardId = null;
+                        "
+                      />
+                    </div>
+                  </Teleport>
                 </div>
 
                 <!-- Tags -->
@@ -213,13 +223,16 @@ function childCount(node: Node): number {
                       +{{ node.tags!.length - 3 }}
                     </span>
                   </div>
-                  <div
-                    v-if="editingTagsCardId === node.id"
-                    data-tag-picker
-                    class="bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2"
-                  >
-                    <TagPicker :node-id="node.id" :tags="node.tags ?? []" />
-                  </div>
+                  <Teleport to="body">
+                    <div
+                      v-if="editingTagsCardId === node.id"
+                      data-tag-picker
+                      class="fixed z-50 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2"
+                      :style="tagPickerPos"
+                    >
+                      <TagPicker :node-id="node.id" :tags="node.tags ?? []" />
+                    </div>
+                  </Teleport>
                 </div>
 
                 <!-- Hover actions for adding tag/date -->
@@ -288,13 +301,22 @@ function childCount(node: Node): number {
           </div>
         </div>
       </div>
-      <!-- Context menu -->
+      <!-- Card context menu -->
       <ContextMenu
         v-if="ctxMenu"
         :node-id="ctxMenu.nodeId"
         :x="ctxMenu.x"
         :y="ctxMenu.y"
         @close="closeContextMenu"
+      />
+      <!-- Column context menu -->
+      <ColumnContextMenu
+        v-if="columnCtxMenu"
+        :status-id="columnCtxMenu.statusId"
+        :x="columnCtxMenu.x"
+        :y="columnCtxMenu.y"
+        @close="closeColumnContextMenu"
+        @open-status-editor="emit('openStatusEditor')"
       />
     </div>
   </div>

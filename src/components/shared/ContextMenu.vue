@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   Pencil,
   Trash2,
@@ -14,6 +14,7 @@ import {
 import { useDocStore } from '@/stores/doc'
 import { resolveStatusIcon } from '@/lib/status-icons'
 import { useClickOutside, UiMenuItem, UiMenuDivider } from '@/components/ui'
+import { useMenuPosition } from '@/composables/useMenuPosition'
 import type { Status } from '@/types'
 import DatePicker from './DatePicker.vue'
 
@@ -36,6 +37,17 @@ const showDatePicker = ref(false)
 const isMultiSelect = computed(() => store.selectedIds.size > 1 && store.selectedIds.has(props.nodeId))
 
 useClickOutside(menuRef, () => emit('close'))
+const { style: menuStyle } = useMenuPosition(menuRef, props.x, props.y)
+
+// Flip submenus to open left if near right edge
+const subLeft = ref(false)
+onMounted(() => {
+  const el = menuRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  // If the menu's right edge + typical submenu width (~160px) exceeds viewport
+  subLeft.value = rect.right + 160 > window.innerWidth
+})
 
 function onSetDueDate(dueDate: number | null) {
   store.setDueDate(props.nodeId, dueDate)
@@ -94,12 +106,13 @@ function onHistory() {
 </script>
 
 <template>
+  <Teleport to="body">
   <div
     ref="menuRef"
     class="fixed z-50 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg py-1 min-w-44 text-sm"
     role="menu"
     aria-label="Node actions"
-    :style="{ left: x + 'px', top: y + 'px' }"
+    :style="menuStyle"
   >
     <UiMenuItem v-if="!isMultiSelect" :icon="Pencil" @click="onEdit">
       Edit
@@ -123,7 +136,8 @@ function onHistory() {
 
       <div
         v-if="showStatusSub"
-        class="absolute left-full top-0 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg py-1 min-w-36"
+        class="absolute top-0 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg py-1 min-w-36"
+        :class="subLeft ? 'right-full' : 'left-full'"
         role="menu"
         aria-label="Status options"
       >
@@ -154,7 +168,7 @@ function onHistory() {
         <Calendar class="w-3.5 h-3.5 text-(--text-faint)" />
         <span class="flex-1">Due date</span>
       </button>
-      <div v-if="showDatePicker" class="absolute left-full top-0 z-10">
+      <div v-if="showDatePicker" class="absolute top-0 z-10" :class="subLeft ? 'right-full' : 'left-full'">
         <DatePicker
           :model-value="store.nodes.get(nodeId)?.dueDate ?? null"
           @update:model-value="onSetDueDate($event)"
@@ -180,4 +194,5 @@ function onHistory() {
       {{ isMultiSelect ? `Delete ${store.selectedIds.size} items` : 'Delete' }}
     </UiMenuItem>
   </div>
+  </Teleport>
 </template>
