@@ -141,6 +141,16 @@ export async function saveStatusConfig(statuses: StatusDef[]): Promise<void> {
   await db().meta.put({ key: 'statusConfig', value: statuses })
 }
 
+export async function loadTagColors(): Promise<Record<string, string> | null> {
+  const row = await db().meta.get('tagColors')
+  if (!row || typeof row.value !== 'object') return null
+  return row.value as Record<string, string>
+}
+
+export async function saveTagColors(colors: Record<string, string>): Promise<void> {
+  await db().meta.put({ key: 'tagColors', value: colors })
+}
+
 export async function clearAll(): Promise<void> {
   await db().ops.clear()
   await db().snapshots.clear()

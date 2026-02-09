@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { nextTick } from 'vue'
-import { Plus, FileText, Trash2, X } from 'lucide-vue-next'
+import { Plus, FileText, Trash2, X, FolderOpen } from 'lucide-vue-next'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocStore } from '@/stores/doc'
-import { isTauri } from '@/lib/platform'
+import { useSettingsStore } from '@/stores/settings'
+import { isTauri, isFileSystemMode, hasFileSystemAccess, setFileSystemActive } from '@/lib/platform'
 import { useDocumentRename } from '@/composables/sidebar/useDocumentRename'
 
 const emit = defineEmits<{ close: [] }>()
 const docsStore = useDocumentsStore()
 const docStore = useDocStore()
+const settings = useSettingsStore()
 
 const {
   renamingId,
@@ -40,6 +42,33 @@ async function onSwitchDoc(docId: string) {
   docStore.flushTextDebounce()
   await docsStore.switchDocument(docId)
   await docStore.loadDocument(docId)
+}
+
+async function changeWorkspace() {
+  if (isTauri()) {
+    const { open } = await import('@tauri-apps/plugin-dialog')
+    const selected = await open({
+      directory: true,
+      title: 'Choose Strata Workspace',
+    })
+    if (selected) {
+      settings.setWorkspacePath(selected as string)
+      window.location.reload()
+    }
+  } else if (hasFileSystemAccess()) {
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'readwrite' })
+      const { setHandle } = await import('@/lib/web-fs')
+      await setHandle(handle)
+      const { setWorkspacePrefix } = await import('@/lib/fs')
+      setFileSystemActive(true)
+      setWorkspacePrefix(handle.name + '/')
+      settings.setWorkspacePath(handle.name)
+      window.location.reload()
+    } catch {
+      // User cancelled
+    }
+  }
 }
 
 async function onDelete(docId: string, e: MouseEvent) {
@@ -91,7 +120,7 @@ async function onDelete(docId: string, e: MouseEvent) {
     </div>
 
     <!-- Document list -->
-    <div class="flex-1 overflow-y-auto py-1">
+    <div class="flex-1 overflow-y-auto py-1 min-h-0">
       <div
         v-for="doc in docsStore.sortedDocuments"
         :key="doc.id"
@@ -140,6 +169,33 @@ async function onDelete(docId: string, e: MouseEvent) {
           <Trash2 class="w-3 h-3" />
         </button>
       </div>
+    </div>
+
+    <!-- Workspace footer -->
+    <div
+      v-if="isFileSystemMode() || hasFileSystemAccess()"
+      class="shrink-0 border-t border-(--border-primary) px-3 py-2"
+    >
+      <div v-if="isFileSystemMode()" class="flex items-center gap-1.5">
+        <FolderOpen class="w-3 h-3 shrink-0 text-(--text-faint)" />
+        <span class="flex-1 text-[11px] text-(--text-faint) truncate" :title="settings.workspacePath">
+          {{ settings.workspacePath || '(not set)' }}
+        </span>
+        <button
+          class="text-[11px] text-(--accent-600) hover:text-(--accent-700) cursor-pointer shrink-0"
+          @click="changeWorkspace"
+        >
+          Change
+        </button>
+      </div>
+      <button
+        v-else
+        class="flex items-center gap-1.5 text-[11px] text-(--accent-600) hover:text-(--accent-700) cursor-pointer w-full"
+        @click="changeWorkspace"
+      >
+        <FolderOpen class="w-3 h-3" />
+        Open workspace folder
+      </button>
     </div>
   </div>
 </template>

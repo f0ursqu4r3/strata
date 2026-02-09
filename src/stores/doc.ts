@@ -21,6 +21,8 @@ import {
   setCurrentDocId,
   loadStatusConfig,
   saveStatusConfig,
+  loadTagColors,
+  saveTagColors,
 } from "@/lib/idb";
 
 const SNAPSHOT_INTERVAL = 200;
@@ -92,6 +94,7 @@ export const useDocStore = defineStore("doc", () => {
       nodes: nodes.value,
       rootId: rootId.value,
       statusConfig: statusConfig.value,
+      tagColors: tagColors.value,
     });
     const filePath = `${settings.workspacePath}/${currentDocId.value}`;
     await writeFile(filePath, content);
@@ -100,6 +103,9 @@ export const useDocStore = defineStore("doc", () => {
 
   // ── Status configuration (per-document) ──
   const statusConfig = ref<StatusDef[]>([...DEFAULT_STATUSES]);
+
+  // ── Per-document tag colors ──
+  const tagColors = ref<Record<string, string>>({});
 
   const statusDefs = computed(() => statusConfig.value);
 
@@ -735,6 +741,19 @@ export const useDocStore = defineStore("doc", () => {
     scheduleFileSave();
   }
 
+  // ── Tag color CRUD ──
+
+  async function setTagColor(tag: string, colorKey: string | null) {
+    if (colorKey) {
+      tagColors.value = { ...tagColors.value, [tag]: colorKey };
+    } else {
+      const { [tag]: _, ...rest } = tagColors.value;
+      tagColors.value = rest;
+    }
+    if (!isFileSystemMode()) await saveTagColors(tagColors.value);
+    scheduleFileSave();
+  }
+
   const trashedNodes = computed(() => {
     const result: Node[] = [];
     for (const node of nodes.value.values()) {
@@ -999,6 +1018,7 @@ export const useDocStore = defineStore("doc", () => {
       rootId.value = parsed.rootId;
       nodes.value = parsed.nodes;
       statusConfig.value = parsed.statusConfig;
+      tagColors.value = parsed.tagColors;
     } else {
       // Brand new document
       const nodeMap = new Map<string, Node>();
@@ -1052,7 +1072,7 @@ export const useDocStore = defineStore("doc", () => {
   function reconcileParsed(
     oldMap: Map<string, Node>,
     oldRootId: string,
-    parsed: { nodes: Map<string, Node>; rootId: string; statusConfig: StatusDef[] },
+    parsed: { nodes: Map<string, Node>; rootId: string; statusConfig: StatusDef[]; tagColors: Record<string, string> },
   ) {
     const newMap = parsed.nodes;
     const newRootId = parsed.rootId;
@@ -1152,6 +1172,7 @@ export const useDocStore = defineStore("doc", () => {
       rootId: idMap.get(newRootId) ?? newRootId,
       nodes: result,
       statusConfig: parsed.statusConfig,
+      tagColors: parsed.tagColors,
     };
   }
 
@@ -1179,6 +1200,7 @@ export const useDocStore = defineStore("doc", () => {
     rootId.value = reconciled.rootId;
     nodes.value = reconciled.nodes;
     statusConfig.value = reconciled.statusConfig;
+    tagColors.value = reconciled.tagColors;
     triggerRef(nodes);
     scheduleIndexUpdate();
     nextTick(() => {
@@ -1315,6 +1337,10 @@ export const useDocStore = defineStore("doc", () => {
     } else {
       statusConfig.value = [...DEFAULT_STATUSES];
     }
+
+    // Load per-document tag colors
+    const savedTagColors = await loadTagColors();
+    tagColors.value = savedTagColors ?? {};
 
     nodes.value = nodeMap;
 
@@ -1477,6 +1503,7 @@ export const useDocStore = defineStore("doc", () => {
       rootId: rootId.value,
       nodes: allNodes,
       statusConfig: statusConfig.value,
+      tagColors: tagColors.value,
       exportedAt: new Date().toISOString(),
     };
     return JSON.stringify(doc, null, 2);
@@ -1601,6 +1628,14 @@ export const useDocStore = defineStore("doc", () => {
     }
     await saveStatusConfig(statusConfig.value);
 
+    // Import tag colors
+    if (doc.tagColors && typeof doc.tagColors === 'object') {
+      tagColors.value = doc.tagColors as Record<string, string>;
+    } else {
+      tagColors.value = {};
+    }
+    await saveTagColors(tagColors.value);
+
     // Update state
     rootId.value = doc.rootId;
     nodes.value = nodeMap;
@@ -1684,6 +1719,7 @@ export const useDocStore = defineStore("doc", () => {
     tagFilter,
     dueDateFilter,
     statusConfig,
+    tagColors,
     // Computed
     statusDefs,
     statusMap,
@@ -1718,6 +1754,7 @@ export const useDocStore = defineStore("doc", () => {
     removeStatus,
     updateStatus,
     reorderStatuses,
+    setTagColor,
     duplicateNode,
     moveSelectionUp,
     moveSelectionDown,

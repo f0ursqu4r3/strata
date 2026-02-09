@@ -13,6 +13,7 @@ import {
   Trash2,
   Calendar,
   GitBranch,
+  FileText,
 } from "lucide-vue-next";
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -27,6 +28,7 @@ import DocumentSidebar from "@/components/sidebar/DocumentSidebar.vue";
 import TrashPanel from "@/components/overlays/TrashPanel.vue";
 import ExportMenu from "@/components/overlays/ExportMenu.vue";
 import StatusEditor from "@/components/settings/StatusEditor.vue";
+import DocumentSettingsPanel from "@/components/settings/DocumentSettingsPanel.vue";
 import GlobalSearch from "@/components/overlays/GlobalSearch.vue";
 import CommandPalette from "@/components/overlays/CommandPalette.vue";
 import ShortcutEditor from "@/components/settings/ShortcutEditor.vue";
@@ -34,6 +36,7 @@ import { matchesCombo } from "@/lib/shortcuts";
 import { isTauri, hasFileSystemAccess, isFileSystemMode, setFileSystemActive } from "@/lib/platform";
 import WorkspacePicker from "@/components/overlays/WorkspacePicker.vue";
 import type { ViewMode } from "@/types";
+import { tagStyle } from "@/lib/tag-colors";
 
 const store = useDocStore();
 const settings = useSettingsStore();
@@ -42,11 +45,58 @@ const showShortcuts = ref(false);
 const showSettings = ref(false);
 const showTrash = ref(false);
 const showStatusEditor = ref(false);
+const showDocSettings = ref(false);
 const showGlobalSearch = ref(false);
 const showCommandPalette = ref(false);
 const showShortcutEditor = ref(false);
 const showTagFilter = ref(false);
 const showDueDateFilter = ref(false);
+const tagFilterQuery = ref("");
+const tagFilterRef = ref<HTMLElement | null>(null);
+const tagFilterInputRef = ref<HTMLInputElement | null>(null);
+const dueDateFilterRef = ref<HTMLElement | null>(null);
+
+const filteredTags = computed(() => {
+  const q = tagFilterQuery.value.trim().toLowerCase();
+  if (!q) return store.allTags;
+  return store.allTags.filter((t) => t.toLowerCase().includes(q));
+});
+
+function openTagFilter() {
+  showTagFilter.value = !showTagFilter.value;
+  if (showTagFilter.value) {
+    tagFilterQuery.value = "";
+    nextTick(() => tagFilterInputRef.value?.focus());
+  }
+}
+
+function applyTagFilter(tag: string | null) {
+  store.tagFilter = tag;
+  showTagFilter.value = false;
+}
+
+function onTagFilterKeydown(e: KeyboardEvent) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const q = tagFilterQuery.value.trim();
+    if (q) {
+      // Use the first matching tag or the typed value
+      const match = filteredTags.value[0];
+      applyTagFilter(match ?? q);
+    }
+  } else if (e.key === "Escape") {
+    showTagFilter.value = false;
+  }
+}
+
+function onGlobalClick(e: MouseEvent) {
+  if (showTagFilter.value && tagFilterRef.value && !tagFilterRef.value.contains(e.target as HTMLElement)) {
+    showTagFilter.value = false;
+  }
+  if (showDueDateFilter.value && dueDateFilterRef.value && !dueDateFilterRef.value.contains(e.target as HTMLElement)) {
+    showDueDateFilter.value = false;
+  }
+}
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const outlineRef = ref<InstanceType<typeof OutlineView> | null>(null);
 const needsWorkspacePicker = ref(false);
@@ -63,6 +113,7 @@ const activeDocName = computed(() => {
 
 onMounted(async () => {
   settings.init();
+  document.addEventListener("mousedown", onGlobalClick);
 
   // In Tauri mode, auto-detect git repo or show workspace picker
   if (isTauri() && !settings.workspacePath) {
@@ -371,7 +422,7 @@ function onZoomRoot() {
         </button>
 
         <!-- Tag filter -->
-        <div v-if="store.allTags.length > 0" class="relative hidden sm:block">
+        <div v-if="store.allTags.length > 0" ref="tagFilterRef" class="relative hidden sm:block">
           <button
             class="flex items-center gap-1 px-1.5 py-1 rounded-md border text-[12px] cursor-pointer"
             :class="
@@ -379,7 +430,7 @@ function onZoomRoot() {
                 ? 'border-(--accent-500) bg-(--accent-50) text-(--accent-700)'
                 : 'border-(--border-secondary) text-(--text-muted) hover:text-(--text-secondary) bg-(--bg-tertiary)'
             "
-            @click="showTagFilter = !showTagFilter"
+            @click="openTagFilter"
           >
             <Tag class="w-3 h-3" />
             <span v-if="store.tagFilter">{{ store.tagFilter }}</span>
@@ -387,36 +438,59 @@ function onZoomRoot() {
             <button
               v-if="store.tagFilter"
               class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
-              @click.stop="store.tagFilter = null; showTagFilter = false"
+              @click.stop="applyTagFilter(null)"
             >
               <X class="w-3 h-3" />
             </button>
           </button>
           <div
             v-if="showTagFilter"
-            class="absolute right-0 top-full z-50 mt-1 w-48 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg py-1 max-h-60 overflow-y-auto"
+            class="absolute right-0 top-full z-50 mt-1 w-52 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg overflow-hidden"
           >
-            <button
-              class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
-              :class="!store.tagFilter ? 'text-(--accent-600) font-medium' : 'text-(--text-secondary)'"
-              @click="store.tagFilter = null; showTagFilter = false"
-            >
-              All
-            </button>
-            <button
-              v-for="tag in store.allTags"
-              :key="tag"
-              class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
-              :class="store.tagFilter === tag ? 'text-(--accent-600) font-medium bg-(--bg-hover)' : 'text-(--text-secondary)'"
-              @click="store.tagFilter = tag; showTagFilter = false"
-            >
-              {{ tag }}
-            </button>
+            <div class="px-2 pt-2 pb-1">
+              <input
+                ref="tagFilterInputRef"
+                v-model="tagFilterQuery"
+                class="w-full bg-(--bg-tertiary) border border-(--border-primary) rounded px-2 py-1 text-[12px] text-(--text-secondary) placeholder:text-(--text-faint) outline-none focus:border-(--accent-400)"
+                placeholder="Filter or type tag..."
+                @keydown="onTagFilterKeydown"
+              />
+            </div>
+            <div class="max-h-52 overflow-y-auto py-1">
+              <button
+                class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
+                :class="!store.tagFilter ? 'text-(--accent-600) font-medium' : 'text-(--text-secondary)'"
+                @click="applyTagFilter(null)"
+              >
+                All
+              </button>
+              <button
+                v-for="tag in filteredTags"
+                :key="tag"
+                class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer flex items-center gap-2"
+                :class="store.tagFilter === tag ? 'text-(--accent-600) font-medium bg-(--bg-hover)' : 'text-(--text-secondary)'"
+                @click="applyTagFilter(tag)"
+              >
+                <span
+                  class="w-2.5 h-2.5 rounded-full shrink-0"
+                  :class="tagStyle(tag, store.tagColors, settings.dark) ? '' : 'bg-(--accent-300)'"
+                  :style="tagStyle(tag, store.tagColors, settings.dark) ? { backgroundColor: (tagStyle(tag, store.tagColors, settings.dark) as Record<string, string>).color } : {}"
+                />
+                {{ tag }}
+              </button>
+              <button
+                v-if="tagFilterQuery.trim() && !filteredTags.includes(tagFilterQuery.trim())"
+                class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer text-(--text-muted) italic"
+                @click="applyTagFilter(tagFilterQuery.trim())"
+              >
+                Filter by "{{ tagFilterQuery.trim() }}"
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- Due date filter -->
-        <div class="relative hidden sm:block">
+        <div ref="dueDateFilterRef" class="relative hidden sm:block">
           <button
             class="flex items-center gap-1 px-1.5 py-1 rounded-md border text-[12px] cursor-pointer"
             :class="
@@ -481,6 +555,13 @@ function onZoomRoot() {
           @click="showShortcuts = true"
         >
           <Keyboard class="w-4 h-4" />
+        </button>
+        <button
+          class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
+          title="Document settings"
+          @click="showDocSettings = true"
+        >
+          <FileText class="w-4 h-4" />
         </button>
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
@@ -561,10 +642,13 @@ function onZoomRoot() {
   <ShortcutsModal v-if="showShortcuts" @close="showShortcuts = false" @customize="showShortcuts = false; showShortcutEditor = true" />
 
   <!-- Settings panel -->
-  <SettingsPanel v-if="showSettings" @close="showSettings = false" @open-status-editor="showSettings = false; showStatusEditor = true" />
+  <SettingsPanel v-if="showSettings" @close="showSettings = false" />
 
   <!-- Trash panel -->
   <TrashPanel v-if="showTrash" @close="showTrash = false" />
+
+  <!-- Document settings -->
+  <DocumentSettingsPanel v-if="showDocSettings" @close="showDocSettings = false" @open-status-editor="showDocSettings = false; showStatusEditor = true" />
 
   <!-- Status editor -->
   <StatusEditor v-if="showStatusEditor" @close="showStatusEditor = false" />
@@ -577,6 +661,7 @@ function onZoomRoot() {
     v-if="showCommandPalette"
     @close="showCommandPalette = false"
     @openSettings="showCommandPalette = false; showSettings = true"
+    @openDocSettings="showCommandPalette = false; showDocSettings = true"
     @openShortcuts="showCommandPalette = false; showShortcuts = true"
     @openTrash="showCommandPalette = false; showTrash = true"
     @openSearch="showCommandPalette = false; showGlobalSearch = true"

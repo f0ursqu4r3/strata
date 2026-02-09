@@ -15,10 +15,11 @@ export interface SerializeOptions {
   nodes: Map<string, Node>;
   rootId: string;
   statusConfig: StatusDef[];
+  tagColors?: Record<string, string>;
 }
 
 export function serializeToMarkdown(opts: SerializeOptions): string {
-  const { nodes, rootId, statusConfig } = opts;
+  const { nodes, rootId, statusConfig, tagColors } = opts;
   const lines: string[] = [];
 
   // YAML frontmatter — minimal when using default statuses
@@ -34,6 +35,12 @@ export function serializeToMarkdown(opts: SerializeOptions): string {
       if (s.final) {
         lines.push(`    final: true`);
       }
+    }
+  }
+  if (tagColors && Object.keys(tagColors).length > 0) {
+    lines.push("tag-colors:");
+    for (const [tag, color] of Object.entries(tagColors)) {
+      lines.push(`  ${tag}: ${color}`);
     }
   }
   lines.push("---");
@@ -128,11 +135,13 @@ export interface ParseResult {
   nodes: Map<string, Node>;
   rootId: string;
   statusConfig: StatusDef[];
+  tagColors: Record<string, string>;
 }
 
 export function parseMarkdown(content: string): ParseResult {
   const { frontmatter, body } = splitFrontmatter(content);
   const statusConfig = parseFrontmatterStatuses(frontmatter);
+  const tagColors = parseFrontmatterTagColors(frontmatter);
   const defaultStatus = statusConfig[0]?.id ?? "todo";
 
   // Build label → id map for resolving human-readable status labels
@@ -280,7 +289,7 @@ export function parseMarkdown(content: string): ParseResult {
     stack.push({ id, depth });
   }
 
-  return { nodes, rootId, statusConfig };
+  return { nodes, rootId, statusConfig, tagColors };
 }
 
 // ── Frontmatter helpers ──
@@ -345,4 +354,23 @@ function parseFrontmatterStatuses(fm: string): StatusDef[] {
   }
 
   return statuses.length > 0 ? statuses : [...DEFAULT_STATUSES];
+}
+
+function parseFrontmatterTagColors(fm: string): Record<string, string> {
+  if (!fm.trim() || !fm.includes("tag-colors:")) return {};
+
+  const colors: Record<string, string> = {};
+  const tcIdx = fm.indexOf("tag-colors:");
+  const afterTc = fm.slice(tcIdx + "tag-colors:".length);
+  const lines = afterTc.split("\n");
+  for (const line of lines) {
+    const m = line.match(/^\s{2}([\w-]+):\s*([\w-]+)\s*$/);
+    if (m) {
+      colors[m[1]!] = m[2]!;
+    } else if (line.trim() && !line.startsWith("  ")) {
+      // Reached next top-level key, stop
+      break;
+    }
+  }
+  return colors;
 }

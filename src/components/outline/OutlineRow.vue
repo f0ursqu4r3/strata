@@ -5,6 +5,7 @@ import { useDocStore } from "@/stores/doc";
 import { useSettingsStore } from "@/stores/settings";
 import TagPicker from "@/components/shared/TagPicker.vue";
 import { resolveStatusIcon } from "@/lib/status-icons";
+import { tagStyle } from "@/lib/tag-colors";
 import { dueDateUrgency, formatDueDate } from "@/lib/due-date";
 import DatePicker from "@/components/shared/DatePicker.vue";
 import { useRowEditing } from "@/composables/outline/useRowEditing";
@@ -253,7 +254,9 @@ function onRowPointerDown(e: PointerEvent) {
       <span
         v-for="tag in node.tags"
         :key="tag"
-        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-(--accent-100) text-(--accent-700) cursor-pointer hover:bg-(--accent-200)"
+        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:opacity-80"
+        :class="tagStyle(tag, store.tagColors, settings.dark) ? '' : 'bg-(--accent-100) text-(--accent-700) hover:bg-(--accent-200)'"
+        :style="tagStyle(tag, store.tagColors, settings.dark) ?? {}"
         @click.stop="showTagPicker = !showTagPicker"
       >
         {{ tag }}

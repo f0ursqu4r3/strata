@@ -16,6 +16,7 @@ export type { CommandItem }
 export function useCommandPalette(emit: {
   (e: 'close'): void
   (e: 'openSettings'): void
+  (e: 'openDocSettings'): void
   (e: 'openShortcuts'): void
   (e: 'openTrash'): void
   (e: 'openSearch'): void
@@ -47,6 +48,7 @@ export function useCommandPalette(emit: {
     // Panels
     items.push(
       { id: 'open-settings', label: 'Open Settings', category: 'General', execute: () => emit('openSettings') },
+      { id: 'open-doc-settings', label: 'Document Settings', category: 'General', execute: () => emit('openDocSettings') },
       { id: 'open-shortcuts', label: 'Keyboard Shortcuts', category: 'General', execute: () => emit('openShortcuts') },
       { id: 'open-trash', label: 'Open Trash', category: 'General', execute: () => emit('openTrash') },
       { id: 'open-search', label: 'Search All Documents', category: 'General', execute: () => emit('openSearch') },

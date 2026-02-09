@@ -12,6 +12,7 @@ import TagPicker from "../shared/TagPicker.vue";
 import DatePicker from "../shared/DatePicker.vue";
 import { useBoardDrag } from "@/composables/board/useBoardDrag";
 import { useBoardEditing } from "@/composables/board/useBoardEditing";
+import { tagStyle } from "@/lib/tag-colors";
 
 const store = useDocStore();
 const settings = useSettingsStore();
@@ -202,7 +203,9 @@ function childCount(node: Node): number {
                     <span
                       v-for="tag in node.tags?.slice(0, 3)"
                       :key="tag"
-                      class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-(--accent-100) text-(--accent-700) hover:bg-(--accent-200)"
+                      class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
+                      :class="tagStyle(tag, store.tagColors, settings.dark) ? '' : 'bg-(--accent-100) text-(--accent-700) hover:bg-(--accent-200)'"
+                      :style="tagStyle(tag, store.tagColors, settings.dark) ?? {}"
                     >
                       {{ tag }}
                     </span>

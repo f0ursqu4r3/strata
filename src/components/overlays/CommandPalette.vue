@@ -6,6 +6,7 @@ import { UiKbd } from '@/components/ui'
 const emit = defineEmits<{
   close: []
   openSettings: []
+  openDocSettings: []
   openShortcuts: []
   openTrash: []
   openSearch: []
