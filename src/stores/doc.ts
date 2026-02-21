@@ -4,10 +4,16 @@ import type { Node, Op, Status, ViewMode, Snapshot, StatusDef } from "@/types";
 import { DEFAULT_STATUSES } from "@/types";
 import { makeOp, applyOp, rebuildState, setSeq } from "@/lib/ops";
 import { rankBetween, rankAfter, rankBefore, initialRank } from "@/lib/rank";
-import { exportToMarkdown, exportToOPML, exportToPlaintext } from "@/lib/export-formats";
+import {
+  buildExportJSON,
+  downloadExport as doDownloadExport,
+  type ExportFormat,
+} from "@/lib/doc-export";
 import { matchesDueDateFilter } from "@/lib/due-date";
 import { updateIndexForDoc } from "@/lib/search-index";
 import { isFileSystemMode } from "@/lib/platform";
+import { markAncestors } from "@/lib/tree-utils";
+import { buildCompensatingOp } from "@/lib/undo-ops";
 import { serializeToMarkdown, parseMarkdown } from "@/lib/markdown-serialize";
 import {
   saveOp,
@@ -169,22 +175,13 @@ export const useDocStore = defineStore("doc", () => {
   const searchMatchIds = computed(() => {
     const q = searchQuery.value.trim().toLowerCase();
     if (!q) return null;
-    const matches = new Set<string>();
+    const direct = new Set<string>();
     for (const node of nodes.value.values()) {
-      if (node.deleted) continue;
-      if (node.text.toLowerCase().includes(q)) {
-        matches.add(node.id);
-        // Also mark all ancestors visible so the match is reachable
-        let cur = node;
-        while (cur.parentId) {
-          matches.add(cur.parentId);
-          const parent = nodes.value.get(cur.parentId);
-          if (!parent) break;
-          cur = parent;
-        }
+      if (!node.deleted && node.text.toLowerCase().includes(q)) {
+        direct.add(node.id);
       }
     }
-    return matches;
+    return markAncestors(nodes.value, direct);
   });
 
   const allTags = computed(() => {
@@ -201,42 +198,25 @@ export const useDocStore = defineStore("doc", () => {
   const tagMatchIds = computed(() => {
     const tag = tagFilter.value;
     if (!tag) return null;
-    const matches = new Set<string>();
+    const direct = new Set<string>();
     for (const node of nodes.value.values()) {
-      if (node.deleted) continue;
-      if (node.tags && node.tags.includes(tag)) {
-        matches.add(node.id);
-        // Mark ancestors visible
-        let cur = node;
-        while (cur.parentId) {
-          matches.add(cur.parentId);
-          const parent = nodes.value.get(cur.parentId);
-          if (!parent) break;
-          cur = parent;
-        }
+      if (!node.deleted && node.tags?.includes(tag)) {
+        direct.add(node.id);
       }
     }
-    return matches;
+    return markAncestors(nodes.value, direct);
   });
 
   const dueDateMatchIds = computed(() => {
     const filter = dueDateFilter.value;
     if (filter === "all") return null;
-    const matches = new Set<string>();
+    const direct = new Set<string>();
     for (const node of nodes.value.values()) {
-      if (node.deleted) continue;
-      if (matchesDueDateFilter(node.dueDate, filter)) {
-        matches.add(node.id);
-        let cur = node;
-        while (cur.parentId) {
-          matches.add(cur.parentId);
-          const parent = nodes.value.get(cur.parentId);
-          if (!parent) break;
-          cur = parent;
-        }
+      if (!node.deleted && matchesDueDateFilter(node.dueDate, filter)) {
+        direct.add(node.id);
       }
     }
-    return matches;
+    return markAncestors(nodes.value, direct);
   });
 
   const visibleRows = computed(() => {
@@ -379,112 +359,13 @@ export const useDocStore = defineStore("doc", () => {
     for (const snap of entry.beforeSnapshots) {
       nodes.value.set(snap.id, { ...snap });
     }
-    // Handle create undo: if the op created a node, remove it
-    if (entry.op.type === "create") {
-      const id = (entry.op.payload as { id: string }).id;
-      const node = nodes.value.get(id);
-      if (node) {
-        node.deleted = true;
-      }
-    }
-    triggerRef(nodes);
 
-    // Persist a compensating op
-    if (entry.op.type === "create") {
-      const id = (entry.op.payload as { id: string }).id;
-      const compensate = makeOp("tombstone", { type: "tombstone", id });
-      saveOp(compensate);
-      lastSeq.value = compensate.seq;
-    } else {
-      // For other ops, write the restored state as new ops
-      for (const snap of entry.beforeSnapshots) {
-        if (entry.op.type === "updateText") {
-          const compensate = makeOp("updateText", {
-            type: "updateText",
-            id: snap.id,
-            text: snap.text,
-          });
-          saveOp(compensate);
-          lastSeq.value = compensate.seq;
-        } else if (entry.op.type === "move") {
-          const compensate = makeOp("move", {
-            type: "move",
-            id: snap.id,
-            parentId: snap.parentId,
-            pos: snap.pos,
-          });
-          saveOp(compensate);
-          lastSeq.value = compensate.seq;
-        } else if (entry.op.type === "setStatus") {
-          const compensate = makeOp("setStatus", {
-            type: "setStatus",
-            id: snap.id,
-            status: snap.status,
-          });
-          saveOp(compensate);
-          lastSeq.value = compensate.seq;
-        } else if (entry.op.type === "toggleCollapsed") {
-          const compensate = makeOp("toggleCollapsed", { type: "toggleCollapsed", id: snap.id });
-          saveOp(compensate);
-          lastSeq.value = compensate.seq;
-        } else if (entry.op.type === "tombstone") {
-          // Restore: un-delete
-          const node = nodes.value.get(snap.id);
-          if (node) {
-            node.deleted = false;
-            node.deletedAt = undefined;
-            const compensate = makeOp("create", {
-              type: "create",
-              id: snap.id,
-              parentId: snap.parentId,
-              pos: snap.pos,
-              text: snap.text,
-              status: snap.status,
-            });
-            saveOp(compensate);
-            lastSeq.value = compensate.seq;
-          }
-        } else if (entry.op.type === "addTag") {
-          const node = nodes.value.get(snap.id);
-          if (node) {
-            node.tags = snap.tags ? [...snap.tags] : [];
-            const tag = (entry.op.payload as { tag: string }).tag;
-            const compensate = makeOp("removeTag", { type: "removeTag", id: snap.id, tag });
-            saveOp(compensate);
-            lastSeq.value = compensate.seq;
-          }
-        } else if (entry.op.type === "removeTag") {
-          const node = nodes.value.get(snap.id);
-          if (node) {
-            node.tags = snap.tags ? [...snap.tags] : [];
-            const tag = (entry.op.payload as { tag: string }).tag;
-            const compensate = makeOp("addTag", { type: "addTag", id: snap.id, tag });
-            saveOp(compensate);
-            lastSeq.value = compensate.seq;
-          }
-        } else if (entry.op.type === "restore") {
-          const node = nodes.value.get(snap.id);
-          if (node) {
-            node.deleted = snap.deleted;
-            node.deletedAt = snap.deletedAt;
-            const compensate = makeOp("tombstone", { type: "tombstone", id: snap.id });
-            saveOp(compensate);
-            lastSeq.value = compensate.seq;
-          }
-        } else if (entry.op.type === "setDueDate") {
-          const node = nodes.value.get(snap.id);
-          if (node) {
-            node.dueDate = snap.dueDate;
-            const compensate = makeOp("setDueDate", {
-              type: "setDueDate",
-              id: snap.id,
-              dueDate: snap.dueDate ?? null,
-            });
-            saveOp(compensate);
-            lastSeq.value = compensate.seq;
-          }
-        }
-      }
+    // Build and persist compensating ops (also mutates nodes for side-effect ops)
+    const compensatingOps = buildCompensatingOp(entry, nodes.value);
+    triggerRef(nodes);
+    for (const cop of compensatingOps) {
+      saveOp(cop);
+      lastSeq.value = cop.seq;
     }
 
     selectedId.value = entry.selectedBefore;
@@ -1496,58 +1377,25 @@ export const useDocStore = defineStore("doc", () => {
 
   function exportJSON(): string {
     flushTextDebounce();
-    // Note: flushOpBuffer is async but export is sync; the buffer will flush soon via timer
-    const allNodes = Array.from(nodes.value.values());
-    const doc = {
-      version: 3,
+    return buildExportJSON({
+      nodes: nodes.value,
       rootId: rootId.value,
-      nodes: allNodes,
       statusConfig: statusConfig.value,
       tagColors: tagColors.value,
-      exportedAt: new Date().toISOString(),
-    };
-    return JSON.stringify(doc, null, 2);
+    });
   }
-
-  type ExportFormat = "json" | "markdown" | "opml" | "plaintext";
 
   function downloadExport(format: ExportFormat = "json") {
     flushTextDebounce();
-    let content: string;
-    let ext: string;
-    let mime: string;
-
-    const sMap = statusMap.value;
-    switch (format) {
-      case "markdown":
-        content = exportToMarkdown(nodes.value, rootId.value, sMap, zoomId.value);
-        ext = "md";
-        mime = "text/markdown";
-        break;
-      case "opml":
-        content = exportToOPML(nodes.value, rootId.value, sMap, zoomId.value);
-        ext = "opml";
-        mime = "application/xml";
-        break;
-      case "plaintext":
-        content = exportToPlaintext(nodes.value, rootId.value, sMap, zoomId.value);
-        ext = "txt";
-        mime = "text/plain";
-        break;
-      default:
-        content = exportJSON();
-        ext = "json";
-        mime = "application/json";
-        break;
-    }
-
-    const blob = new Blob([content], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `strata-export-${new Date().toISOString().slice(0, 10)}.${ext}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    doDownloadExport({
+      format,
+      nodes: nodes.value,
+      rootId: rootId.value,
+      statusMap: statusMap.value,
+      statusConfig: statusConfig.value,
+      tagColors: tagColors.value,
+      zoomId: zoomId.value,
+    });
   }
 
   /**

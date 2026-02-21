@@ -1,6 +1,7 @@
 import type { Node, StatusDef } from "@/types";
 import { DEFAULT_STATUSES } from "@/types";
 import { initialRank, rankAfter } from "@/lib/rank";
+import { getOrderedChildren } from "@/lib/tree-utils";
 
 // ── Inline marker regexes ──
 
@@ -60,18 +61,8 @@ export function serializeToMarkdown(opts: SerializeOptions): string {
   const finalStatuses = statusConfig.filter((s) => s.final);
   const firstFinalStatusId = finalStatuses[0]?.id;
 
-  function getOrderedChildren(parentId: string): Node[] {
-    const children: Node[] = [];
-    for (const node of nodes.values()) {
-      if (node.parentId === parentId && !node.deleted) {
-        children.push(node);
-      }
-    }
-    return children.sort((a, b) => (a.pos < b.pos ? -1 : a.pos > b.pos ? 1 : 0));
-  }
-
   function walk(parentId: string, depth: number) {
-    const children = getOrderedChildren(parentId);
+    const children = getOrderedChildren(nodes, parentId);
     for (const child of children) {
       const indent = "  ".repeat(depth);
       const textLines = (child.text || "").split("\n");

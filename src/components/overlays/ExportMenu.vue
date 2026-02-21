@@ -2,10 +2,9 @@
 import { Download } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { UiDropdown, UiIconButton, UiMenu, UiMenuItem } from '@/components/ui'
+import type { ExportFormat } from '@/lib/doc-export'
 
 const store = useDocStore()
-
-type ExportFormat = 'json' | 'markdown' | 'opml' | 'plaintext'
 
 const formats: { key: ExportFormat; label: string }[] = [
   { key: 'json', label: 'JSON' },

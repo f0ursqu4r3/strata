@@ -1,14 +1,5 @@
 import type { Node, StatusDef } from '@/types'
-
-function getOrderedChildren(nodes: Map<string, Node>, parentId: string): Node[] {
-  const children: Node[] = []
-  for (const node of nodes.values()) {
-    if (node.parentId === parentId && !node.deleted) {
-      children.push(node)
-    }
-  }
-  return children.sort((a, b) => (a.pos < b.pos ? -1 : a.pos > b.pos ? 1 : 0))
-}
+import { getOrderedChildren } from '@/lib/tree-utils'
 
 function getStatusLabel(statusId: string, statusMap: Map<string, StatusDef>): string {
   return statusMap.get(statusId)?.label ?? statusId
