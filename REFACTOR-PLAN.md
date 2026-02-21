@@ -20,13 +20,13 @@ Streamline and optimize codebase without losing features.
 
 ## High Priority
 
-- [ ] **Shared context menu base component**
-  - `ContextMenu.vue`, `DocumentContextMenu.vue`, `ColumnContextMenu.vue` repeat Teleport + positioning + styling
-  - Extract reusable `BaseContextMenu.vue` wrapper
+- [x] **Shared context menu base component**
+  - Created `BaseContextMenu.vue` wrapping Teleport + positioning + click-outside + styling
+  - Refactored `ContextMenu.vue`, `DocumentContextMenu.vue`, `ColumnContextMenu.vue`
 
-- [ ] **`useDropdownPosition` composable**
-  - `TagPicker.vue` and `DatePicker.vue` duplicate positioning logic
-  - Extract shared composable
+- [x] **`useDropdownPosition` composable**
+  - Extracted to `composables/useDropdownPosition.ts`
+  - `TagPicker.vue` refactored to use it for both autocomplete and color picker popovers
 
 - [ ] **Split markdown-serialize.ts**
   - 376 lines combining parse + serialize

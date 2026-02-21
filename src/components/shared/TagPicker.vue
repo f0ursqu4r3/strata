@@ -4,6 +4,7 @@ import { X } from "lucide-vue-next";
 import { useDocStore } from "@/stores/doc";
 import { useSettingsStore } from "@/stores/settings";
 import { TAG_COLOR_PRESETS, TAG_COLOR_KEYS, tagStyle } from "@/lib/tag-colors";
+import { useDropdownPosition } from "@/composables/useDropdownPosition";
 
 const props = defineProps<{
   nodeId: string;
@@ -20,39 +21,10 @@ const inputFocused = ref(false);
 const colorPickerTag = ref<string | null>(null);
 
 // Fixed position for the autocomplete dropdown (teleported to body)
-const dropdownStyle = ref<Record<string, string>>({});
-
-function updateDropdownPos() {
-  const el = inputRef.value;
-  if (!el) return;
-  const rect = el.getBoundingClientRect();
-  const vh = window.innerHeight;
-  const dropH = Math.min(suggestions.value.length * 30 + 4, 256);
-  const spaceBelow = vh - rect.bottom - 8;
-  const top = spaceBelow >= dropH ? rect.bottom + 4 : rect.top - dropH - 4;
-  dropdownStyle.value = {
-    left: `${rect.left}px`,
-    top: `${Math.max(4, top)}px`,
-    width: '192px',
-  };
-}
+const { style: dropdownStyle, update: updateDropdownPos } = useDropdownPosition();
 
 // Fixed position for the color picker popover (teleported to body)
-const colorPickerStyle = ref<Record<string, string>>({});
-
-function updateColorPickerPos(tag: string) {
-  const el = pickerRef.value?.querySelector(`[data-tag-pill="${tag}"]`) as HTMLElement | null;
-  if (!el) return;
-  const rect = el.getBoundingClientRect();
-  const vh = window.innerHeight;
-  const popH = 36;
-  const spaceBelow = vh - rect.bottom - 8;
-  const top = spaceBelow >= popH ? rect.bottom + 4 : rect.top - popH - 4;
-  colorPickerStyle.value = {
-    left: `${rect.left}px`,
-    top: `${Math.max(4, top)}px`,
-  };
-}
+const { style: colorPickerStyle, update: updateColorPickerPos } = useDropdownPosition();
 
 const suggestions = computed(() => {
   const q = query.value.trim().toLowerCase();
@@ -67,7 +39,10 @@ const showDropdown = computed(() => inputFocused.value && suggestions.value.leng
 
 // Update dropdown position when it becomes visible
 watch(showDropdown, (val) => {
-  if (val) nextTick(updateDropdownPos);
+  if (val) nextTick(() => {
+    const dropH = Math.min(suggestions.value.length * 30 + 4, 256);
+    updateDropdownPos(inputRef.value, { dropHeight: dropH, width: "192px" });
+  });
 });
 
 function getTagStyle(tag: string) {
@@ -128,7 +103,10 @@ function toggleColorPicker(tag: string, e: MouseEvent) {
   e.stopPropagation();
   const next = colorPickerTag.value === tag ? null : tag;
   colorPickerTag.value = next;
-  if (next) nextTick(() => updateColorPickerPos(next));
+  if (next) nextTick(() => {
+    const el = pickerRef.value?.querySelector(`[data-tag-pill="${next}"]`) as HTMLElement | null;
+    updateColorPickerPos(el, { dropHeight: 36 });
+  });
 }
 
 function pickColor(tag: string, colorKey: string | null) {

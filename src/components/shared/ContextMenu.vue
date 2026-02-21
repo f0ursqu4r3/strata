@@ -13,8 +13,8 @@ import {
 } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { resolveStatusIcon } from '@/lib/status-icons'
-import { useClickOutside, UiMenuItem, UiMenuDivider } from '@/components/ui'
-import { useMenuPosition } from '@/composables/useMenuPosition'
+import { UiMenuItem, UiMenuDivider } from '@/components/ui'
+import BaseContextMenu from './BaseContextMenu.vue'
 import type { Status } from '@/types'
 import DatePicker from './DatePicker.vue'
 
@@ -30,22 +30,18 @@ const emit = defineEmits<{
 }>()
 
 const store = useDocStore()
-const menuRef = ref<HTMLElement | null>(null)
+const baseMenuRef = ref<InstanceType<typeof BaseContextMenu> | null>(null)
 const showStatusSub = ref(false)
 const showDatePicker = ref(false)
 
 const isMultiSelect = computed(() => store.selectedIds.size > 1 && store.selectedIds.has(props.nodeId))
 
-useClickOutside(menuRef, () => emit('close'))
-const { style: menuStyle } = useMenuPosition(menuRef, props.x, props.y)
-
 // Flip submenus to open left if near right edge
 const subLeft = ref(false)
 onMounted(() => {
-  const el = menuRef.value
+  const el = baseMenuRef.value?.menuRef
   if (!el) return
   const rect = el.getBoundingClientRect()
-  // If the menu's right edge + typical submenu width (~160px) exceeds viewport
   subLeft.value = rect.right + 160 > window.innerWidth
 })
 
@@ -106,13 +102,13 @@ function onHistory() {
 </script>
 
 <template>
-  <Teleport to="body">
-  <div
-    ref="menuRef"
-    class="fixed z-50 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg py-1 min-w-44 text-sm"
-    role="menu"
+  <BaseContextMenu
+    ref="baseMenuRef"
+    :x="x"
+    :y="y"
     aria-label="Node actions"
-    :style="menuStyle"
+    min-width="min-w-44"
+    @close="emit('close')"
   >
     <UiMenuItem v-if="!isMultiSelect" :icon="Pencil" @click="onEdit">
       Edit
@@ -193,6 +189,5 @@ function onHistory() {
     <UiMenuItem :icon="Trash2" danger @click="onDelete">
       {{ isMultiSelect ? `Delete ${store.selectedIds.size} items` : 'Delete' }}
     </UiMenuItem>
-  </div>
-  </Teleport>
+  </BaseContextMenu>
 </template>

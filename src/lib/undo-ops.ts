@@ -1,4 +1,4 @@
-import type { Node, Op, Status } from "@/types";
+import type { Node, Op } from "@/types";
 import { makeOp } from "@/lib/ops";
 
 /**

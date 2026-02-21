@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { Plus, Settings2 } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { rankAfter, initialRank } from '@/lib/rank'
-import { useClickOutside, UiMenuItem, UiMenuDivider } from '@/components/ui'
-import { useMenuPosition } from '@/composables/useMenuPosition'
+import { UiMenuItem, UiMenuDivider } from '@/components/ui'
+import BaseContextMenu from '@/components/shared/BaseContextMenu.vue'
 import type { Status } from '@/types'
 
 const props = defineProps<{
@@ -19,10 +18,6 @@ const emit = defineEmits<{
 }>()
 
 const store = useDocStore()
-const menuRef = ref<HTMLElement | null>(null)
-
-useClickOutside(menuRef, () => emit('close'))
-const { style: menuStyle } = useMenuPosition(menuRef, props.x, props.y)
 
 function onAddCard() {
   const parentId = store.effectiveZoomId
@@ -44,14 +39,7 @@ function onManageStatuses() {
 </script>
 
 <template>
-  <Teleport to="body">
-  <div
-    ref="menuRef"
-    class="fixed z-50 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg py-1 min-w-40 text-sm"
-    role="menu"
-    aria-label="Column actions"
-    :style="menuStyle"
-  >
+  <BaseContextMenu :x="x" :y="y" aria-label="Column actions" min-width="min-w-40" @close="emit('close')">
     <UiMenuItem :icon="Plus" @click="onAddCard">
       Add card
     </UiMenuItem>
@@ -59,6 +47,5 @@ function onManageStatuses() {
     <UiMenuItem :icon="Settings2" @click="onManageStatuses">
       Manage statuses
     </UiMenuItem>
-  </div>
-  </Teleport>
+  </BaseContextMenu>
 </template>
