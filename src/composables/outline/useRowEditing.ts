@@ -113,7 +113,7 @@ export function useRowEditing(
       const input = titleInputRef.value
       if (input && document.activeElement !== input) {
         input.focus()
-        if (store.editingTrigger === 'keyboard') {
+        if (store.editing.trigger === 'keyboard') {
           const len = input.value.length
           input.setSelectionRange(len, len)
         }
@@ -138,13 +138,13 @@ export function useRowEditing(
         localText.value = props.node.text
         await nextTick()
         autoResizeBody()
-        const cursorColumn = store.editingCursorColumn
-        store.editingCursorColumn = null
+        const cursorColumn = store.editing.cursorColumn
+        store.editing.cursorColumn = null
         const shouldFocusBody =
-          focusBodyOnEdit.value || (store.editingFocusBody && localText.value.includes('\n'))
+          focusBodyOnEdit.value || (store.editing.focusBody && localText.value.includes('\n'))
         if (shouldFocusBody) {
           focusBodyOnEdit.value = false
-          store.editingFocusBody = false
+          store.editing.focusBody = false
           await nextTick()
           const body = bodyInputRef.value
           if (body) {
@@ -164,7 +164,7 @@ export function useRowEditing(
           if (document.activeElement !== input) {
             input.focus()
           }
-          if (store.editingTrigger === 'keyboard') {
+          if (store.editing.trigger === 'keyboard') {
             if (cursorColumn !== null) {
               const pos = Math.min(cursorColumn, input.value.length)
               input.setSelectionRange(pos, pos)
@@ -213,7 +213,7 @@ export function useRowEditing(
       return
     }
     cleanupEmptyBody()
-    if (store.editingId === props.node.id) {
+    if (store.editing.id === props.node.id) {
       store.stopEditing()
     }
   }

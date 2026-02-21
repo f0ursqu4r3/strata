@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed, shallowRef, triggerRef, nextTick } from "vue";
+import { ref, reactive, computed, shallowRef, triggerRef, nextTick } from "vue";
 import type { Node, Op, Status, ViewMode, Snapshot, StatusDef } from "@/types";
 import { DEFAULT_STATUSES } from "@/types";
 import { makeOp, applyOp, rebuildState, setSeq } from "@/lib/ops";
@@ -40,20 +40,26 @@ export const useDocStore = defineStore("doc", () => {
   const nodes = shallowRef<Map<string, Node>>(new Map());
   const rootId = ref<string>("");
   const zoomId = ref<string | null>(null);
-  const selectedId = ref<string>("");
-  const editingId = ref<string | null>(null);
-  const editingTrigger = ref<"keyboard" | "click" | "dblclick" | null>(null);
-  const editingFocusBody = ref(false);
-  const editingCursorColumn = ref<number | null>(null);
+  const editing = reactive({
+    id: null as string | null,
+    trigger: null as "keyboard" | "click" | "dblclick" | null,
+    focusBody: false,
+    cursorColumn: null as number | null,
+  });
+  const selection = reactive({
+    current: "",
+    ids: new Set<string>(),
+    anchor: "",
+  });
+  const filters = reactive({
+    search: "",
+    tag: null as string | null,
+    dueDate: "all" as "all" | "overdue" | "today" | "week",
+  });
   const viewMode = ref<ViewMode>("split");
   const ready = ref(false);
-  const searchQuery = ref("");
-  const tagFilter = ref<string | null>(null);
-  const dueDateFilter = ref<"all" | "overdue" | "today" | "week">("all");
   const currentDocId = ref<string>("");
   const suppressTransitions = ref(false);
-  const selectedIds = ref<Set<string>>(new Set());
-  const selectionAnchor = ref<string>("");
 
   // ── Debounced search-index updater ──
   let _indexTimer: ReturnType<typeof setTimeout> | null = null;
@@ -174,7 +180,7 @@ export const useDocStore = defineStore("doc", () => {
 
   // ── Search: set of matching node IDs + ancestors that should be visible ──
   const searchMatchIds = computed(() => {
-    const q = searchQuery.value.trim().toLowerCase();
+    const q = filters.search.trim().toLowerCase();
     if (!q) return null;
     const direct = new Set<string>();
     for (const node of nodes.value.values()) {
@@ -197,7 +203,7 @@ export const useDocStore = defineStore("doc", () => {
   });
 
   const tagMatchIds = computed(() => {
-    const tag = tagFilter.value;
+    const tag = filters.tag;
     if (!tag) return null;
     const direct = new Set<string>();
     for (const node of nodes.value.values()) {
@@ -209,7 +215,7 @@ export const useDocStore = defineStore("doc", () => {
   });
 
   const dueDateMatchIds = computed(() => {
-    const filter = dueDateFilter.value;
+    const filter = filters.dueDate;
     if (filter === "all") return null;
     const direct = new Set<string>();
     for (const node of nodes.value.values()) {
@@ -263,9 +269,9 @@ export const useDocStore = defineStore("doc", () => {
     const root = effectiveZoomId.value;
     if (!root) return [];
     let all = subtreeNodes(root);
-    const tag = tagFilter.value;
+    const tag = filters.tag;
     if (tag) all = all.filter((n) => n.tags && n.tags.includes(tag));
-    const dueFilter = dueDateFilter.value;
+    const dueFilter = filters.dueDate;
     if (dueFilter !== "all") all = all.filter((n) => matchesDueDateFilter(n.dueDate, dueFilter));
     return all;
   });
@@ -313,7 +319,7 @@ export const useDocStore = defineStore("doc", () => {
       undoStack.push({
         op,
         beforeSnapshots,
-        selectedBefore: selectedId.value,
+        selectedBefore: selection.current,
       });
       if (undoStack.length > MAX_UNDO) undoStack.shift();
       // Clear redo on new action
@@ -369,7 +375,7 @@ export const useDocStore = defineStore("doc", () => {
       lastSeq.value = cop.seq;
     }
 
-    selectedId.value = entry.selectedBefore;
+    selection.current = entry.selectedBefore;
     redoStack.push(entry);
   }
 
@@ -390,7 +396,7 @@ export const useDocStore = defineStore("doc", () => {
     undoStack.push({
       op: reOp,
       beforeSnapshots,
-      selectedBefore: selectedId.value,
+      selectedBefore: selection.current,
     });
 
     applyOp(nodes.value, reOp);
@@ -474,7 +480,7 @@ export const useDocStore = defineStore("doc", () => {
       undoStack.push({
         op,
         beforeSnapshots: [beforeSnap],
-        selectedBefore: selectedId.value,
+        selectedBefore: selection.current,
       });
       if (undoStack.length > MAX_UNDO) undoStack.shift();
       redoStack.length = 0;
@@ -535,7 +541,7 @@ export const useDocStore = defineStore("doc", () => {
 
     const op = createNode(node.parentId, pos, node.text, node.status);
     const newId = (op.payload as { id: string }).id;
-    selectedId.value = newId;
+    selection.current = newId;
   }
 
   function tombstone(id: string) {
@@ -649,27 +655,27 @@ export const useDocStore = defineStore("doc", () => {
   // ── Outline keyboard actions ──
 
   function selectedIndex(): number {
-    return visibleRows.value.findIndex((r) => r.node.id === selectedId.value);
+    return visibleRows.value.findIndex((r) => r.node.id === selection.current);
   }
 
   function moveSelectionUp() {
     const idx = selectedIndex();
     if (idx > 0) {
-      selectedId.value = visibleRows.value[idx - 1]!.node.id;
-      editingId.value = null;
+      selection.current = visibleRows.value[idx - 1]!.node.id;
+      editing.id = null;
     }
   }
 
   function moveSelectionDown() {
     const idx = selectedIndex();
     if (idx < visibleRows.value.length - 1) {
-      selectedId.value = visibleRows.value[idx + 1]!.node.id;
-      editingId.value = null;
+      selection.current = visibleRows.value[idx + 1]!.node.id;
+      editing.id = null;
     }
   }
 
   function createSiblingBelow() {
-    const node = nodes.value.get(selectedId.value);
+    const node = nodes.value.get(selection.current);
     if (!node) return;
 
     const siblings = getChildren(node.parentId!);
@@ -685,15 +691,15 @@ export const useDocStore = defineStore("doc", () => {
 
     const op = createNode(node.parentId, pos, "", node.status);
     const newId = (op.payload as { id: string }).id;
-    selectedId.value = newId;
-    editingId.value = newId;
+    selection.current = newId;
+    editing.id = newId;
   }
 
   function indentNode() {
     const idx = selectedIndex();
     if (idx <= 0) return;
 
-    const node = nodes.value.get(selectedId.value);
+    const node = nodes.value.get(selection.current);
     if (!node) return;
 
     // Find previous visible sibling to become new parent
@@ -719,7 +725,7 @@ export const useDocStore = defineStore("doc", () => {
   }
 
   function outdentNode() {
-    const node = nodes.value.get(selectedId.value);
+    const node = nodes.value.get(selection.current);
     if (!node || !node.parentId) return;
 
     const parent = nodes.value.get(node.parentId);
@@ -748,12 +754,12 @@ export const useDocStore = defineStore("doc", () => {
     const idx = visibleRows.value.findIndex((r) => r.node.id === fromId);
     if (idx > 0) {
       const prevId = visibleRows.value[idx - 1]!.node.id;
-      selectedId.value = prevId;
-      selectedIds.value = new Set([prevId]);
-      editingId.value = prevId;
-      editingTrigger.value = "keyboard";
-      editingFocusBody.value = focusBody;
-      editingCursorColumn.value = cursorColumn;
+      selection.current = prevId;
+      selection.ids = new Set([prevId]);
+      editing.id = prevId;
+      editing.trigger = "keyboard";
+      editing.focusBody = focusBody;
+      editing.cursorColumn = cursorColumn;
     }
   }
 
@@ -761,11 +767,11 @@ export const useDocStore = defineStore("doc", () => {
     const idx = visibleRows.value.findIndex((r) => r.node.id === fromId);
     if (idx >= 0 && idx < visibleRows.value.length - 1) {
       const nextId = visibleRows.value[idx + 1]!.node.id;
-      selectedId.value = nextId;
-      selectedIds.value = new Set([nextId]);
-      editingId.value = nextId;
-      editingTrigger.value = "keyboard";
-      editingCursorColumn.value = cursorColumn;
+      selection.current = nextId;
+      selection.ids = new Set([nextId]);
+      editing.id = nextId;
+      editing.trigger = "keyboard";
+      editing.cursorColumn = cursorColumn;
     }
   }
 
@@ -778,32 +784,32 @@ export const useDocStore = defineStore("doc", () => {
 
     const targetId = prevId ?? nextId;
     if (targetId) {
-      selectedId.value = targetId;
-      editingId.value = targetId;
-      editingTrigger.value = "keyboard";
+      selection.current = targetId;
+      editing.id = targetId;
+      editing.trigger = "keyboard";
     } else {
-      editingId.value = null;
-      editingTrigger.value = null;
+      editing.id = null;
+      editing.trigger = null;
     }
   }
 
   function indentAndKeepEditing(id: string) {
-    selectedId.value = id;
+    selection.current = id;
     indentNode();
     // Node id doesn't change, just re-assert editing
-    editingId.value = id;
-    editingTrigger.value = "keyboard";
+    editing.id = id;
+    editing.trigger = "keyboard";
   }
 
   function outdentAndKeepEditing(id: string) {
-    selectedId.value = id;
+    selection.current = id;
     outdentNode();
-    editingId.value = id;
-    editingTrigger.value = "keyboard";
+    editing.id = id;
+    editing.trigger = "keyboard";
   }
 
   function createSiblingBelowAndEdit() {
-    const node = nodes.value.get(selectedId.value);
+    const node = nodes.value.get(selection.current);
     if (!node) return;
 
     const siblings = getChildren(node.parentId!);
@@ -819,9 +825,9 @@ export const useDocStore = defineStore("doc", () => {
 
     const op = createNode(node.parentId, pos, "", node.status);
     const newId = (op.payload as { id: string }).id;
-    selectedId.value = newId;
-    editingId.value = newId;
-    editingTrigger.value = "keyboard";
+    selection.current = newId;
+    editing.id = newId;
+    editing.trigger = "keyboard";
   }
 
   // ── Init / Load ──
@@ -853,11 +859,11 @@ export const useDocStore = defineStore("doc", () => {
     undoStack.length = 0;
     redoStack.length = 0;
     zoomId.value = null;
-    searchQuery.value = "";
-    tagFilter.value = null;
-    dueDateFilter.value = "all";
-    editingId.value = null;
-    editingTrigger.value = null;
+    filters.search = "";
+    filters.tag = null;
+    filters.dueDate = "all";
+    editing.id = null;
+    editing.trigger = null;
     ready.value = false;
     setSeq(0);
 
@@ -933,7 +939,7 @@ export const useDocStore = defineStore("doc", () => {
     // Set selection to first visible
     const firstChild = getChildren(rootId.value);
     if (firstChild.length > 0) {
-      selectedId.value = firstChild[0]!.id;
+      selection.current = firstChild[0]!.id;
     }
 
     ready.value = true;
@@ -1085,7 +1091,7 @@ export const useDocStore = defineStore("doc", () => {
         }
         await saveOps(ops);
         lastSeq.value = ops[ops.length - 1]?.seq ?? 0;
-        selectedId.value = firstId;
+        selection.current = firstId;
       }
     }
 
@@ -1109,10 +1115,10 @@ export const useDocStore = defineStore("doc", () => {
     nodes.value = nodeMap;
 
     // Set selection to first visible if not set
-    if (!selectedId.value || !nodeMap.has(selectedId.value)) {
+    if (!selection.current || !nodeMap.has(selection.current)) {
       const firstChild = getChildren(rootId.value);
       if (firstChild.length > 0) {
-        selectedId.value = firstChild[0]!.id;
+        selection.current = firstChild[0]!.id;
       }
     }
 
@@ -1123,36 +1129,36 @@ export const useDocStore = defineStore("doc", () => {
   }
 
   function selectNode(id: string) {
-    selectedId.value = id;
-    selectedIds.value = new Set([id]);
-    selectionAnchor.value = id;
+    selection.current = id;
+    selection.ids = new Set([id]);
+    selection.anchor = id;
   }
 
   function clearSelection() {
-    selectedId.value = '';
-    selectedIds.value = new Set();
-    selectionAnchor.value = '';
+    selection.current = '';
+    selection.ids = new Set();
+    selection.anchor = '';
   }
 
   function toggleSelectNode(id: string) {
-    const newSet = new Set(selectedIds.value);
+    const newSet = new Set(selection.ids);
     if (newSet.has(id)) {
       newSet.delete(id);
       // Update selectedId to last remaining or the toggled one
       if (newSet.size > 0) {
-        selectedId.value = [...newSet][newSet.size - 1]!;
+        selection.current = [...newSet][newSet.size - 1]!;
       }
     } else {
       newSet.add(id);
-      selectedId.value = id;
+      selection.current = id;
     }
-    selectedIds.value = newSet;
-    selectionAnchor.value = id;
+    selection.ids = newSet;
+    selection.anchor = id;
   }
 
   function rangeSelectTo(id: string) {
     const rows = visibleRows.value;
-    const anchorIdx = rows.findIndex((r) => r.node.id === selectionAnchor.value);
+    const anchorIdx = rows.findIndex((r) => r.node.id === selection.anchor);
     const targetIdx = rows.findIndex((r) => r.node.id === id);
     if (anchorIdx === -1 || targetIdx === -1) return;
 
@@ -1162,16 +1168,16 @@ export const useDocStore = defineStore("doc", () => {
     for (let i = start; i <= end; i++) {
       newSet.add(rows[i]!.node.id);
     }
-    selectedIds.value = newSet;
-    selectedId.value = id;
+    selection.ids = newSet;
+    selection.current = id;
   }
 
   function isSelected(id: string): boolean {
-    return selectedIds.value.has(id);
+    return selection.ids.has(id);
   }
 
   function bulkSetStatus(status: Status) {
-    for (const id of selectedIds.value) {
+    for (const id of selection.ids) {
       const op = makeOp("setStatus", { type: "setStatus", id, status });
       dispatch(op);
     }
@@ -1179,7 +1185,7 @@ export const useDocStore = defineStore("doc", () => {
 
   function bulkTombstone() {
     const rows = visibleRows.value;
-    const ids = selectedIds.value;
+    const ids = selection.ids;
     // Find first row after selection for focus
     // Find a row to focus after deletion: prefer first non-selected row after the last selected
     let lastSelectedIdx = -1;
@@ -1207,22 +1213,22 @@ export const useDocStore = defineStore("doc", () => {
     if (nextId) {
       selectNode(nextId);
     } else {
-      selectedIds.value = new Set();
+      selection.ids = new Set();
     }
   }
 
   function startEditing(id: string, trigger: "keyboard" | "click" | "dblclick" = "keyboard") {
-    editingTrigger.value = trigger;
-    editingFocusBody.value = false;
-    editingCursorColumn.value = null;
-    editingId.value = id;
+    editing.trigger = trigger;
+    editing.focusBody = false;
+    editing.cursorColumn = null;
+    editing.id = id;
   }
 
   function stopEditing() {
-    editingId.value = null;
-    editingTrigger.value = null;
-    editingFocusBody.value = false;
-    editingCursorColumn.value = null;
+    editing.id = null;
+    editing.trigger = null;
+    editing.focusBody = false;
+    editing.cursorColumn = null;
   }
 
   function setViewMode(mode: ViewMode) {
@@ -1377,9 +1383,9 @@ export const useDocStore = defineStore("doc", () => {
     // Select first child
     const firstChild = getChildren(rootId.value);
     if (firstChild.length > 0) {
-      selectedId.value = firstChild[0]!.id;
+      selection.current = firstChild[0]!.id;
     }
-    editingId.value = null;
+    editing.id = null;
   }
 
   function clearToEmpty() {
@@ -1397,13 +1403,13 @@ export const useDocStore = defineStore("doc", () => {
     triggerRef(nodes);
     undoStack.length = 0;
     redoStack.length = 0;
-    selectedId.value = "";
-    editingId.value = null;
-    editingTrigger.value = null;
+    selection.current = "";
+    editing.id = null;
+    editing.trigger = null;
     zoomId.value = null;
-    searchQuery.value = "";
-    tagFilter.value = null;
-    dueDateFilter.value = "all";
+    filters.search = "";
+    filters.tag = null;
+    filters.dueDate = "all";
     currentDocId.value = "";
   }
 
@@ -1413,7 +1419,7 @@ export const useDocStore = defineStore("doc", () => {
     redoStack.length = 0;
     ready.value = false;
     zoomId.value = null;
-    searchQuery.value = "";
+    filters.search = "";
     setSeq(0);
     await init();
   }
@@ -1431,7 +1437,7 @@ export const useDocStore = defineStore("doc", () => {
     }
     // Clear zoom so node is reachable
     zoomId.value = null;
-    selectedId.value = nodeId;
+    selection.current = nodeId;
   }
 
   return {
@@ -1439,16 +1445,11 @@ export const useDocStore = defineStore("doc", () => {
     nodes,
     rootId,
     zoomId,
-    selectedId,
-    editingId,
-    editingTrigger,
-    editingFocusBody,
-    editingCursorColumn,
+    editing,
+    selection,
+    filters,
     viewMode,
     ready,
-    searchQuery,
-    tagFilter,
-    dueDateFilter,
     statusConfig,
     tagColors,
     // Computed
@@ -1500,7 +1501,6 @@ export const useDocStore = defineStore("doc", () => {
     createSiblingBelowAndEdit,
     selectNode,
     clearSelection,
-    selectedIds,
     toggleSelectNode,
     rangeSelectTo,
     isSelected,

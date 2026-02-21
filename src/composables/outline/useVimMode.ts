@@ -21,7 +21,7 @@ export function useVimMode(
   }
 
   function handleVimKey(e: KeyboardEvent): boolean {
-    if (!settings.vimMode || store.editingId) return false
+    if (!settings.vimMode || store.editing.id) return false
     if (e.ctrlKey || e.metaKey || e.altKey) return false
 
     const key = e.key
@@ -31,11 +31,11 @@ export function useVimMode(
       const combo = vimPendingKey + key
       clearVimPending()
 
-      if (combo === 'dd' && store.selectedId) {
+      if (combo === 'dd' && store.selection.current) {
         const rows = store.visibleRows
-        const idx = rows.findIndex((r) => r.node.id === store.selectedId)
+        const idx = rows.findIndex((r) => r.node.id === store.selection.current)
         const nextId = rows[idx + 1]?.node.id ?? rows[idx - 1]?.node.id ?? null
-        store.tombstone(store.selectedId)
+        store.tombstone(store.selection.current)
         if (nextId) store.selectNode(nextId)
         e.preventDefault()
         return true
@@ -49,16 +49,16 @@ export function useVimMode(
         e.preventDefault()
         return true
       }
-      if (combo === 'zc' && store.selectedId) {
-        const node = store.nodes.get(store.selectedId)
+      if (combo === 'zc' && store.selection.current) {
+        const node = store.nodes.get(store.selection.current)
         if (node && store.getChildren(node.id).length > 0 && !node.collapsed) {
           store.toggleCollapsed(node.id)
         }
         e.preventDefault()
         return true
       }
-      if (combo === 'zo' && store.selectedId) {
-        const node = store.nodes.get(store.selectedId)
+      if (combo === 'zo' && store.selection.current) {
+        const node = store.nodes.get(store.selection.current)
         if (node && node.collapsed) {
           store.toggleCollapsed(node.id)
         }
@@ -90,15 +90,15 @@ export function useVimMode(
       return true
     }
     if (key === 'i') {
-      if (store.selectedId) {
-        store.startEditing(store.selectedId, 'keyboard')
+      if (store.selection.current) {
+        store.startEditing(store.selection.current, 'keyboard')
         e.preventDefault()
       }
       return true
     }
     if (key === 'o') {
-      if (store.selectedId) {
-        const node = store.nodes.get(store.selectedId)
+      if (store.selection.current) {
+        const node = store.nodes.get(store.selection.current)
         if (node) {
           const siblings = store.getChildren(node.parentId!)
           const idx = siblings.findIndex((s) => s.id === node.id)

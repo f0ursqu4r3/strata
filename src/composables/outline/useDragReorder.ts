@@ -15,9 +15,9 @@ export function useDragReorder(
 
   const dragRootIds = computed(() => {
     if (!dragNodeId.value) return [] as string[]
-    if (store.selectedIds.size > 1 && store.selectedIds.has(dragNodeId.value)) {
+    if (store.selection.ids.size > 1 && store.selection.ids.has(dragNodeId.value)) {
       return store.visibleRows
-        .filter((r) => store.selectedIds.has(r.node.id))
+        .filter((r) => store.selection.ids.has(r.node.id))
         .map((r) => r.node.id)
     }
     return [dragNodeId.value]

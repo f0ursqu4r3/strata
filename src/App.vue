@@ -71,7 +71,7 @@ function openTagFilter() {
 }
 
 function applyTagFilter(tag: string | null) {
-  store.tagFilter = tag;
+  store.filters.tag = tag;
   showTagFilter.value = false;
 }
 
@@ -278,14 +278,14 @@ async function onWorkspaceSelected() {
 }
 
 function onGlobalKeydown(e: KeyboardEvent) {
-  if (e.key === "?" && !store.editingId && !(e.target instanceof HTMLInputElement)) {
+  if (e.key === "?" && !store.editing.id && !(e.target instanceof HTMLInputElement)) {
     showShortcuts.value = !showShortcuts.value;
     e.preventDefault();
   }
   const searchDef = settings.resolvedShortcuts.find((s) => s.action === "globalSearch");
   if (searchDef && matchesCombo(e, searchDef.combo)) {
     showGlobalSearch.value = !showGlobalSearch.value;
-    store.searchQuery = "";
+    store.filters.search = "";
     e.preventDefault();
   }
   const paletteDef = settings.resolvedShortcuts.find((s) => s.action === "commandPalette");
@@ -426,17 +426,17 @@ function onZoomRoot() {
           <button
             class="flex items-center gap-1 px-1.5 py-1 rounded-md border text-[12px] cursor-pointer"
             :class="
-              store.tagFilter
+              store.filters.tag
                 ? 'border-(--accent-500) bg-(--accent-50) text-(--accent-700)'
                 : 'border-(--border-secondary) text-(--text-muted) hover:text-(--text-secondary) bg-(--bg-tertiary)'
             "
             @click="openTagFilter"
           >
             <Tag class="w-3 h-3" />
-            <span v-if="store.tagFilter">{{ store.tagFilter }}</span>
+            <span v-if="store.filters.tag">{{ store.filters.tag }}</span>
             <span v-else>Tags</span>
             <button
-              v-if="store.tagFilter"
+              v-if="store.filters.tag"
               class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
               @click.stop="applyTagFilter(null)"
             >
@@ -459,7 +459,7 @@ function onZoomRoot() {
             <div class="max-h-52 overflow-y-auto py-1">
               <button
                 class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
-                :class="!store.tagFilter ? 'text-(--accent-600) font-medium' : 'text-(--text-secondary)'"
+                :class="!store.filters.tag ? 'text-(--accent-600) font-medium' : 'text-(--text-secondary)'"
                 @click="applyTagFilter(null)"
               >
                 All
@@ -468,7 +468,7 @@ function onZoomRoot() {
                 v-for="tag in filteredTags"
                 :key="tag"
                 class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer flex items-center gap-2"
-                :class="store.tagFilter === tag ? 'text-(--accent-600) font-medium bg-(--bg-hover)' : 'text-(--text-secondary)'"
+                :class="store.filters.tag === tag ? 'text-(--accent-600) font-medium bg-(--bg-hover)' : 'text-(--text-secondary)'"
                 @click="applyTagFilter(tag)"
               >
                 <span
@@ -494,19 +494,19 @@ function onZoomRoot() {
           <button
             class="flex items-center gap-1 px-1.5 py-1 rounded-md border text-[12px] cursor-pointer"
             :class="
-              store.dueDateFilter !== 'all'
+              store.filters.dueDate !== 'all'
                 ? 'border-(--accent-500) bg-(--accent-50) text-(--accent-700)'
                 : 'border-(--border-secondary) text-(--text-muted) hover:text-(--text-secondary) bg-(--bg-tertiary)'
             "
             @click="showDueDateFilter = !showDueDateFilter"
           >
             <Calendar class="w-3 h-3" />
-            <span v-if="store.dueDateFilter !== 'all'">{{ { overdue: 'Overdue', today: 'Today', week: 'Week' }[store.dueDateFilter] }}</span>
+            <span v-if="store.filters.dueDate !== 'all'">{{ { overdue: 'Overdue', today: 'Today', week: 'Week' }[store.filters.dueDate] }}</span>
             <span v-else>Due</span>
             <button
-              v-if="store.dueDateFilter !== 'all'"
+              v-if="store.filters.dueDate !== 'all'"
               class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
-              @click.stop="store.dueDateFilter = 'all'; showDueDateFilter = false"
+              @click.stop="store.filters.dueDate = 'all'; showDueDateFilter = false"
             >
               <X class="w-3 h-3" />
             </button>
@@ -524,8 +524,8 @@ function onZoomRoot() {
               ]"
               :key="opt.key"
               class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
-              :class="store.dueDateFilter === opt.key ? 'text-(--accent-600) font-medium bg-(--bg-hover)' : 'text-(--text-secondary)'"
-              @click="store.dueDateFilter = opt.key as 'all' | 'overdue' | 'today' | 'week'; showDueDateFilter = false"
+              :class="store.filters.dueDate === opt.key ? 'text-(--accent-600) font-medium bg-(--bg-hover)' : 'text-(--text-secondary)'"
+              @click="store.filters.dueDate = opt.key as 'all' | 'overdue' | 'today' | 'week'; showDueDateFilter = false"
             >
               {{ opt.label }}
             </button>

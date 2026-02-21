@@ -34,7 +34,7 @@ const baseMenuRef = ref<InstanceType<typeof BaseContextMenu> | null>(null)
 const showStatusSub = ref(false)
 const showDatePicker = ref(false)
 
-const isMultiSelect = computed(() => store.selectedIds.size > 1 && store.selectedIds.has(props.nodeId))
+const isMultiSelect = computed(() => store.selection.ids.size > 1 && store.selection.ids.has(props.nodeId))
 
 // Flip submenus to open left if near right edge
 const subLeft = ref(false)
@@ -187,7 +187,7 @@ function onHistory() {
     <UiMenuDivider />
 
     <UiMenuItem :icon="Trash2" danger @click="onDelete">
-      {{ isMultiSelect ? `Delete ${store.selectedIds.size} items` : 'Delete' }}
+      {{ isMultiSelect ? `Delete ${store.selection.ids.size} items` : 'Delete' }}
     </UiMenuItem>
   </BaseContextMenu>
 </template>

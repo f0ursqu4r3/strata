@@ -25,7 +25,7 @@ const store = useDocStore();
 const settings = useSettingsStore();
 
 const isSelected = computed(() => store.isSelected(props.node.id));
-const isEditing = computed(() => store.editingId === props.node.id);
+const isEditing = computed(() => store.editing.id === props.node.id);
 const hasChildren = computed(() => store.getChildren(props.node.id).length > 0);
 const nodeDueUrgency = computed(() => dueDateUrgency(props.node.dueDate));
 const nodeDueLabel = computed(() =>
@@ -34,7 +34,7 @@ const nodeDueLabel = computed(() =>
 const isSearchMatch = computed(() => {
   const matches = store.searchMatchIds;
   if (!matches) return false;
-  const q = store.searchQuery.trim().toLowerCase();
+  const q = store.filters.search.trim().toLowerCase();
   return q !== "" && props.node.text.toLowerCase().includes(q);
 });
 
@@ -119,7 +119,7 @@ function onRowPointerDown(e: PointerEvent) {
     :class="{
       'bg-(--bg-active)': isSelected && !isEditing,
       'bg-(--bg-editing)': isEditing,
-      'ring-1 ring-(--accent-300)': isSelected && store.selectedIds.size > 1 && !isEditing,
+      'ring-1 ring-(--accent-300)': isSelected && store.selection.ids.size > 1 && !isEditing,
       'ring-1 ring-(--highlight-search-ring) bg-(--highlight-search-bg)':
         isSearchMatch && !isSelected && !isEditing,
     }"

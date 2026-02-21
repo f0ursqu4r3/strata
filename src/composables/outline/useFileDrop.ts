@@ -27,8 +27,8 @@ export function useFileDrop(dragNodeId: Ref<string | null>) {
     const { parseMarkdownImport, parseOPMLImport, parsePlainTextImport, flattenImportNodes } =
       await import('@/lib/import-formats')
 
-    const targetParentId = store.selectedId
-      ? (store.nodes.get(store.selectedId)?.parentId ?? store.effectiveZoomId)
+    const targetParentId = store.selection.current
+      ? (store.nodes.get(store.selection.current)?.parentId ?? store.effectiveZoomId)
       : store.effectiveZoomId
     const defaultStatus = store.statusDefs[0]?.id ?? 'todo'
 

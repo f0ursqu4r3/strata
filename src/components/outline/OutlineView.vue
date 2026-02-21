@@ -86,12 +86,12 @@ async function onKeydown(e: KeyboardEvent) {
     return
   }
 
-  if (store.editingId) return
+  if (store.editing.id) return
 
   if (e.key === 'Escape') {
-    if (store.selectedIds.size > 1) {
-      store.selectNode(store.selectedId)
-    } else if (store.selectedId) {
+    if (store.selection.ids.size > 1) {
+      store.selectNode(store.selection.current)
+    } else if (store.selection.current) {
       store.clearSelection()
     }
     e.preventDefault()
@@ -100,14 +100,14 @@ async function onKeydown(e: KeyboardEvent) {
 
   if (handleVimKey(e)) return
 
-  if ((e.ctrlKey || e.metaKey) && store.selectedId && e.key >= '1' && e.key <= '9') {
+  if ((e.ctrlKey || e.metaKey) && store.selection.current && e.key >= '1' && e.key <= '9') {
     const idx = parseInt(e.key) - 1
     const def = store.statusDefs[idx]
     if (def) {
-      if (store.selectedIds.size > 1) {
+      if (store.selection.ids.size > 1) {
         store.bulkSetStatus(def.id)
       } else {
-        store.setStatus(store.selectedId, def.id)
+        store.setStatus(store.selection.current, def.id)
       }
       e.preventDefault()
       return
@@ -129,8 +129,8 @@ async function onKeydown(e: KeyboardEvent) {
       scrollSelectedIntoView()
       break
     case 'startEditing':
-      if (store.selectedId) {
-        store.startEditing(store.selectedId, 'keyboard')
+      if (store.selection.current) {
+        store.startEditing(store.selection.current, 'keyboard')
         e.preventDefault()
       } else if (store.visibleRows.length === 0) {
         e.preventDefault()
@@ -152,21 +152,21 @@ async function onKeydown(e: KeyboardEvent) {
       scrollSelectedIntoView()
       break
     case 'delete':
-      if (store.selectedIds.size > 1) {
+      if (store.selection.ids.size > 1) {
         store.bulkTombstone()
         e.preventDefault()
-      } else if (store.selectedId) {
+      } else if (store.selection.current) {
         const rows = store.visibleRows
-        const idx = rows.findIndex((r) => r.node.id === store.selectedId)
+        const idx = rows.findIndex((r) => r.node.id === store.selection.current)
         const nextId = rows[idx + 1]?.node.id ?? rows[idx - 1]?.node.id ?? null
-        store.tombstone(store.selectedId)
+        store.tombstone(store.selection.current)
         if (nextId) store.selectNode(nextId)
         e.preventDefault()
       }
       break
     case 'toggleCollapse':
-      if (store.selectedId) {
-        const node = store.nodes.get(store.selectedId)
+      if (store.selection.current) {
+        const node = store.nodes.get(store.selection.current)
         if (node && store.getChildren(node.id).length > 0) {
           store.toggleCollapsed(node.id)
           e.preventDefault()
@@ -174,8 +174,8 @@ async function onKeydown(e: KeyboardEvent) {
       }
       break
     case 'zoomIn':
-      if (store.selectedId) {
-        store.zoomIn(store.selectedId)
+      if (store.selection.current) {
+        store.zoomIn(store.selection.current)
         e.preventDefault()
       }
       break
@@ -190,7 +190,7 @@ async function onKeydown(e: KeyboardEvent) {
 function onContainerClick(e: MouseEvent) {
   const target = e.target as HTMLElement
   if (target.closest('[data-row-idx]')) return
-  if (store.selectedId || store.selectedIds.size > 0) {
+  if (store.selection.current || store.selection.ids.size > 0) {
     store.clearSelection()
   }
 }
@@ -214,7 +214,7 @@ async function onContainerDblClick(e: MouseEvent) {
 function scrollSelectedIntoView() {
   nextTick(() => {
     if (useVirtual.value) {
-      const idx = store.visibleRows.findIndex((r) => r.node.id === store.selectedId)
+      const idx = store.visibleRows.findIndex((r) => r.node.id === store.selection.current)
       if (idx >= 0 && containerRef.value) {
         const rowTop = idx * ROW_HEIGHT
         const rowBottom = rowTop + ROW_HEIGHT
@@ -234,7 +234,7 @@ function scrollSelectedIntoView() {
 }
 
 watch(
-  () => store.selectedId,
+  () => store.selection.current,
   () => {
     scrollSelectedIntoView()
   },

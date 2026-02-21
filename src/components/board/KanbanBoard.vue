@@ -127,11 +127,11 @@ function childCount(node: Node): number {
                 class="group/card bg-(--bg-secondary) border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color] hover:border-(--border-hover) hover:shadow-sm active:cursor-grabbing select-none"
                 :class="{
                   'border-(--accent-500) shadow-[0_0_0_1px_var(--accent-500)]':
-                    store.selectedId === node.id && dragNodeId !== node.id,
+                    store.selection.current === node.id && dragNodeId !== node.id,
                   'opacity-30! border-dashed! border-(--border-secondary)! shadow-none! cursor-grabbing!':
                     dragNodeId === node.id,
                   'border-(--border-primary)':
-                    store.selectedId !== node.id && dragNodeId !== node.id,
+                    store.selection.current !== node.id && dragNodeId !== node.id,
                 }"
                 @pointerdown="onCardPointerDown($event, node)"
                 @click="onCardClick(node)"

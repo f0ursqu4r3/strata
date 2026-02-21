@@ -62,14 +62,14 @@ export function useCommandPalette(emit: {
     )
 
     // Node operations (only when a node is selected)
-    if (store.selectedId) {
+    if (store.selection.current) {
       items.push(
-        { id: 'zoom-in', label: 'Zoom Into Node', category: 'Node', shortcut: shortcutMap.get('zoomIn'), execute: () => store.zoomIn(store.selectedId) },
+        { id: 'zoom-in', label: 'Zoom Into Node', category: 'Node', shortcut: shortcutMap.get('zoomIn'), execute: () => store.zoomIn(store.selection.current) },
         { id: 'zoom-out', label: 'Zoom Out', category: 'Node', shortcut: shortcutMap.get('zoomOut'), execute: () => store.zoomOut() },
-        { id: 'duplicate', label: 'Duplicate Node', category: 'Node', execute: () => store.duplicateNode(store.selectedId) },
-        { id: 'delete', label: 'Delete Node', category: 'Node', shortcut: shortcutMap.get('delete'), execute: () => store.tombstone(store.selectedId) },
+        { id: 'duplicate', label: 'Duplicate Node', category: 'Node', execute: () => store.duplicateNode(store.selection.current) },
+        { id: 'delete', label: 'Delete Node', category: 'Node', shortcut: shortcutMap.get('delete'), execute: () => store.tombstone(store.selection.current) },
         { id: 'toggle-collapse', label: 'Toggle Collapse', category: 'Node', shortcut: shortcutMap.get('toggleCollapse'), execute: () => {
-          const node = store.nodes.get(store.selectedId)
+          const node = store.nodes.get(store.selection.current)
           if (node && store.getChildren(node.id).length > 0) store.toggleCollapsed(node.id)
         }},
       )
@@ -80,7 +80,7 @@ export function useCommandPalette(emit: {
           id: `status-${s.id}`,
           label: `Set Status: ${s.label}`,
           category: 'Status',
-          execute: () => store.setStatus(store.selectedId, s.id),
+          execute: () => store.setStatus(store.selection.current, s.id),
         })
       }
     }
