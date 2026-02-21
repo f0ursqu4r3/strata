@@ -244,6 +244,38 @@ export const useDocumentsStore = defineStore("documents", () => {
     }
   }
 
+  function onFileCreated(relPath: string) {
+    if (!documents.value.find((d) => d.id === relPath)) {
+      documents.value = [
+        ...documents.value,
+        {
+          id: relPath,
+          name: relPath.replace(/\.md$/, ""),
+          createdAt: Date.now(),
+          lastModified: Date.now(),
+        },
+      ];
+    }
+  }
+
+  function onFileDeleted(relPath: string) {
+    documents.value = documents.value.filter((d) => d.id !== relPath);
+    if (activeId.value === relPath) {
+      const other = documents.value[0];
+      if (other) switchDocument(other.id);
+    }
+  }
+
+  async function onFileModified(relPath: string) {
+    if (relPath === activeId.value) {
+      const { useDocStore } = await import("@/stores/doc");
+      const docStore = useDocStore();
+      if (!docStore.hasUnsavedChanges() && !docStore.recentlyWritten()) {
+        docStore.refreshFromFile();
+      }
+    }
+  }
+
   async function setupTauriFileWatching(workspace: string) {
     const { startWatching } = await import("@/lib/tauri-fs");
     const { listen } = await import("@tauri-apps/api/event");
@@ -251,40 +283,9 @@ export const useDocumentsStore = defineStore("documents", () => {
     await startWatching(workspace);
 
     unlistenHandles.push(
-      await listen<{ relPath: string }>("fs:created", (event) => {
-        const { relPath } = event.payload;
-        if (!documents.value.find((d) => d.id === relPath)) {
-          documents.value = [
-            ...documents.value,
-            {
-              id: relPath,
-              name: relPath.replace(/\.md$/, ""),
-              createdAt: Date.now(),
-              lastModified: Date.now(),
-            },
-          ];
-        }
-      }),
-
-      await listen<{ relPath: string }>("fs:deleted", (event) => {
-        const { relPath } = event.payload;
-        documents.value = documents.value.filter((d) => d.id !== relPath);
-        if (activeId.value === relPath) {
-          const other = documents.value[0];
-          if (other) switchDocument(other.id);
-        }
-      }),
-
-      await listen<{ relPath: string }>("fs:modified", async (event) => {
-        const { relPath } = event.payload;
-        if (relPath === activeId.value) {
-          const { useDocStore } = await import("@/stores/doc");
-          const docStore = useDocStore();
-          if (!docStore.hasUnsavedChanges() && !docStore.recentlyWritten()) {
-            docStore.refreshFromFile();
-          }
-        }
-      }),
+      await listen<{ relPath: string }>("fs:created", (e) => onFileCreated(e.payload.relPath)),
+      await listen<{ relPath: string }>("fs:deleted", (e) => onFileDeleted(e.payload.relPath)),
+      await listen<{ relPath: string }>("fs:modified", (e) => onFileModified(e.payload.relPath)),
     );
   }
 
@@ -294,37 +295,9 @@ export const useDocumentsStore = defineStore("documents", () => {
     await startWatching();
 
     unlistenHandles.push(
-      onFsEvent("created", (relPath) => {
-        if (!documents.value.find((d) => d.id === relPath)) {
-          documents.value = [
-            ...documents.value,
-            {
-              id: relPath,
-              name: relPath.replace(/\.md$/, ""),
-              createdAt: Date.now(),
-              lastModified: Date.now(),
-            },
-          ];
-        }
-      }),
-
-      onFsEvent("deleted", (relPath) => {
-        documents.value = documents.value.filter((d) => d.id !== relPath);
-        if (activeId.value === relPath) {
-          const other = documents.value[0];
-          if (other) switchDocument(other.id);
-        }
-      }),
-
-      onFsEvent("modified", async (relPath) => {
-        if (relPath === activeId.value) {
-          const { useDocStore } = await import("@/stores/doc");
-          const docStore = useDocStore();
-          if (!docStore.hasUnsavedChanges() && !docStore.recentlyWritten()) {
-            docStore.refreshFromFile();
-          }
-        }
-      }),
+      onFsEvent("created", onFileCreated),
+      onFsEvent("deleted", onFileDeleted),
+      onFsEvent("modified", onFileModified),
     );
   }
 
