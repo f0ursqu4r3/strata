@@ -57,10 +57,6 @@ export function setCurrentDocId(docId: string): void {
   _currentDocId = docId
 }
 
-export function getCurrentDocId(): string {
-  return _currentDocId
-}
-
 function db(): StrataDB {
   if (!_currentDocId) throw new Error('No document selected')
   return openDocDB(_currentDocId)
@@ -111,10 +107,6 @@ export async function loadOpsAfter(seqAfter: number): Promise<Op[]> {
 
 export async function loadAllOps(): Promise<Op[]> {
   return db().ops.orderBy('seq').toArray()
-}
-
-export async function getOpCount(): Promise<number> {
-  return db().ops.count()
 }
 
 export async function loadOpsForNode(nodeId: string): Promise<Op[]> {

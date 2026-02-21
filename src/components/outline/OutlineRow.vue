@@ -169,7 +169,7 @@ function onRowPointerDown(e: PointerEvent) {
       <div
         v-if="showStatusPicker"
         ref="statusPickerRef"
-        class="absolute left-0 top-5 z-40 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg py-1 min-w-32"
+        class="strata-popup absolute left-0 top-5 z-40 py-1 min-w-32"
         role="listbox"
         aria-label="Select status"
       >
@@ -263,7 +263,7 @@ function onRowPointerDown(e: PointerEvent) {
       </span>
       <div
         v-if="showTagPicker"
-        class="absolute right-0 top-full z-40 mt-1 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2 min-w-48"
+        class="strata-popup absolute right-0 top-full z-40 mt-1 p-2 min-w-48"
       >
         <TagPicker :node-id="node.id" :tags="node.tags ?? []" />
       </div>
@@ -317,7 +317,7 @@ function onRowPointerDown(e: PointerEvent) {
         </button>
         <div
           v-if="showTagPicker"
-          class="absolute right-0 top-full z-40 mt-1 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2 min-w-48"
+          class="strata-popup absolute right-0 top-full z-40 mt-1 p-2 min-w-48"
         >
           <TagPicker :node-id="node.id" :tags="node.tags ?? []" />
         </div>

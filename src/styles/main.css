@@ -93,6 +93,14 @@ body,
   font-size: var(--strata-font-size);
 }
 
+/* ── Reusable popup/menu surface ── */
+.strata-popup {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
 /* ── Inline markdown styles ── */
 .strata-md-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;

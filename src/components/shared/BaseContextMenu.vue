@@ -26,7 +26,7 @@ defineExpose({ menuRef })
   <Teleport to="body">
     <div
       ref="menuRef"
-      class="fixed z-50 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg py-1 text-sm"
+      class="strata-popup fixed z-50 py-1 text-sm"
       :class="minWidth ?? 'min-w-36'"
       role="menu"
       :aria-label="ariaLabel ?? 'Actions'"

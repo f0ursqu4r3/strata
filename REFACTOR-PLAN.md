@@ -39,10 +39,9 @@ Streamline and optimize codebase without losing features.
   - Extracted shared `onFileCreated`, `onFileDeleted`, `onFileModified` handlers
   - Tauri and Web setup functions now just wire up events
 
-- [ ] **Create CSS utility classes**
-  - Menu styling repeated 15+ times
-  - Button hover pattern repeated 20+ times
-  - Codify into reusable classes
+- [x] **Create CSS utility classes**
+  - Added `.strata-popup` class (bg, border, radius, shadow) to `main.css`
+  - Applied across 12 components: BaseContextMenu, ContextMenu, DatePicker, UiColorPicker, UiIconPicker, UiDropdown, OutlineRow (×3), KanbanBoard, TagPicker (×2), DocumentSettingsPanel, App (×2)
 
 - [ ] **Optimize IDB queries in `idb.ts`**
   - `loadOpsForNode()` fetches entire op log then filters

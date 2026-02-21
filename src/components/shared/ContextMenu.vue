@@ -132,7 +132,7 @@ function onHistory() {
 
       <div
         v-if="showStatusSub"
-        class="absolute top-0 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg py-1 min-w-36"
+        class="strata-popup absolute top-0 py-1 min-w-36"
         :class="subLeft ? 'right-full' : 'left-full'"
         role="menu"
         aria-label="Status options"

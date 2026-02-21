@@ -3,7 +3,7 @@ import { ref, computed, shallowRef, triggerRef, nextTick } from "vue";
 import type { Node, Op, Status, ViewMode, Snapshot, StatusDef } from "@/types";
 import { DEFAULT_STATUSES } from "@/types";
 import { makeOp, applyOp, rebuildState, setSeq } from "@/lib/ops";
-import { rankBetween, rankAfter, rankBefore, initialRank } from "@/lib/rank";
+import { rankBetween, rankAfter, initialRank } from "@/lib/rank";
 import {
   buildExportJSON,
   downloadExport as doDownloadExport,

@@ -160,7 +160,7 @@ onUnmounted(() => {
     <Teleport to="body">
       <div
         v-if="colorPickerTag"
-        class="fixed z-50 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg p-2"
+        class="strata-popup fixed z-50 p-2"
         :style="colorPickerStyle"
         @click.stop
       >
@@ -202,7 +202,7 @@ onUnmounted(() => {
     <Teleport to="body">
       <div
         v-if="showDropdown"
-        class="fixed z-50 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg overflow-hidden"
+        class="strata-popup fixed z-50 overflow-hidden"
         :style="dropdownStyle"
       >
         <button

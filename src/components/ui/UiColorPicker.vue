@@ -43,7 +43,7 @@ function select(color: string) {
     />
     <div
       v-if="open"
-      class="absolute top-full mt-1 z-10 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2 grid grid-cols-4 gap-1 w-max"
+      class="strata-popup absolute top-full mt-1 z-10 p-2 grid grid-cols-4 gap-1 w-max"
       :class="align === 'right' ? 'right-0' : 'left-0'"
     >
       <button

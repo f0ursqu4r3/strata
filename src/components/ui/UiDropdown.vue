@@ -38,7 +38,7 @@ defineExpose({ open, toggle, close })
 
     <div
       v-if="open"
-      class="absolute top-full z-50 mt-1 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg py-1"
+      class="strata-popup absolute top-full z-50 mt-1 py-1"
       :class="[width, align === 'right' ? 'right-0' : 'left-0']"
       @click="close"
     >

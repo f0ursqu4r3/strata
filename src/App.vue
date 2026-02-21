@@ -445,7 +445,7 @@ function onZoomRoot() {
           </button>
           <div
             v-if="showTagFilter"
-            class="absolute right-0 top-full z-50 mt-1 w-52 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg overflow-hidden"
+            class="strata-popup absolute right-0 top-full z-50 mt-1 w-52 overflow-hidden"
           >
             <div class="px-2 pt-2 pb-1">
               <input
@@ -513,7 +513,7 @@ function onZoomRoot() {
           </button>
           <div
             v-if="showDueDateFilter"
-            class="absolute right-0 top-full z-50 mt-1 w-40 bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg py-1"
+            class="strata-popup absolute right-0 top-full z-50 mt-1 w-40 py-1"
           >
             <button
               v-for="opt in [

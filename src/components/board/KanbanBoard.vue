@@ -227,7 +227,7 @@ function childCount(node: Node): number {
                     <div
                       v-if="editingTagsCardId === node.id"
                       data-tag-picker
-                      class="fixed z-50 bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2"
+                      class="strata-popup fixed z-50 p-2"
                       :style="tagPickerPos"
                     >
                       <TagPicker :node-id="node.id" :tags="node.tags ?? []" />

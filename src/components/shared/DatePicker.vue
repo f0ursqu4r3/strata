@@ -53,7 +53,7 @@ function onClear() {
 
 <template>
   <div
-    class="bg-(--bg-secondary) border border-(--border-secondary) rounded-lg shadow-lg p-2 min-w-48"
+    class="strata-popup p-2 min-w-48"
     @click.stop
   >
     <!-- Quick presets -->

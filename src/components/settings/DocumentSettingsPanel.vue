@@ -100,7 +100,7 @@ function pickColor(tag: string, colorKey: string | null) {
     <div
       v-if="colorPickerTag"
       ref="colorPickerRef"
-      class="bg-(--bg-secondary) border border-(--border-primary) rounded-lg shadow-lg p-2"
+      class="strata-popup p-2"
       :style="colorPickerStyle"
     >
       <div class="flex gap-1">
