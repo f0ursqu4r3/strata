@@ -149,6 +149,32 @@ fn ensure_dir(path: String) -> Result<(), String> {
     fs::create_dir_all(&path).map_err(|e| e.to_string())
 }
 
+/// List all subdirectories in a workspace, excluding hidden/ignored dirs.
+#[tauri::command]
+fn list_subdirs(workspace: String) -> Result<Vec<String>, String> {
+    let base = PathBuf::from(&workspace);
+    let mut dirs = Vec::new();
+    walk_subdirs(&base, &base, &mut dirs)?;
+    dirs.sort();
+    Ok(dirs)
+}
+
+fn walk_subdirs(base: &PathBuf, dir: &PathBuf, dirs: &mut Vec<String>) -> Result<(), String> {
+    let entries = fs::read_dir(dir).map_err(|e| e.to_string())?;
+    for entry in entries {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        if path.is_dir() && !should_skip_dir(&name) {
+            if let Ok(rel) = path.strip_prefix(base) {
+                dirs.push(rel.to_string_lossy().replace('\\', "/"));
+            }
+            walk_subdirs(base, &path, dirs)?;
+        }
+    }
+    Ok(())
+}
+
 // ── File watcher commands ──
 
 #[tauri::command]
@@ -250,6 +276,75 @@ fn start_watching(workspace: String, app_handle: AppHandle, state: tauri::State<
 }
 
 #[tauri::command]
+fn start_watching_file(path: String, app_handle: AppHandle, state: tauri::State<'_, AppState>) -> Result<(), String> {
+    // Stop any existing watcher first
+    {
+        let mut w = state.watcher.lock().map_err(|e| e.to_string())?;
+        *w = None;
+    }
+
+    let file_path = PathBuf::from(&path);
+    let handle = app_handle.clone();
+    let write_guard = Arc::clone(&app_handle.state::<AppState>().inner().write_guard);
+
+    let mut watcher = notify::recommended_watcher(move |res: Result<notify::Event, notify::Error>| {
+        let event = match res {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+
+        for p in &event.paths {
+            if p != &file_path {
+                continue;
+            }
+
+            // Check write guard
+            {
+                let mut guard = match write_guard.lock() {
+                    Ok(g) => g,
+                    Err(_) => continue,
+                };
+                if guard.remove(p) {
+                    continue;
+                }
+            }
+
+            let rel_path = file_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            let payload = FsEvent { rel_path };
+
+            match event.kind {
+                EventKind::Modify(_) => {
+                    let _ = handle.emit("fs:modified", &payload);
+                }
+                EventKind::Remove(_) => {
+                    let _ = handle.emit("fs:deleted", &payload);
+                }
+                _ => {}
+            }
+        }
+    })
+    .map_err(|e| e.to_string())?;
+
+    // Watch the parent directory non-recursively to catch file events
+    let parent = PathBuf::from(&path)
+        .parent()
+        .ok_or_else(|| "No parent directory".to_string())?
+        .to_path_buf();
+    watcher
+        .watch(&parent, RecursiveMode::NonRecursive)
+        .map_err(|e| e.to_string())?;
+
+    let mut w = state.watcher.lock().map_err(|e| e.to_string())?;
+    *w = Some(watcher);
+
+    Ok(())
+}
+
+#[tauri::command]
 fn stop_watching(state: tauri::State<'_, AppState>) -> Result<(), String> {
     let mut w = state.watcher.lock().map_err(|e| e.to_string())?;
     *w = None;
@@ -280,6 +375,8 @@ fn build_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // File menu
     let mut file_builder = SubmenuBuilder::new(handle, "File")
         .item(&MenuItem::with_id(handle, "new-document", "New Document", true, Some("CmdOrCtrl+N"))?)
+        .separator()
+        .item(&MenuItem::with_id(handle, "open-file", "Open File…", true, None::<&str>)?)
         .item(&MenuItem::with_id(handle, "open-workspace", "Open Workspace…", true, Some("CmdOrCtrl+O"))?);
 
     file_builder = file_builder
@@ -366,6 +463,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             list_workspace_files,
+            list_subdirs,
             read_file,
             write_file,
             delete_file,
@@ -376,6 +474,7 @@ pub fn run() {
             ensure_dir,
             mark_file_write,
             start_watching,
+            start_watching_file,
             stop_watching,
         ])
         .run(tauri::generate_context!())

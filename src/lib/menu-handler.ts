@@ -5,6 +5,7 @@ export interface MenuHandlerRefs {
   showShortcuts: Ref<boolean>
   showSettings: Ref<boolean>
   onOpenWorkspace: () => void
+  onOpenFile: () => void
 }
 
 export async function setupMenuHandler(refs: MenuHandlerRefs) {
@@ -24,6 +25,9 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
         docs.switchDocument(id).then(() => store.loadDocument(id))
         break
       }
+      case 'open-file':
+        refs.onOpenFile()
+        break
       case 'open-workspace':
         refs.onOpenWorkspace()
         break

@@ -18,3 +18,15 @@ export function setFileSystemActive(active: boolean): void {
 export function isFileSystemMode(): boolean {
   return isTauri() || _webFsActive
 }
+
+let _singleFileMode = false
+
+/** Mark single-file mode as active (a single file has been opened instead of a workspace). */
+export function setSingleFileMode(active: boolean): void {
+  _singleFileMode = active
+}
+
+/** True when the user opened a single file rather than a workspace folder. */
+export function isSingleFileMode(): boolean {
+  return _singleFileMode
+}

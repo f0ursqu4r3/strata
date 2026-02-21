@@ -13,7 +13,7 @@ import {
 } from "@/lib/doc-registry";
 import { migrateOldDB, deleteDocDB, setCurrentDocId } from "@/lib/idb";
 import { removeDocFromIndex } from "@/lib/search-index";
-import { isTauri, isFileSystemMode } from "@/lib/platform";
+import { isTauri, isFileSystemMode, isSingleFileMode } from "@/lib/platform";
 import { serializeToMarkdown } from "@/lib/markdown-serialize";
 import { DEFAULT_STATUSES } from "@/types";
 
@@ -28,6 +28,7 @@ function emptyStrataDoc(): string {
 export const useDocumentsStore = defineStore("documents", () => {
   const documents = ref<DocumentMeta[]>([]);
   const activeId = ref<string>("");
+  const folders = ref<string[]>([]);
 
   /** Generate a unique document name like "Untitled", "Untitled 2", etc. */
   function nextUntitledName(): string {
@@ -48,10 +49,39 @@ export const useDocumentsStore = defineStore("documents", () => {
   );
 
   async function init(): Promise<string> {
+    if (isSingleFileMode()) {
+      return initSingleFile();
+    }
     if (isFileSystemMode()) {
       return initFromFilesystem();
     }
     return initFromRegistry();
+  }
+
+  // ── Single-file mode ──
+
+  async function initSingleFile(): Promise<string> {
+    const { useSettingsStore } = await import("@/stores/settings");
+    const settings = useSettingsStore();
+    const filePath = settings.singleFilePath;
+    if (!filePath) return "";
+
+    // Extract filename for display
+    const fileName = filePath.includes("/")
+      ? filePath.substring(filePath.lastIndexOf("/") + 1)
+      : filePath;
+
+    const docId = fileName;
+    documents.value = [
+      {
+        id: docId,
+        name: fileName.replace(/\.md$/, ""),
+        createdAt: 0,
+        lastModified: 0,
+      },
+    ];
+    activeId.value = docId;
+    return docId;
   }
 
   // ── Web mode: localStorage registry (existing behavior) ──
@@ -117,37 +147,67 @@ export const useDocumentsStore = defineStore("documents", () => {
     }));
     activeId.value = files[0] ?? "";
 
+    await loadFolders();
+
     return activeId.value;
   }
 
-  function createDocument(name: string): string {
+  function createDocument(name: string, folder?: string): string {
     if (isFileSystemMode()) {
-      return createDocumentFile(name);
+      return createDocumentFile(name, folder);
     }
     const meta = addDoc(name);
     documents.value = loadRegistry().documents;
     return meta.id;
   }
 
-  function createDocumentFile(name: string): string {
-    const filename = `${name}.md`;
+  function createDocumentFile(name: string, folder?: string): string {
+    const relPath = folder ? `${folder}/${name}.md` : `${name}.md`;
+    const displayName = folder ? `${folder}/${name}` : name;
     // Write is async but we return the id synchronously; the file will be created when the doc store inits
-    import("@/lib/fs").then(({ writeFile }) => {
+    import("@/lib/fs").then(({ writeFile, ensureDir }) => {
       import("@/stores/settings").then(({ useSettingsStore }) => {
         const settings = useSettingsStore();
-        writeFile(`${settings.workspacePath}/${filename}`, emptyStrataDoc());
+        const promise = folder
+          ? ensureDir(`${settings.workspacePath}/${folder}`)
+          : Promise.resolve();
+        promise.then(() => {
+          writeFile(`${settings.workspacePath}/${relPath}`, emptyStrataDoc());
+        });
       });
     });
     documents.value = [
       ...documents.value,
       {
-        id: filename,
-        name,
+        id: relPath,
+        name: displayName,
         createdAt: Date.now(),
         lastModified: Date.now(),
       },
     ];
-    return filename;
+    return relPath;
+  }
+
+  async function loadFolders(): Promise<void> {
+    if (!isFileSystemMode() || isSingleFileMode()) return;
+    const { useSettingsStore } = await import("@/stores/settings");
+    const settings = useSettingsStore();
+    if (!settings.workspacePath) return;
+    try {
+      const { listSubdirs } = await import("@/lib/fs");
+      folders.value = await listSubdirs(settings.workspacePath);
+    } catch (err) {
+      console.error("[strata] Failed to list subdirs:", err);
+      folders.value = [];
+    }
+  }
+
+  async function createFolder(folderPath: string): Promise<void> {
+    const { ensureDir } = await import("@/lib/fs");
+    const { useSettingsStore } = await import("@/stores/settings");
+    const settings = useSettingsStore();
+    await ensureDir(`${settings.workspacePath}/${folderPath}`);
+    await loadFolders();
   }
 
   async function switchDocument(docId: string): Promise<void> {
@@ -236,11 +296,32 @@ export const useDocumentsStore = defineStore("documents", () => {
 
   let unlistenHandles: Array<() => void> = [];
 
-  async function setupFileWatching(workspace: string) {
+  async function setupFileWatching(pathOrWorkspace: string) {
+    if (isSingleFileMode()) {
+      await setupSingleFileWatching(pathOrWorkspace);
+      return;
+    }
     if (isTauri()) {
-      await setupTauriFileWatching(workspace);
+      await setupTauriFileWatching(pathOrWorkspace);
     } else {
       await setupWebFileWatching();
+    }
+  }
+
+  async function setupSingleFileWatching(filePath: string) {
+    if (isTauri()) {
+      const { startWatchingFile } = await import("@/lib/tauri-fs");
+      const { listen } = await import("@tauri-apps/api/event");
+      await startWatchingFile(filePath);
+      unlistenHandles.push(
+        await listen<{ relPath: string }>("fs:modified", (e) => onFileModified(e.payload.relPath)),
+      );
+    } else {
+      const { startWatchingSingleFile, onFsEvent } = await import("@/lib/web-fs");
+      await startWatchingSingleFile();
+      unlistenHandles.push(
+        onFsEvent("modified", onFileModified),
+      );
     }
   }
 
@@ -313,6 +394,7 @@ export const useDocumentsStore = defineStore("documents", () => {
   return {
     documents,
     activeId,
+    folders,
     sortedDocuments,
     init,
     createDocument,
@@ -322,6 +404,8 @@ export const useDocumentsStore = defineStore("documents", () => {
     nextUntitledName,
     deleteDocument,
     touch,
+    loadFolders,
+    createFolder,
     setupFileWatching,
     teardownFileWatching,
   };

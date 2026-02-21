@@ -17,6 +17,8 @@ const LEGACY_THEME_MAP: Record<string, string> = {
   monochrome: 'github-light',
 }
 
+export type OpenMode = 'folder' | 'single-file'
+
 interface PersistedSettings {
   theme: string
   fontSize: number
@@ -27,6 +29,8 @@ interface PersistedSettings {
   shortcuts?: Record<string, KeyCombo>
   workspacePath?: string
   vimMode?: boolean
+  openMode?: OpenMode
+  singleFilePath?: string
 }
 
 function loadSettings(): { theme: string; fontSize: number; showTags: boolean; showBoardTags: boolean; sidebarOpen: boolean; shortcuts: Record<string, KeyCombo>; workspacePath: string; vimMode: boolean } {
@@ -49,7 +53,7 @@ function loadSettings(): { theme: string; fontSize: number; showTags: boolean; s
       const valid = themeRegistry.some((t) => t.key === themeKey)
       if (!valid) themeKey = 'github-light'
 
-      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, showBoardTags: parsed.showBoardTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false, shortcuts: parsed.shortcuts ?? {}, workspacePath: parsed.workspacePath ?? '', vimMode: parsed.vimMode ?? false }
+      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, showBoardTags: parsed.showBoardTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false, shortcuts: parsed.shortcuts ?? {}, workspacePath: parsed.workspacePath ?? '', vimMode: parsed.vimMode ?? false, openMode: parsed.openMode ?? 'folder', singleFilePath: parsed.singleFilePath ?? '' }
     }
   } catch {
     // ignore
@@ -66,6 +70,8 @@ function loadSettings(): { theme: string; fontSize: number; showTags: boolean; s
     shortcuts: {},
     workspacePath: '',
     vimMode: false,
+    openMode: 'folder' as OpenMode,
+    singleFilePath: '',
   }
 }
 
@@ -79,6 +85,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const shortcutOverrides = ref<Record<string, KeyCombo>>(saved.shortcuts)
   const workspacePath = ref(saved.workspacePath)
   const vimMode = ref(saved.vimMode)
+  const openMode = ref<OpenMode>(saved.openMode)
+  const singleFilePath = ref(saved.singleFilePath)
 
   const resolvedShortcuts = computed<ShortcutDef[]>(() => {
     return DEFAULT_SHORTCUTS.map((def) => {
@@ -102,6 +110,8 @@ export const useSettingsStore = defineStore('settings', () => {
         shortcuts: shortcutOverrides.value,
         workspacePath: workspacePath.value,
         vimMode: vimMode.value,
+        openMode: openMode.value,
+        singleFilePath: singleFilePath.value,
       }),
     )
   }
@@ -175,12 +185,22 @@ export const useSettingsStore = defineStore('settings', () => {
     persist()
   }
 
+  function setOpenMode(mode: OpenMode) {
+    openMode.value = mode
+    persist()
+  }
+
+  function setSingleFilePath(path: string) {
+    singleFilePath.value = path
+    persist()
+  }
+
   function init() {
     applyTheme()
     applyFontSize()
   }
 
-  watch([theme, fontSize, showTags, showBoardTags, sidebarOpen, shortcutOverrides, workspacePath, vimMode], persist)
+  watch([theme, fontSize, showTags, showBoardTags, sidebarOpen, shortcutOverrides, workspacePath, vimMode, openMode, singleFilePath], persist)
 
   return {
     theme,
@@ -199,10 +219,14 @@ export const useSettingsStore = defineStore('settings', () => {
     vimMode,
     setVimMode,
     workspacePath,
+    openMode,
+    singleFilePath,
     updateShortcut,
     resetShortcut,
     resetAllShortcuts,
     setWorkspacePath,
+    setOpenMode,
+    setSingleFilePath,
     init,
   }
 })

@@ -4,7 +4,7 @@
  * depending on the runtime environment.
  */
 
-import { isTauri } from './platform'
+import { isTauri, isSingleFileMode } from './platform'
 import * as webFs from './web-fs'
 
 /** Public contract for all filesystem operations used by the app. */
@@ -51,12 +51,18 @@ export async function readFile(path: string): Promise<string> {
   if (isTauri()) {
     return (await import('./tauri-fs')).readFile(path)
   }
+  if (isSingleFileMode()) {
+    return webFs.readSingleFile()
+  }
   return webFs.readFile(rel(path))
 }
 
 export async function writeFile(path: string, content: string): Promise<void> {
   if (isTauri()) {
     return (await import('./tauri-fs')).writeFile(path, content)
+  }
+  if (isSingleFileMode()) {
+    return webFs.writeSingleFile(content)
   }
   return webFs.writeFile(rel(path), content)
 }
@@ -80,6 +86,13 @@ export async function ensureDir(path: string): Promise<void> {
     return (await import('./tauri-fs')).ensureDir(path)
   }
   return webFs.ensureDir(rel(path))
+}
+
+export async function listSubdirs(workspace: string): Promise<string[]> {
+  if (isTauri()) {
+    return (await import('./tauri-fs')).listSubdirs(workspace)
+  }
+  return webFs.listSubdirs()
 }
 
 export async function isGitRepo(workspace: string): Promise<boolean> {

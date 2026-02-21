@@ -11,7 +11,7 @@ import {
 } from "@/lib/doc-export";
 import { matchesDueDateFilter } from "@/lib/due-date";
 import { updateIndexForDoc } from "@/lib/search-index";
-import { isFileSystemMode } from "@/lib/platform";
+import { isFileSystemMode, isSingleFileMode } from "@/lib/platform";
 import { markAncestors } from "@/lib/tree-utils";
 import { buildCompensatingOp } from "@/lib/undo-ops";
 import { serializeToMarkdown, parseMarkdown } from "@/lib/markdown-serialize";
@@ -96,12 +96,21 @@ export const useDocStore = defineStore("doc", () => {
     return Date.now() - _lastWriteAt < WRITE_COOLDOWN;
   }
 
+  async function getFilePath(): Promise<string | null> {
+    const { useSettingsStore } = await import("@/stores/settings");
+    const settings = useSettingsStore();
+    if (isSingleFileMode()) {
+      return settings.singleFilePath || null;
+    }
+    if (!settings.workspacePath || !currentDocId.value) return null;
+    return `${settings.workspacePath}/${currentDocId.value}`;
+  }
+
   async function saveToFile() {
     if (!isFileSystemMode() || !currentDocId.value) return;
     flushTextDebounce();
-    const { useSettingsStore } = await import("@/stores/settings");
-    const settings = useSettingsStore();
-    if (!settings.workspacePath) return;
+    const filePath = await getFilePath();
+    if (!filePath) return;
     const { writeFile } = await import("@/lib/fs");
     const content = serializeToMarkdown({
       nodes: nodes.value,
@@ -109,7 +118,6 @@ export const useDocStore = defineStore("doc", () => {
       statusConfig: statusConfig.value,
       tagColors: tagColors.value,
     });
-    const filePath = `${settings.workspacePath}/${currentDocId.value}`;
     await writeFile(filePath, content);
     _lastWriteAt = Date.now();
   }
@@ -887,12 +895,10 @@ export const useDocStore = defineStore("doc", () => {
   }
 
   async function initFromFile() {
-    const { useSettingsStore } = await import("@/stores/settings");
-    const settings = useSettingsStore();
-    if (!settings.workspacePath || !currentDocId.value) return;
+    const filePath = await getFilePath();
+    if (!filePath) return;
 
     const { readFile } = await import("@/lib/fs");
-    const filePath = `${settings.workspacePath}/${currentDocId.value}`;
 
     let content = "";
     try {
@@ -947,12 +953,10 @@ export const useDocStore = defineStore("doc", () => {
   }
 
   async function refreshFromFile() {
-    const { useSettingsStore } = await import("@/stores/settings");
-    const settings = useSettingsStore();
-    if (!settings.workspacePath || !currentDocId.value) return;
+    const filePath = await getFilePath();
+    if (!filePath) return;
 
     const { readFile } = await import("@/lib/fs");
-    const filePath = `${settings.workspacePath}/${currentDocId.value}`;
 
     let content = "";
     try {

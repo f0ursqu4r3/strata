@@ -40,8 +40,16 @@ export async function ensureDir(path: string): Promise<void> {
   return invoke('ensure_dir', { path })
 }
 
+export async function listSubdirs(workspace: string): Promise<string[]> {
+  return invoke('list_subdirs', { workspace })
+}
+
 export async function startWatching(workspace: string): Promise<void> {
   return invoke('start_watching', { workspace })
+}
+
+export async function startWatchingFile(path: string): Promise<void> {
+  return invoke('start_watching_file', { path })
 }
 
 export async function stopWatching(): Promise<void> {

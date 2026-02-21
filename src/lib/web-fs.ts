@@ -6,6 +6,7 @@
 const DB_NAME = 'strata-webfs'
 const STORE_NAME = 'handles'
 const HANDLE_KEY = 'workspace'
+const FILE_HANDLE_KEY = 'single-file'
 
 // ── Directory handle management ──
 
@@ -75,6 +76,64 @@ export async function clearHandle(): Promise<void> {
   } catch {
     // ignore
   }
+}
+
+// ── Single-file handle management ──
+
+let _fileHandle: FileSystemFileHandle | null = null
+
+export function getFileHandle(): FileSystemFileHandle | null {
+  return _fileHandle
+}
+
+export async function setFileHandle(handle: FileSystemFileHandle): Promise<void> {
+  _fileHandle = handle
+  try {
+    const db = await openIDB()
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    tx.objectStore(STORE_NAME).put(handle, FILE_HANDLE_KEY)
+    await txDone(tx)
+    db.close()
+  } catch {
+    console.warn('[strata] Could not persist file handle to IndexedDB')
+  }
+}
+
+export async function restoreFileHandle(): Promise<boolean> {
+  try {
+    const db = await openIDB()
+    const tx = db.transaction(STORE_NAME, 'readonly')
+    const handle = await new Promise<FileSystemFileHandle | undefined>((resolve, reject) => {
+      const req = tx.objectStore(STORE_NAME).get(FILE_HANDLE_KEY)
+      req.onsuccess = () => resolve(req.result as FileSystemFileHandle | undefined)
+      req.onerror = () => reject(req.error)
+    })
+    db.close()
+
+    if (!handle) return false
+
+    const perm = await handle.requestPermission({ mode: 'readwrite' })
+    if (perm !== 'granted') return false
+
+    _fileHandle = handle
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function readSingleFile(): Promise<string> {
+  if (!_fileHandle) throw new Error('No file handle')
+  const file = await _fileHandle.getFile()
+  return file.text()
+}
+
+export async function writeSingleFile(content: string): Promise<void> {
+  if (!_fileHandle) throw new Error('No file handle')
+  const writable = await _fileHandle.createWritable()
+  await writable.write(content)
+  await writable.close()
+  _writeGuard.add(_fileHandle.name)
 }
 
 // ── IndexedDB helpers ──
@@ -309,6 +368,51 @@ export function stopWatching(): void {
     _pollTimer = null
   }
   _knownFiles.clear()
+}
+
+// ── Subdirectory listing ──
+
+export async function listSubdirs(): Promise<string[]> {
+  const root = ensureHandle()
+  const dirs: string[] = []
+
+  async function walk(dir: FileSystemDirectoryHandle, prefix: string) {
+    for await (const entry of dir.values()) {
+      if (entry.kind === 'directory' && !shouldSkipDir(entry.name)) {
+        const relPath = prefix ? `${prefix}/${entry.name}` : entry.name
+        dirs.push(relPath)
+        await walk(entry as FileSystemDirectoryHandle, relPath)
+      }
+    }
+  }
+
+  await walk(root, '')
+  dirs.sort()
+  return dirs
+}
+
+// ── Single-file watching via polling ──
+
+export async function startWatchingSingleFile(): Promise<void> {
+  stopWatching()
+  if (!_fileHandle) return
+
+  let lastMtime = (await _fileHandle.getFile()).lastModified
+
+  _pollTimer = setInterval(async () => {
+    if (!_fileHandle) return
+    try {
+      const file = await _fileHandle.getFile()
+      if (file.lastModified > lastMtime) {
+        if (!_writeGuard.delete(_fileHandle.name)) {
+          _eventTarget.dispatchEvent(new CustomEvent('fs:modified', { detail: _fileHandle.name }))
+        }
+        lastMtime = file.lastModified
+      }
+    } catch {
+      // Handle might have been revoked
+    }
+  }, 2000)
 }
 
 /** Scan all .md Strata files and return a map of relPath → lastModified timestamp. */

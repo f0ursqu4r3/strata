@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
-import { Plus, FileText, Trash2, X, FolderOpen } from 'lucide-vue-next'
+import { ref, computed, nextTick, provide, watch } from 'vue'
+import { Plus, X, FolderOpen, FolderPlus } from 'lucide-vue-next'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
 import { isTauri, isFileSystemMode, hasFileSystemAccess, setFileSystemActive } from '@/lib/platform'
 import { useDocumentRename } from '@/composables/sidebar/useDocumentRename'
+import { buildFolderTree } from '@/lib/folder-tree'
+import FolderTreeItem from './FolderTreeItem.vue'
 import DocumentContextMenu from './DocumentContextMenu.vue'
+import FolderContextMenu from './FolderContextMenu.vue'
 
 const emit = defineEmits<{ close: [] }>()
 const docsStore = useDocumentsStore()
@@ -18,19 +21,60 @@ const {
   renameInputRef,
   renameText,
   renameConflict,
-  baseName,
-  dirPrefix,
   startRename,
   finishRename,
   onRenameKeydown,
 } = useDocumentRename()
 
-// Context menu
-const ctxMenu = ref<{ docId: string; x: number; y: number } | null>(null)
+// Provide rename ref for tree items
+provide('renameInputRef', renameInputRef)
 
-function onDocContextMenu(e: MouseEvent, docId: string) {
-  e.preventDefault()
-  ctxMenu.value = { docId, x: e.clientX, y: e.clientY }
+// Expand/collapse state for folders — persisted per workspace
+const EXPANDED_KEY = 'strata-expanded-folders'
+
+function loadExpanded(): Set<string> {
+  try {
+    const raw = localStorage.getItem(EXPANDED_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      const wsKey = settings.workspacePath || '_default'
+      if (parsed[wsKey]) return new Set(parsed[wsKey])
+    }
+  } catch { /* ignore */ }
+  return new Set()
+}
+
+function saveExpanded(folders: Set<string>) {
+  try {
+    const raw = localStorage.getItem(EXPANDED_KEY)
+    const all = raw ? JSON.parse(raw) : {}
+    const wsKey = settings.workspacePath || '_default'
+    all[wsKey] = [...folders]
+    localStorage.setItem(EXPANDED_KEY, JSON.stringify(all))
+  } catch { /* ignore */ }
+}
+
+const expandedFolders = ref<Set<string>>(loadExpanded())
+watch(expandedFolders, (v) => saveExpanded(v))
+provide('expandedFolders', expandedFolders)
+
+// Build the folder tree from documents + folders
+const folderTree = computed(() =>
+  buildFolderTree(docsStore.sortedDocuments, docsStore.folders),
+)
+
+// Context menus
+const docCtxMenu = ref<{ docId: string; x: number; y: number } | null>(null)
+const folderCtxMenu = ref<{ folderPath: string; x: number; y: number } | null>(null)
+
+function onDocContext(e: MouseEvent, docId: string) {
+  folderCtxMenu.value = null
+  docCtxMenu.value = { docId, x: e.clientX, y: e.clientY }
+}
+
+function onFolderContext(e: MouseEvent, folderPath: string) {
+  docCtxMenu.value = null
+  folderCtxMenu.value = { folderPath, x: e.clientX, y: e.clientY }
 }
 
 function onCtxRename(docId: string) {
@@ -44,17 +88,43 @@ async function onCtxDelete(docId: string) {
   await onDelete(docId)
 }
 
-async function onCreateNew() {
+async function onCreateNew(folder?: string) {
   docStore.flushTextDebounce()
   const name = docsStore.nextUntitledName()
-  const id = docsStore.createDocument(name)
+  const id = docsStore.createDocument(name, folder)
   await docsStore.switchDocument(id)
   await docStore.loadDocument(id)
+  // Expand the target folder so the new doc is visible
+  if (folder) {
+    const newSet = new Set(expandedFolders.value)
+    newSet.add(folder)
+    expandedFolders.value = newSet
+  }
   renamingId.value = id
   renameText.value = name
   await nextTick()
   renameInputRef.value[0]?.focus()
   renameInputRef.value[0]?.select()
+}
+
+async function onCreateFolder(parentPath: string) {
+  const baseName = 'New Folder'
+  let folderName = baseName
+  let i = 2
+  const existing = new Set(docsStore.folders)
+  const fullPath = () => parentPath ? `${parentPath}/${folderName}` : folderName
+  while (existing.has(fullPath())) {
+    folderName = `${baseName} ${i}`
+    i++
+  }
+  const newPath = fullPath()
+  await docsStore.createFolder(newPath)
+  // Expand parent so the new folder is visible
+  if (parentPath) {
+    const newSet = new Set(expandedFolders.value)
+    newSet.add(parentPath)
+    expandedFolders.value = newSet
+  }
 }
 
 async function onSwitchDoc(docId: string) {
@@ -124,8 +194,15 @@ async function onDelete(docId: string, e?: MouseEvent) {
       <div class="flex items-center gap-1">
         <button
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
+          title="New folder"
+          @click="onCreateFolder('')"
+        >
+          <FolderPlus class="w-3.5 h-3.5" />
+        </button>
+        <button
+          class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New document"
-          @click="onCreateNew"
+          @click="onCreateNew()"
         >
           <Plus class="w-3.5 h-3.5" />
         </button>
@@ -139,57 +216,28 @@ async function onDelete(docId: string, e?: MouseEvent) {
       </div>
     </div>
 
-    <!-- Document list -->
+    <!-- Document tree -->
     <div class="flex-1 overflow-y-auto py-1 min-h-0">
-      <div
-        v-for="doc in docsStore.sortedDocuments"
-        :key="doc.id"
-        class="flex items-center gap-2 px-3 py-1.5 cursor-pointer text-sm transition-colors group"
-        :class="
-          doc.id === docsStore.activeId
-            ? 'bg-(--bg-active) text-(--text-primary) font-medium'
-            : 'text-(--text-secondary) hover:bg-(--bg-hover)'
-        "
-        @click="onSwitchDoc(doc.id)"
-        @dblclick="startRename(doc.id, doc.name, $event)"
-        @contextmenu="onDocContextMenu($event, doc.id)"
-      >
-        <FileText class="w-3.5 h-3.5 shrink-0 text-(--text-faint)" />
-
-        <!-- Rename input -->
-        <div v-if="renamingId === doc.id" class="flex-1 min-w-0 relative">
-          <input
-            ref="renameInputRef"
-            v-model="renameText"
-            class="w-full bg-transparent border rounded px-1 py-0.5 text-sm text-(--text-primary) outline-none focus:ring-1"
-            :class="renameConflict ? 'border-(--color-danger) focus:ring-(--color-danger)' : 'border-(--border-secondary) focus:ring-(--accent-400)'"
-            @blur="finishRename"
-            @keydown="onRenameKeydown"
-            @click.stop
-          />
-          <div v-if="renameConflict" class="absolute left-0 top-full text-[10px] text-(--color-danger) mt-0.5">
-            Name already exists
-          </div>
-        </div>
-
-        <!-- Document name -->
-        <span
-          v-else
-          class="flex-1 truncate"
-        >
-          <span v-if="dirPrefix(doc.name)" class="text-(--text-faint) text-xs">{{ dirPrefix(doc.name) }}</span>{{ baseName(doc.name) }}
-        </span>
-
-        <!-- Delete button -->
-        <button
-          v-if="renamingId !== doc.id"
-          class="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:text-(--color-danger) text-(--text-faint) cursor-pointer"
-          title="Delete document"
-          @click="onDelete(doc.id, $event)"
-        >
-          <Trash2 class="w-3 h-3" />
-        </button>
-      </div>
+      <FolderTreeItem
+        v-for="child in folderTree.children"
+        :key="child.path"
+        :node="child"
+        :depth="0"
+        :active-doc-id="docsStore.activeId"
+        :renaming-id="renamingId"
+        :rename-text="renameText"
+        :rename-conflict="renameConflict"
+        @switch-doc="onSwitchDoc"
+        @create-doc="onCreateNew"
+        @create-folder="onCreateFolder"
+        @delete-doc="onDelete"
+        @start-rename="startRename"
+        @folder-context="onFolderContext"
+        @doc-context="onDocContext"
+        @update:rename-text="renameText = $event"
+        @finish-rename="finishRename"
+        @rename-keydown="onRenameKeydown"
+      />
     </div>
 
     <!-- Workspace footer -->
@@ -219,15 +267,26 @@ async function onDelete(docId: string, e?: MouseEvent) {
       </button>
     </div>
 
-    <!-- Context menu -->
+    <!-- Document context menu -->
     <DocumentContextMenu
-      v-if="ctxMenu"
-      :doc-id="ctxMenu.docId"
-      :x="ctxMenu.x"
-      :y="ctxMenu.y"
-      @close="ctxMenu = null"
+      v-if="docCtxMenu"
+      :doc-id="docCtxMenu.docId"
+      :x="docCtxMenu.x"
+      :y="docCtxMenu.y"
+      @close="docCtxMenu = null"
       @rename="onCtxRename"
       @delete="onCtxDelete"
+    />
+
+    <!-- Folder context menu -->
+    <FolderContextMenu
+      v-if="folderCtxMenu"
+      :folder-path="folderCtxMenu.folderPath"
+      :x="folderCtxMenu.x"
+      :y="folderCtxMenu.y"
+      @close="folderCtxMenu = null"
+      @create-doc="onCreateNew"
+      @create-folder="onCreateFolder"
     />
   </div>
 </template>

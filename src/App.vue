@@ -33,7 +33,7 @@ import GlobalSearch from "@/components/overlays/GlobalSearch.vue";
 import CommandPalette from "@/components/overlays/CommandPalette.vue";
 import ShortcutEditor from "@/components/settings/ShortcutEditor.vue";
 import { matchesCombo } from "@/lib/shortcuts";
-import { isTauri, hasFileSystemAccess, isFileSystemMode, setFileSystemActive } from "@/lib/platform";
+import { isTauri, hasFileSystemAccess, isFileSystemMode, setFileSystemActive, isSingleFileMode, setSingleFileMode } from "@/lib/platform";
 import WorkspacePicker from "@/components/overlays/WorkspacePicker.vue";
 import type { ViewMode } from "@/types";
 import { tagStyle } from "@/lib/tag-colors";
@@ -115,6 +115,45 @@ onMounted(async () => {
   settings.init();
   document.addEventListener("mousedown", onGlobalClick);
 
+  // Restore single-file mode from previous session
+  if (settings.openMode === "single-file" && settings.singleFilePath) {
+    setSingleFileMode(true);
+    if (!isTauri() && hasFileSystemAccess()) {
+      const { restoreFileHandle } = await import("@/lib/web-fs");
+      const restored = await restoreFileHandle();
+      if (!restored) {
+        settings.setSingleFilePath("");
+        settings.setOpenMode("folder");
+        setSingleFileMode(false);
+        needsWorkspacePicker.value = true;
+        return;
+      }
+      setFileSystemActive(true);
+    }
+    const activeDocId = await docsStore.init();
+    if (activeDocId) {
+      await store.loadDocument(activeDocId);
+    }
+    if (isTauri()) {
+      const { setupMenuHandler, updateWindowTitle } = await import("@/lib/menu-handler");
+      await setupMenuHandler({ showShortcuts, showSettings, onOpenWorkspace: openWorkspacePicker, onOpenFile: openFilePicker });
+      const fileName = settings.singleFilePath.includes("/")
+        ? settings.singleFilePath.substring(settings.singleFilePath.lastIndexOf("/") + 1)
+        : settings.singleFilePath;
+      await updateWindowTitle(fileName);
+    }
+    // Set up single-file watching
+    if (isFileSystemMode()) {
+      try {
+        await docsStore.setupFileWatching(settings.singleFilePath);
+      } catch (err) {
+        console.warn("[strata] Single-file watching setup failed:", err);
+      }
+    }
+    document.addEventListener("keydown", onGlobalKeydown);
+    return;
+  }
+
   // In Tauri mode, auto-detect git repo or show workspace picker
   if (isTauri() && !settings.workspacePath) {
     try {
@@ -181,7 +220,7 @@ onMounted(async () => {
   // Tauri: set up native menu handler and window title
   if (isTauri()) {
     const { setupMenuHandler, updateWindowTitle } = await import("@/lib/menu-handler");
-    await setupMenuHandler({ showShortcuts, showSettings, onOpenWorkspace: openWorkspacePicker });
+    await setupMenuHandler({ showShortcuts, showSettings, onOpenWorkspace: openWorkspacePicker, onOpenFile: openFilePicker });
 
     if (settings.workspacePath) {
       await updateWindowTitle(settings.workspacePath);
@@ -223,6 +262,12 @@ onMounted(async () => {
 async function openWorkspacePicker() {
   // Tear down current file watching before switching
   await docsStore.teardownFileWatching();
+  setSingleFileMode(false);
+  needsWorkspacePicker.value = true;
+}
+
+async function openFilePicker() {
+  await docsStore.teardownFileWatching();
   needsWorkspacePicker.value = true;
 }
 
@@ -237,27 +282,37 @@ async function onWorkspaceSelected() {
       store.ready = true;
     }
   } catch (err) {
-    console.error("[strata] Failed to initialize workspace:", err);
-    // Reset filesystem mode and fall back to workspace picker
+    console.error("[strata] Failed to initialize:", err);
     setFileSystemActive(false);
+    setSingleFileMode(false);
     settings.setWorkspacePath("");
+    settings.setSingleFilePath("");
+    settings.setOpenMode("folder");
     needsWorkspacePicker.value = true;
     return;
   }
 
-  // Set up file watching in filesystem mode (non-critical)
-  if (isFileSystemMode() && settings.workspacePath) {
-    try {
-      await docsStore.setupFileWatching(settings.workspacePath);
-    } catch (err) {
-      console.warn("[strata] File watching setup failed:", err);
+  // Set up file watching
+  if (isFileSystemMode()) {
+    const watchPath = isSingleFileMode() ? settings.singleFilePath : settings.workspacePath;
+    if (watchPath) {
+      try {
+        await docsStore.setupFileWatching(watchPath);
+      } catch (err) {
+        console.warn("[strata] File watching setup failed:", err);
+      }
     }
   }
 
-  if (isTauri() && settings.workspacePath) {
-    import("@/lib/menu-handler").then(({ updateWindowTitle }) => {
-      updateWindowTitle(settings.workspacePath);
-    });
+  if (isTauri()) {
+    const titlePath = isSingleFileMode()
+      ? (settings.singleFilePath.includes("/") ? settings.singleFilePath.substring(settings.singleFilePath.lastIndexOf("/") + 1) : settings.singleFilePath)
+      : settings.workspacePath;
+    if (titlePath) {
+      import("@/lib/menu-handler").then(({ updateWindowTitle }) => {
+        updateWindowTitle(titlePath);
+      });
+    }
   }
 
   // Check git status after manual workspace selection
@@ -602,9 +657,9 @@ function onZoomRoot() {
 
     <!-- Main content with optional sidebar -->
     <div class="flex flex-1 overflow-hidden">
-      <!-- Document sidebar -->
+      <!-- Document sidebar (hidden in single-file mode) -->
       <DocumentSidebar
-        v-if="settings.sidebarOpen"
+        v-if="settings.sidebarOpen && !isSingleFileMode()"
         @close="settings.setSidebarOpen(false)"
       />
 
