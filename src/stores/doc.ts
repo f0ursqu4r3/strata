@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, reactive, computed, shallowRef, triggerRef, nextTick } from "vue";
+import { ref, shallowReactive, computed, shallowRef, triggerRef, nextTick } from "vue";
 import type { Node, Op, Status, ViewMode, Snapshot, StatusDef } from "@/types";
 import { DEFAULT_STATUSES } from "@/types";
 import { makeOp, applyOp, rebuildState, setSeq } from "@/lib/ops";
@@ -40,18 +40,18 @@ export const useDocStore = defineStore("doc", () => {
   const nodes = shallowRef<Map<string, Node>>(new Map());
   const rootId = ref<string>("");
   const zoomId = ref<string | null>(null);
-  const editing = reactive({
+  const editing = shallowReactive({
     id: null as string | null,
     trigger: null as "keyboard" | "click" | "dblclick" | null,
     focusBody: false,
     cursorColumn: null as number | null,
   });
-  const selection = reactive({
+  const selection = shallowReactive({
     current: "",
     ids: new Set<string>(),
     anchor: "",
   });
-  const filters = reactive({
+  const filters = shallowReactive({
     search: "",
     tag: null as string | null,
     dueDate: "all" as "all" | "overdue" | "today" | "week",
