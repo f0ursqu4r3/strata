@@ -7,6 +7,21 @@
 import { isTauri } from './platform'
 import * as webFs from './web-fs'
 
+/** Public contract for all filesystem operations used by the app. */
+export interface FileSystemAdapter {
+  listWorkspaceFiles(workspace: string): Promise<string[]>
+  readFile(path: string): Promise<string>
+  writeFile(path: string, content: string): Promise<void>
+  deleteFile(path: string): Promise<void>
+  renameFile(oldPath: string, newPath: string): Promise<void>
+  ensureDir(path: string): Promise<void>
+  isGitRepo(workspace: string): Promise<boolean>
+  findGitRoot(): Promise<string>
+  gitBranchName(workspace: string): Promise<string>
+  startWatching(workspace: string): Promise<void>
+  stopWatching(): Promise<void>
+}
+
 /** Strip the workspace path prefix to get a relative path for web-fs. */
 function toRelative(absPath: string, workspace: string): string {
   if (absPath.startsWith(workspace)) {

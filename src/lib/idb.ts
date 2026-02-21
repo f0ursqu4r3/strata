@@ -42,6 +42,11 @@ function openDocDB(docId: string): StrataDB {
     snapshots: 'id, seqAfter',
     meta: 'key',
   })
+  db.version(3).stores({
+    ops: 'opId, seq, ts, payload.id',
+    snapshots: 'id, seqAfter',
+    meta: 'key',
+  })
   dbCache.set(docId, db)
   return db
 }
@@ -110,8 +115,7 @@ export async function loadAllOps(): Promise<Op[]> {
 }
 
 export async function loadOpsForNode(nodeId: string): Promise<Op[]> {
-  return (await db().ops.orderBy('seq').toArray())
-    .filter(op => (op.payload as { id?: string }).id === nodeId)
+  return db().ops.where('payload.id').equals(nodeId).sortBy('seq')
 }
 
 export async function saveSnapshot(snapshot: Snapshot): Promise<void> {

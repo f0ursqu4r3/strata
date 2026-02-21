@@ -9,7 +9,7 @@ Streamline and optimize codebase without losing features.
   - [x] Extract tree-walking utils → `lib/tree-utils.ts` (35 lines)
   - [x] Move export/download logic → `lib/doc-export.ts` (67 lines)
   - [x] Extract `reconcileParsed` → `lib/reconcile.ts` (126 lines)
-  - [ ] Group scattered refs into state objects (editing, filters, selection)
+  - [ ] ~Group scattered refs into state objects~ — deferred (too invasive, every consumer would need updating)
 
 - [x] **Deduplicate `getOrderedChildren()`**
   - Was identical in `markdown-serialize.ts` and `export-formats.ts`
@@ -43,12 +43,15 @@ Streamline and optimize codebase without losing features.
   - Added `.strata-popup` class (bg, border, radius, shadow) to `main.css`
   - Applied across 12 components: BaseContextMenu, ContextMenu, DatePicker, UiColorPicker, UiIconPicker, UiDropdown, OutlineRow (×3), KanbanBoard, TagPicker (×2), DocumentSettingsPanel, App (×2)
 
-- [ ] **Optimize IDB queries in `idb.ts`**
-  - `loadOpsForNode()` fetches entire op log then filters
-  - Add IDB index on `payload.id`
+- [x] **Optimize IDB queries in `idb.ts`**
+  - Added `payload.id` index in schema v3
+  - `loadOpsForNode()` now uses indexed `where()` instead of full-table scan + JS filter
 
 ## Low Priority
 
 - [x] **Remove unused `vue-router` dependency**
-- [ ] **Audit legacy migration code** (`migrate-to-files.ts`)
-- [ ] **Formalize web-fs/tauri-fs interface** with shared TypeScript interface
+- [x] **Audit legacy migration code** (`migrate-to-files.ts`)
+  - Still actively used in `WorkspacePicker.vue` for IDB → file migration
+  - No dead code found, keeping as-is
+- [x] **Formalize web-fs/tauri-fs interface** with shared TypeScript interface
+  - Added `FileSystemAdapter` interface to `fs.ts` documenting the unified public contract
