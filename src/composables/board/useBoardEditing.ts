@@ -1,4 +1,5 @@
-import { ref, watch, nextTick, onUnmounted, type Ref } from 'vue'
+import { ref, nextTick, type Ref } from 'vue'
+import { usePickerClickOutside } from '@/composables/usePickerClickOutside'
 import { useDocStore } from '@/stores/doc'
 import { getTitle, getBody, combineText } from '@/lib/text-utils'
 import { POPOVER_OFFSET, POPOVER_PADDING } from '@/lib/constants'
@@ -115,28 +116,8 @@ export function useBoardEditing(isDragging: Ref<boolean>, editingCardId: Ref<str
     }
   }
 
-  watch(editingTagsCardId, (open) => {
-    if (open) {
-      setTimeout(() => document.addEventListener('mousedown', onTagPickerClickOutside, true), 0)
-    } else {
-      document.removeEventListener('mousedown', onTagPickerClickOutside, true)
-    }
-  })
-
-  watch(editingDateCardId, (open) => {
-    if (open) {
-      setTimeout(() => document.addEventListener('mousedown', onDatePickerClickOutside, true), 0)
-    } else {
-      document.removeEventListener('mousedown', onDatePickerClickOutside, true)
-    }
-  })
-
-  function cleanup() {
-    document.removeEventListener('mousedown', onTagPickerClickOutside, true)
-    document.removeEventListener('mousedown', onDatePickerClickOutside, true)
-  }
-
-  onUnmounted(cleanup)
+  usePickerClickOutside(editingTagsCardId, onTagPickerClickOutside)
+  usePickerClickOutside(editingDateCardId, onDatePickerClickOutside)
 
   return {
     editingCardId,

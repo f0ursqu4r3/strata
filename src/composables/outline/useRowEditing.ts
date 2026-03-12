@@ -1,4 +1,5 @@
 import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
+import { usePickerClickOutside } from '@/composables/usePickerClickOutside'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
 import { matchesCombo, type ShortcutAction } from '@/lib/shortcuts'
@@ -27,13 +28,7 @@ export function useRowEditing(
     }
   }
 
-  watch(showDatePicker, (open) => {
-    if (open) {
-      setTimeout(() => document.addEventListener('mousedown', onDatePickerClickOutside, true), 0)
-    } else {
-      document.removeEventListener('mousedown', onDatePickerClickOutside, true)
-    }
-  })
+  usePickerClickOutside(showDatePicker, onDatePickerClickOutside)
 
   function onTagPickerClickOutside(e: MouseEvent) {
     const target = e.target as HTMLElement
@@ -42,13 +37,7 @@ export function useRowEditing(
     }
   }
 
-  watch(showTagPicker, (open) => {
-    if (open) {
-      setTimeout(() => document.addEventListener('mousedown', onTagPickerClickOutside, true), 0)
-    } else {
-      document.removeEventListener('mousedown', onTagPickerClickOutside, true)
-    }
-  })
+  usePickerClickOutside(showTagPicker, onTagPickerClickOutside)
 
   // ── Status picker ──
   const showStatusPicker = ref(false)
@@ -396,8 +385,6 @@ export function useRowEditing(
   }
 
   onUnmounted(() => {
-    document.removeEventListener('mousedown', onDatePickerClickOutside, true)
-    document.removeEventListener('mousedown', onTagPickerClickOutside, true)
     document.removeEventListener('pointerdown', onClickOutsideStatus, { capture: true } as EventListenerOptions)
   })
 
