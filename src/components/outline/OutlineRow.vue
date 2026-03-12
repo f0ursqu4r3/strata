@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { OUTLINE_DEPTH_INDENT, OUTLINE_BASE_PADDING } from '@/lib/constants'
-import { ChevronRight, ChevronDown, Calendar, Tag } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import { OUTLINE_DEPTH_INDENT, OUTLINE_BASE_PADDING, TRANSITION_STATUS_FLASH, TRANSITION_BASE } from '@/lib/constants'
+import { ChevronRight, Calendar, Tag } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
 import TagPicker from '@/components/shared/TagPicker.vue'
@@ -61,6 +61,37 @@ const {
   onStatusClick,
   onPickStatus,
 } = useRowEditing(props, () => isEditing.value)
+
+const statusPulse = ref(false)
+let pulseTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  () => props.node.status,
+  () => {
+    if (pulseTimeout) clearTimeout(pulseTimeout)
+    statusPulse.value = true
+    pulseTimeout = setTimeout(() => {
+      statusPulse.value = false
+    }, TRANSITION_BASE)
+  },
+)
+
+const statusFlash = ref(false)
+let flashTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  () => props.node.status,
+  (newStatus) => {
+    const statusDef = store.statusDefs.find((s) => s.id === newStatus)
+    if (statusDef?.final) {
+      if (flashTimeout) clearTimeout(flashTimeout)
+      statusFlash.value = true
+      flashTimeout = setTimeout(() => {
+        statusFlash.value = false
+      }, TRANSITION_STATUS_FLASH + 100)
+    }
+  },
+)
 
 function onDatePickerUpdate(value: number | null) {
   store.setDueDate(props.node.id, value)
@@ -126,8 +157,9 @@ function onRowPointerDown(e: PointerEvent) {
       'ring-1 ring-(--accent-300)': isSelected && store.selection.ids.size > 1 && !isEditing,
       'ring-1 ring-(--highlight-search-ring) bg-(--highlight-search-bg)':
         isSearchMatch && !isSelected && !isEditing,
+      'bg-[color-mix(in_srgb,var(--status-done)_12%,transparent)]': statusFlash,
     }"
-    :style="{ paddingLeft: depth * OUTLINE_DEPTH_INDENT + OUTLINE_BASE_PADDING + 'px' }"
+    :style="{ paddingLeft: depth * OUTLINE_DEPTH_INDENT + OUTLINE_BASE_PADDING + 'px', transition: 'background-color 300ms ease-out' }"
     role="treeitem"
     :aria-selected="isSelected"
     :aria-expanded="hasChildren ? !node.collapsed : undefined"
@@ -147,8 +179,11 @@ function onRowPointerDown(e: PointerEvent) {
       @dblclick.stop="onBulletDblClick"
     >
       <template v-if="hasChildren">
-        <ChevronDown v-if="!node.collapsed" class="w-3.5 h-3.5" />
-        <ChevronRight v-else class="w-3.5 h-3.5" />
+        <ChevronRight
+          class="w-3.5 h-3.5 transition-transform"
+          :style="{ transitionDuration: '120ms' }"
+          :class="{ 'rotate-90': !node.collapsed }"
+        />
       </template>
       <template v-else>
         <span class="w-1.5 h-1.5 rounded-full bg-(--border-hover)" />
@@ -166,6 +201,7 @@ function onRowPointerDown(e: PointerEvent) {
         v-if="currentStatusDef"
         :is="resolveStatusIcon(currentStatusDef.icon)"
         class="w-3.5 h-3.5 cursor-pointer hover:scale-125 transition-transform"
+        :class="{ 'scale-125': statusPulse }"
         :style="{ color: currentStatusDef.color }"
       />
 

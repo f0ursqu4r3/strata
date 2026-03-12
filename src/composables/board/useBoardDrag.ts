@@ -7,10 +7,14 @@ import {
   DRAG_SHADOW_CARD,
   DRAG_SCALE,
   DRAG_TRANSITION,
+  TRANSITION_FLIP,
+  TRANSITION_FAST,
 } from '@/lib/constants'
+import { useReducedMotion } from '@/composables/useReducedMotion'
 
 export function useBoardDrag(editingCardId: Ref<string | null>) {
   const store = useDocStore()
+  const { prefersReducedMotion } = useReducedMotion()
 
   const dragNodeId = ref<string | null>(null)
   const dragOverColumn = ref<string | null>(null)
@@ -121,7 +125,25 @@ export function useBoardDrag(editingCardId: Ref<string | null>) {
       store.setStatus(dragNodeId.value, dragOverColumn.value)
     }
 
-    destroyFloatingCard()
+    if (floatingEl && !prefersReducedMotion.value && dragOverColumn.value) {
+      const colEl = document.querySelector(`[data-status-id="${dragOverColumn.value}"]`) as HTMLElement | null
+      if (colEl) {
+        const colRect = colEl.getBoundingClientRect()
+        const currentLeft = parseFloat(floatingEl.style.left)
+        const currentTop = parseFloat(floatingEl.style.top)
+        const dx = colRect.left + colRect.width / 2 - currentLeft - floatingEl.offsetWidth / 2
+        const dy = colRect.top + 60 - currentTop
+        floatingEl.style.transition = `transform ${TRANSITION_FLIP}ms ease-out, opacity ${TRANSITION_FAST}ms ease-out ${TRANSITION_FLIP - TRANSITION_FAST}ms`
+        floatingEl.style.transform = `translate(${dx}px, ${dy}px)`
+        floatingEl.style.opacity = '0'
+        setTimeout(() => destroyFloatingCard(), TRANSITION_FLIP)
+      } else {
+        destroyFloatingCard()
+      }
+    } else {
+      destroyFloatingCard()
+    }
+
     pendingDragNodeId = null
     dragNodeId.value = null
     dragOverColumn.value = null

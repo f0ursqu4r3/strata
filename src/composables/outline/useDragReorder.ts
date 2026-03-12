@@ -1,5 +1,6 @@
 import { ref, computed, onUnmounted, type Ref } from 'vue'
 import { useDocStore } from '@/stores/doc'
+import { useReducedMotion } from '@/composables/useReducedMotion'
 import { rankBefore, rankBetween, rankAfter, initialRank } from '@/lib/rank'
 import {
   DRAG_THRESHOLD,
@@ -9,6 +10,8 @@ import {
   DRAG_SHADOW_ROW,
   DRAG_BORDER_RADIUS,
   OVERLAY_Z_INDEX,
+  TRANSITION_FLIP,
+  TRANSITION_FAST,
 } from '@/lib/constants'
 
 export function useDragReorder(
@@ -17,8 +20,10 @@ export function useDragReorder(
   dropAsChildId: Ref<string | null>,
 ) {
   const store = useDocStore()
+  const { prefersReducedMotion } = useReducedMotion()
   const dragNodeId = ref<string | null>(null)
   const isDragging = ref(false)
+  const shiftedRowIndices = ref(new Set<number>())
 
   const dragRootIds = computed(() => {
     if (!dragNodeId.value) return [] as string[]
@@ -127,6 +132,19 @@ export function useDragReorder(
     } else {
       dropTargetIdx.value = targetIdx ?? store.visibleRows.length
       dropAsChildId.value = null
+    }
+
+    // Compute which rows should shift down to create a gap
+    if (dropTargetIdx.value !== null) {
+      const newShifted = new Set<number>()
+      for (let i = dropTargetIdx.value; i < store.visibleRows.length; i++) {
+        if (!dragSubtreeIds.value.has(store.visibleRows[i]!.node.id)) {
+          newShifted.add(i)
+        }
+      }
+      shiftedRowIndices.value = newShifted
+    } else {
+      shiftedRowIndices.value = new Set()
     }
   }
 
@@ -246,11 +264,30 @@ export function useDragReorder(
       }
     }
 
-    destroyFloatingRow()
+    if (floatingEl && !prefersReducedMotion.value) {
+      const targetIdx = dropTargetIdx.value ?? store.visibleRows.length - 1
+      const targetEl = containerRef.value?.querySelector(`[data-row-idx="${targetIdx}"]`) as HTMLElement | null
+      if (targetEl) {
+        const targetRect = targetEl.getBoundingClientRect()
+        const currentLeft = parseFloat(floatingEl.style.left)
+        const currentTop = parseFloat(floatingEl.style.top)
+        const dx = targetRect.left - currentLeft
+        const dy = targetRect.top - currentTop
+        floatingEl.style.transition = `transform ${TRANSITION_FLIP}ms ease-out, opacity ${TRANSITION_FAST}ms ease-out ${TRANSITION_FLIP - TRANSITION_FAST}ms`
+        floatingEl.style.transform = `translate(${dx}px, ${dy}px)`
+        floatingEl.style.opacity = '0'
+        setTimeout(() => destroyFloatingRow(), TRANSITION_FLIP)
+      } else {
+        destroyFloatingRow()
+      }
+    } else {
+      destroyFloatingRow()
+    }
     pendingDragNodeId = null
     dragNodeId.value = null
     dropTargetIdx.value = null
     dropAsChildId.value = null
+    shiftedRowIndices.value = new Set()
     isDragging.value = false
   }
 
@@ -261,5 +298,5 @@ export function useDragReorder(
     destroyFloatingRow()
   })
 
-  return { dragNodeId, isDragging, dragSubtreeIds, onRowPointerDown, onSelectStart }
+  return { dragNodeId, isDragging, dragSubtreeIds, shiftedRowIndices, onRowPointerDown, onSelectStart }
 }

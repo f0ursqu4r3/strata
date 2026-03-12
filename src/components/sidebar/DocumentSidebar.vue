@@ -11,6 +11,14 @@ import FolderTreeItem from './FolderTreeItem.vue'
 import DocumentContextMenu from './DocumentContextMenu.vue'
 import FolderContextMenu from './FolderContextMenu.vue'
 
+interface Props {
+  open?: boolean
+}
+
+withDefaults(defineProps<Props>(), {
+  open: true,
+})
+
 const emit = defineEmits<{ close: [] }>()
 const docsStore = useDocumentsStore()
 const docStore = useDocStore()
@@ -189,7 +197,16 @@ async function onDelete(docId: string, e?: MouseEvent) {
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-(--bg-secondary) border-r border-(--border-primary) w-56">
+  <div
+    class="shrink-0 overflow-hidden"
+    :style="{
+      width: '14rem',
+      marginLeft: open ? '0' : '-14rem',
+      opacity: open ? '1' : '0',
+      transition: 'margin-left 120ms ease-out, opacity 100ms ease-out',
+    }"
+  >
+    <div class="flex flex-col h-full bg-(--bg-secondary) border-r border-(--border-primary) w-56">
     <!-- Header -->
     <div class="flex items-center justify-between px-3 py-3 border-b border-(--border-primary)">
       <span class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide"
@@ -295,5 +312,6 @@ async function onDelete(docId: string, e?: MouseEvent) {
       @create-doc="onCreateNew"
       @create-folder="onCreateFolder"
     />
+    </div>
   </div>
 </template>

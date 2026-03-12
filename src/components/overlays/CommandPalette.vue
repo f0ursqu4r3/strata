@@ -25,7 +25,7 @@ const { query, selectedIdx, inputRef, resultsRef, filteredCommands, onExecute } 
     @mousedown.self="emit('close')"
   >
     <div
-      class="bg-(--bg-secondary) rounded-xl shadow-2xl w-full max-w-xl flex flex-col max-h-[60vh]"
+      class="overlay-panel bg-(--bg-secondary) rounded-xl shadow-2xl w-full max-w-xl flex flex-col max-h-[60vh]"
     >
       <!-- Input -->
       <div class="flex items-center gap-2 px-4 py-3 border-b border-(--border-primary)">
