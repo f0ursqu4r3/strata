@@ -1,0 +1,114 @@
+/* ── Reduced motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Outline row transitions (migrated from OutlineView.vue scoped) ── */
+.outline-row-enter-active,
+.outline-row-leave-active {
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+}
+.outline-row-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.outline-row-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+.outline-row-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+.outline-row-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.outline-row-move {
+  transition: transform 150ms ease-out;
+}
+/* Take leaving items out of flow so FLIP can measure correctly */
+.outline-row-leave-active {
+  position: absolute;
+  width: 100%;
+}
+
+/* ── Top overlay (command palette, global search) ─────── */
+.overlay-top-enter-active,
+.overlay-top-leave-active {
+  transition: opacity 100ms ease-out;
+}
+.overlay-top-enter-active .overlay-panel,
+.overlay-top-leave-active .overlay-panel {
+  transition: opacity 100ms ease-out, transform 100ms ease-out;
+}
+.overlay-top-enter-from,
+.overlay-top-leave-to {
+  opacity: 0;
+}
+.overlay-top-enter-from .overlay-panel,
+.overlay-top-leave-to .overlay-panel {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* ── Center overlay (UiModal) ─────────────────────────── */
+.overlay-center-enter-active,
+.overlay-center-leave-active {
+  transition: opacity 100ms ease-out;
+}
+.overlay-center-enter-active .modal-panel,
+.overlay-center-leave-active .modal-panel {
+  transition: opacity 100ms ease-out, transform 100ms ease-out;
+}
+.overlay-center-enter-from,
+.overlay-center-leave-to {
+  opacity: 0;
+}
+.overlay-center-enter-from .modal-panel,
+.overlay-center-leave-to .modal-panel {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+/* ── Right overlay (trash panel) ──────────────────────── */
+.overlay-right-enter-active,
+.overlay-right-leave-active {
+  transition: opacity 100ms ease-out;
+}
+.overlay-right-enter-active .overlay-panel,
+.overlay-right-leave-active .overlay-panel {
+  transition: opacity 100ms ease-out, transform 100ms ease-out;
+}
+.overlay-right-enter-from,
+.overlay-right-leave-to {
+  opacity: 0;
+}
+.overlay-right-enter-from .overlay-panel,
+.overlay-right-leave-to .overlay-panel {
+  opacity: 0;
+  transform: translateX(8px);
+}
+
+/* ── Kanban card FLIP ─────────────────────────────────── */
+.kanban-card-move {
+  transition: transform 150ms ease-out;
+}
+.kanban-card-enter-active,
+.kanban-card-leave-active {
+  transition: opacity 100ms ease-out, transform 100ms ease-out;
+}
+.kanban-card-enter-from,
+.kanban-card-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.kanban-card-leave-active {
+  position: absolute;
+  width: 100%;
+}

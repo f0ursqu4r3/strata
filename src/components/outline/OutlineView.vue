@@ -343,33 +343,3 @@ watch(
     </div>
   </div>
 </template>
-
-<style scoped>
-.outline-row-enter-active,
-.outline-row-leave-active {
-  transition: all 0.15s ease;
-  overflow: hidden;
-}
-.outline-row-enter-from {
-  opacity: 0;
-  max-height: 0;
-  transform: translateY(-4px);
-}
-.outline-row-enter-to {
-  opacity: 1;
-  max-height: 2rem;
-  transform: translateY(0);
-}
-.outline-row-leave-from {
-  opacity: 1;
-  max-height: 2rem;
-}
-.outline-row-leave-to {
-  opacity: 0;
-  max-height: 0;
-  transform: translateY(-4px);
-}
-.outline-row-move {
-  transition: transform 0.15s ease;
-}
-</style>
