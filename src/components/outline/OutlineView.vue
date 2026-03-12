@@ -56,7 +56,7 @@ const { useVirtual, virtualRows, topSpacer, bottomSpacer, onScroll } = useVirtua
   containerRef,
 )
 
-const { dragNodeId, dragSubtreeIds, onRowPointerDown } = useDragReorder(
+const { dragNodeId, isDragging, dragSubtreeIds, shiftedRowIndices, onRowPointerDown } = useDragReorder(
   containerRef,
   dropTargetIdx,
   dropAsChildId,
@@ -291,12 +291,15 @@ watch(
       <!-- Normal mode with transitions (suppressed during external file refresh) -->
       <TransitionGroup v-else :name="store.suppressTransitions ? '' : 'outline-row'">
         <template v-for="(row, idx) in store.visibleRows" :key="row.node.id">
-          <div v-if="dropTargetIdx === idx" class="h-0.5 bg-(--accent-500) rounded mx-2 my-px" />
           <div
             :data-row-idx="idx"
             :class="{
               'opacity-30': dragSubtreeIds.has(row.node.id),
               'ring-2 ring-(--accent-500) rounded': dropAsChildId === row.node.id,
+            }"
+            :style="{
+              transform: shiftedRowIndices.has(idx) ? 'translateY(32px)' : undefined,
+              transition: isDragging ? 'transform 150ms ease-out' : undefined,
             }"
           >
             <OutlineRow
@@ -308,11 +311,6 @@ watch(
           </div>
         </template>
       </TransitionGroup>
-
-      <div
-        v-if="dropTargetIdx === store.visibleRows.length && store.visibleRows.length > 0"
-        class="h-0.5 bg-(--accent-500) rounded mx-2 my-px"
-      />
       <div
         v-if="store.visibleRows.length === 0"
         class="p-6 text-center text-(--text-faint) text-sm"

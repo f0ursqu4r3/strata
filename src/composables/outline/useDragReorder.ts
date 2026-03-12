@@ -23,6 +23,7 @@ export function useDragReorder(
   const { prefersReducedMotion } = useReducedMotion()
   const dragNodeId = ref<string | null>(null)
   const isDragging = ref(false)
+  const shiftedRowIndices = ref(new Set<number>())
 
   const dragRootIds = computed(() => {
     if (!dragNodeId.value) return [] as string[]
@@ -131,6 +132,19 @@ export function useDragReorder(
     } else {
       dropTargetIdx.value = targetIdx ?? store.visibleRows.length
       dropAsChildId.value = null
+    }
+
+    // Compute which rows should shift down to create a gap
+    if (dropTargetIdx.value !== null) {
+      const newShifted = new Set<number>()
+      for (let i = dropTargetIdx.value; i < store.visibleRows.length; i++) {
+        if (!dragSubtreeIds.value.has(store.visibleRows[i]!.node.id)) {
+          newShifted.add(i)
+        }
+      }
+      shiftedRowIndices.value = newShifted
+    } else {
+      shiftedRowIndices.value = new Set()
     }
   }
 
@@ -273,6 +287,7 @@ export function useDragReorder(
     dragNodeId.value = null
     dropTargetIdx.value = null
     dropAsChildId.value = null
+    shiftedRowIndices.value = new Set()
     isDragging.value = false
   }
 
@@ -283,5 +298,5 @@ export function useDragReorder(
     destroyFloatingRow()
   })
 
-  return { dragNodeId, isDragging, dragSubtreeIds, onRowPointerDown, onSelectStart }
+  return { dragNodeId, isDragging, dragSubtreeIds, shiftedRowIndices, onRowPointerDown, onSelectStart }
 }
