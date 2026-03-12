@@ -654,22 +654,26 @@ function onZoomRoot() {
   <ShortcutEditor v-if="showShortcutEditor" @close="showShortcutEditor = false" />
 
   <!-- Command palette -->
-  <CommandPalette
-    v-if="showCommandPalette"
-    @close="showCommandPalette = false"
-    @openSettings="openFromPalette('settings')"
-    @openDocSettings="openFromPalette('docSettings')"
-    @openShortcuts="openFromPalette('shortcuts')"
-    @openTrash="openFromPalette('trash')"
-    @openSearch="openFromPalette('search')"
-  />
+  <Transition name="overlay-top">
+    <CommandPalette
+      v-if="showCommandPalette"
+      @close="showCommandPalette = false"
+      @openSettings="openFromPalette('settings')"
+      @openDocSettings="openFromPalette('docSettings')"
+      @openShortcuts="openFromPalette('shortcuts')"
+      @openTrash="openFromPalette('trash')"
+      @openSearch="openFromPalette('search')"
+    />
+  </Transition>
 
   <!-- Global search -->
-  <GlobalSearch
-    v-if="showGlobalSearch"
-    @close="showGlobalSearch = false"
-    @navigate="onGlobalSearchNavigate"
-  />
+  <Transition name="overlay-top">
+    <GlobalSearch
+      v-if="showGlobalSearch"
+      @close="showGlobalSearch = false"
+      @navigate="onGlobalSearchNavigate"
+    />
+  </Transition>
 </template>
 
 <style>
