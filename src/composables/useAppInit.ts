@@ -17,7 +17,6 @@ export interface AppInitOptions {
   isGitWorkspace: Ref<boolean>;
   gitBranch: Ref<string>;
   onGlobalClick: (e: MouseEvent) => void;
-  onGlobalKeydown: (e: KeyboardEvent) => void;
   openWorkspacePicker: () => Promise<void>;
   openFilePicker: () => Promise<void>;
 }
@@ -34,7 +33,6 @@ export function useAppInit(options: AppInitOptions) {
     isGitWorkspace,
     gitBranch,
     onGlobalClick,
-    onGlobalKeydown,
     openWorkspacePicker,
     openFilePicker,
   } = options;
@@ -87,7 +85,6 @@ export function useAppInit(options: AppInitOptions) {
           console.warn("[strata] Single-file watching setup failed:", err);
         }
       }
-      document.addEventListener("keydown", onGlobalKeydown);
       return;
     }
 
@@ -208,7 +205,5 @@ export function useAppInit(options: AppInitOptions) {
         });
     }
 
-    // Global ? shortcut
-    document.addEventListener("keydown", onGlobalKeydown);
   });
 }

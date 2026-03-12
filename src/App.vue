@@ -32,10 +32,10 @@ import DocumentSettingsPanel from "@/components/settings/DocumentSettingsPanel.v
 import GlobalSearch from "@/components/overlays/GlobalSearch.vue";
 import CommandPalette from "@/components/overlays/CommandPalette.vue";
 import ShortcutEditor from "@/components/settings/ShortcutEditor.vue";
-import { matchesCombo, type ShortcutDef } from "@/lib/shortcuts";
 import { isTauri, isSingleFileMode, isFileSystemMode, setFileSystemActive, setSingleFileMode } from "@/lib/platform";
 import WorkspacePicker from "@/components/overlays/WorkspacePicker.vue";
 import { useAppInit } from "@/composables/useAppInit";
+import { useGlobalKeyboard } from "@/composables/useGlobalKeyboard";
 import type { ViewMode } from "@/types";
 import { tagStyle } from "@/lib/tag-colors";
 
@@ -119,9 +119,14 @@ useAppInit({
   isGitWorkspace,
   gitBranch,
   onGlobalClick,
-  onGlobalKeydown,
   openWorkspacePicker,
   openFilePicker,
+});
+
+useGlobalKeyboard({
+  showShortcuts,
+  showGlobalSearch,
+  showCommandPalette,
 });
 
 async function openWorkspacePicker() {
@@ -192,26 +197,6 @@ async function onWorkspaceSelected() {
         }
       }).catch(() => {});
     });
-  }
-
-  document.addEventListener("keydown", onGlobalKeydown);
-}
-
-function onGlobalKeydown(e: KeyboardEvent) {
-  if (e.key === "?" && !store.editing.id && !(e.target instanceof HTMLInputElement)) {
-    showShortcuts.value = !showShortcuts.value;
-    e.preventDefault();
-  }
-  const searchDef = settings.resolvedShortcuts.find((s: ShortcutDef) => s.action === "globalSearch");
-  if (searchDef && matchesCombo(e, searchDef.combo)) {
-    showGlobalSearch.value = !showGlobalSearch.value;
-    store.filters.search = "";
-    e.preventDefault();
-  }
-  const paletteDef = settings.resolvedShortcuts.find((s: ShortcutDef) => s.action === "commandPalette");
-  if (paletteDef && matchesCombo(e, paletteDef.combo)) {
-    showCommandPalette.value = !showCommandPalette.value;
-    e.preventDefault();
   }
 }
 
