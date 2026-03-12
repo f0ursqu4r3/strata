@@ -158,12 +158,13 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
 
           <!-- Cards -->
           <div class="flex-1 overflow-y-auto px-2 pb-2 flex flex-col gap-1.5">
-            <template v-for="(node, nodeIdx) in col.nodes" :key="node.id">
-              <!-- Drop placeholder before this card -->
-              <div
-                v-if="dragOverColumn === col.def.id && dropInsertIndex === nodeIdx"
-                class="border-2 border-dashed border-(--accent-400) rounded-md h-10 bg-(--accent-50) opacity-60"
-              />
+            <TransitionGroup name="kanban-card" tag="div" class="flex flex-col gap-1.5">
+              <div v-for="(node, nodeIdx) in col.nodes" :key="node.id">
+                <!-- Drop placeholder before this card -->
+                <div
+                  v-if="dragOverColumn === col.def.id && dropInsertIndex === nodeIdx"
+                  class="border-2 border-dashed border-(--accent-400) rounded-md h-10 bg-(--accent-50) opacity-60 mb-1.5"
+                />
               <div
                 :data-card-id="node.id"
                 class="group/card bg-(--bg-secondary) border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color] hover:border-(--border-hover) hover:shadow-sm active:cursor-grabbing select-none"
@@ -340,7 +341,8 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
                   </button>
                 </div>
               </div>
-            </template>
+              </div>
+            </TransitionGroup>
 
             <!-- Drop placeholder at end of column -->
             <div
