@@ -27,8 +27,9 @@ function formatDate(ts: number | undefined): string {
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-50 flex justify-end bg-black/30" @mousedown.self="emit('close')">
-      <div class="bg-(--bg-secondary) w-full max-w-sm h-full shadow-2xl flex flex-col">
+    <Transition name="overlay-right" appear>
+      <div class="fixed inset-0 z-50 flex justify-end bg-black/30" @mousedown.self="emit('close')">
+        <div class="overlay-panel bg-(--bg-secondary) w-full max-w-sm h-full shadow-2xl flex flex-col">
         <!-- Header -->
         <div class="flex items-center justify-between px-5 py-4 border-b border-(--border-primary)">
           <div class="flex items-center gap-2">
@@ -76,7 +77,8 @@ function formatDate(ts: number | undefined): string {
             </button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
