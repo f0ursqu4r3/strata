@@ -1,8 +1,7 @@
 import { ref, computed, onUnmounted, type Ref } from 'vue'
 import { useDocStore } from '@/stores/doc'
 import type { Node } from '@/types'
-
-const DRAG_THRESHOLD = 5
+import { DRAG_THRESHOLD, OVERLAY_Z_INDEX, DRAG_SHADOW_CARD, DRAG_SCALE, DRAG_TRANSITION } from '@/lib/constants'
 
 export function useBoardDrag(editingCardId: Ref<string | null>) {
   const store = useDocStore()
@@ -87,12 +86,12 @@ export function useBoardDrag(editingCardId: Ref<string | null>) {
     clone.style.left = `${rect.left}px`
     clone.style.top = `${rect.top}px`
     clone.style.width = `${rect.width}px`
-    clone.style.zIndex = '9999'
+    clone.style.zIndex = OVERLAY_Z_INDEX
     clone.style.pointerEvents = 'none'
     clone.style.opacity = '1'
-    clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)'
-    clone.style.transform = 'scale(1.02)'
-    clone.style.transition = 'box-shadow 0.15s, transform 0.15s'
+    clone.style.boxShadow = DRAG_SHADOW_CARD
+    clone.style.transform = DRAG_SCALE
+    clone.style.transition = DRAG_TRANSITION
     clone.classList.remove('opacity-40')
     clone.removeAttribute('data-card-id')
 

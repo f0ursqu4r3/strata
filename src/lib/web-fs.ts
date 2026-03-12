@@ -3,6 +3,8 @@
  * Mirrors the interface of tauri-fs.ts using browser-native APIs.
  */
 
+import { FILE_POLL_INTERVAL, FILE_POLL_INTERVAL_FAST } from '@/lib/constants'
+
 const DB_NAME = 'strata-webfs'
 const STORE_NAME = 'handles'
 const HANDLE_KEY = 'workspace'
@@ -359,7 +361,7 @@ export async function startWatching(): Promise<void> {
     } catch {
       // Handle might have been revoked
     }
-  }, 5000)
+  }, FILE_POLL_INTERVAL)
 }
 
 export function stopWatching(): void {
@@ -412,7 +414,7 @@ export async function startWatchingSingleFile(): Promise<void> {
     } catch {
       // Handle might have been revoked
     }
-  }, 2000)
+  }, FILE_POLL_INTERVAL_FAST)
 }
 
 /** Scan all .md Strata files and return a map of relPath → lastModified timestamp. */

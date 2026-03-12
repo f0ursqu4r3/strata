@@ -1,6 +1,7 @@
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
 import { rankBetween, rankAfter } from '@/lib/rank'
+import { VIM_PENDING_TIMEOUT } from '@/lib/constants'
 
 export function useVimMode(
   emit: (event: 'openSearch') => void,
@@ -71,7 +72,7 @@ export function useVimMode(
     // Start two-key sequences
     if (key === 'd' || key === 'g' || key === 'z') {
       vimPendingKey = key
-      vimPendingTimer = setTimeout(clearVimPending, 500)
+      vimPendingTimer = setTimeout(clearVimPending, VIM_PENDING_TIMEOUT)
       e.preventDefault()
       return true
     }

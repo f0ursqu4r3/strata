@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { OUTLINE_DEPTH_INDENT, OUTLINE_BASE_PADDING } from '@/lib/constants';
 import { ChevronRight, ChevronDown, Calendar, Tag } from "lucide-vue-next";
 import { useDocStore } from "@/stores/doc";
 import { useSettingsStore } from "@/stores/settings";
@@ -123,7 +124,7 @@ function onRowPointerDown(e: PointerEvent) {
       'ring-1 ring-(--highlight-search-ring) bg-(--highlight-search-bg)':
         isSearchMatch && !isSelected && !isEditing,
     }"
-    :style="{ paddingLeft: depth * 24 + 8 + 'px' }"
+    :style="{ paddingLeft: depth * OUTLINE_DEPTH_INDENT + OUTLINE_BASE_PADDING + 'px' }"
     role="treeitem"
     :aria-selected="isSelected"
     :aria-expanded="hasChildren ? !node.collapsed : undefined"

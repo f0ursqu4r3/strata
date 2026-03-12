@@ -1,6 +1,5 @@
 import { ref, onMounted, type Ref } from 'vue'
-
-const PADDING = 8
+import { POPOVER_PADDING } from '@/lib/constants'
 
 /**
  * Adjusts a context menu's position so it stays within the viewport.
@@ -24,11 +23,11 @@ export function useMenuPosition(
     let left = x
     let top = y
 
-    if (left + rect.width > vw - PADDING) {
-      left = Math.max(PADDING, x - rect.width)
+    if (left + rect.width > vw - POPOVER_PADDING) {
+      left = Math.max(POPOVER_PADDING, x - rect.width)
     }
-    if (top + rect.height > vh - PADDING) {
-      top = Math.max(PADDING, y - rect.height)
+    if (top + rect.height > vh - POPOVER_PADDING) {
+      top = Math.max(POPOVER_PADDING, y - rect.height)
     }
 
     style.value = { left: `${left}px`, top: `${top}px` }

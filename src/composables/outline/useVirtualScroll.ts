@@ -1,10 +1,7 @@
 import { ref, computed, onMounted, onUnmounted, type Ref, type ComputedRef } from 'vue'
+import { ROW_HEIGHT, VIRTUAL_SCROLL_BUFFER, VIRTUAL_SCROLL_THRESHOLD } from '@/lib/constants'
 
-const ROW_HEIGHT = 32
-const BUFFER = 10
-const VIRTUAL_THRESHOLD = 100
-
-export { ROW_HEIGHT }
+export { ROW_HEIGHT } from '@/lib/constants'
 
 export function useVirtualScroll<T extends { node: { id: string }; depth: number }>(
   visibleRows: ComputedRef<T[]>,
@@ -17,14 +14,14 @@ export function useVirtualScroll<T extends { node: { id: string }; depth: number
     scrollTop.value = containerRef.value?.scrollTop ?? 0
   }
 
-  const useVirtual = computed(() => visibleRows.value.length > VIRTUAL_THRESHOLD)
+  const useVirtual = computed(() => visibleRows.value.length > VIRTUAL_SCROLL_THRESHOLD)
 
   const virtualRange = computed(() => {
     if (!useVirtual.value) {
       return { start: 0, end: visibleRows.value.length }
     }
-    const start = Math.max(0, Math.floor(scrollTop.value / ROW_HEIGHT) - BUFFER)
-    const visibleCount = Math.ceil(containerHeight.value / ROW_HEIGHT) + BUFFER * 2
+    const start = Math.max(0, Math.floor(scrollTop.value / ROW_HEIGHT) - VIRTUAL_SCROLL_BUFFER)
+    const visibleCount = Math.ceil(containerHeight.value / ROW_HEIGHT) + VIRTUAL_SCROLL_BUFFER * 2
     const end = Math.min(visibleRows.value.length, start + visibleCount)
     return { start, end }
   })

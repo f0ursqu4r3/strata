@@ -1,8 +1,7 @@
 import { ref, computed, onUnmounted, type Ref } from 'vue'
 import { useDocStore } from '@/stores/doc'
 import { rankBefore, rankBetween, rankAfter, initialRank } from '@/lib/rank'
-
-const DRAG_THRESHOLD = 5
+import { DRAG_THRESHOLD, DROP_ZONE_BEFORE, DROP_ZONE_AFTER, DRAG_OPACITY, DRAG_SHADOW_ROW, DRAG_BORDER_RADIUS, OVERLAY_Z_INDEX } from '@/lib/constants'
 
 export function useDragReorder(
   containerRef: Ref<HTMLElement | null>,
@@ -104,11 +103,11 @@ export function useDragReorder(
         targetIdx = idx
         break
       }
-      if (y < h * 0.25) {
+      if (y < h * DROP_ZONE_BEFORE) {
         targetIdx = idx
         break
       }
-      if (y < h * 0.75) {
+      if (y < h * DROP_ZONE_AFTER) {
         childId = rowNode!.id
         break
       }
@@ -147,12 +146,12 @@ export function useDragReorder(
     wrapper.style.left = `${firstRect.left}px`
     wrapper.style.top = `${firstRect.top}px`
     wrapper.style.width = `${firstRect.width}px`
-    wrapper.style.zIndex = '9999'
+    wrapper.style.zIndex = OVERLAY_Z_INDEX
     wrapper.style.pointerEvents = 'none'
-    wrapper.style.opacity = '0.9'
-    wrapper.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)'
+    wrapper.style.opacity = DRAG_OPACITY
+    wrapper.style.boxShadow = DRAG_SHADOW_ROW
     wrapper.style.background = 'var(--bg-secondary)'
-    wrapper.style.borderRadius = '4px'
+    wrapper.style.borderRadius = DRAG_BORDER_RADIUS
     wrapper.style.overflow = 'hidden'
 
     for (const src of sources) {

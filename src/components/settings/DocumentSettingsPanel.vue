@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, type CSSProperties } from 'vue'
+import { OVERLAY_Z_INDEX } from '@/lib/constants'
 import { Settings2 } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
 import { useDocStore } from '@/stores/doc'
@@ -35,7 +36,7 @@ function toggleColorPicker(tag: string, e: MouseEvent) {
   if (top + popoverHeight > window.innerHeight - 8) {
     top = rect.top - popoverHeight - 4
   }
-  colorPickerStyle.value = { position: 'fixed', left: `${left}px`, top: `${top}px`, zIndex: 9999 }
+  colorPickerStyle.value = { position: 'fixed', left: `${left}px`, top: `${top}px`, zIndex: OVERLAY_Z_INDEX }
   colorPickerTag.value = tag
 }
 

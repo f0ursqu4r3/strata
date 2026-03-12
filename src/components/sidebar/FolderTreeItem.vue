@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { inject, type Ref } from 'vue'
+import { SIDEBAR_DEPTH_INDENT, SIDEBAR_BASE_PADDING } from '@/lib/constants'
 import { ChevronRight, Folder, FolderOpen, FileText, Plus, Trash2, FolderPlus } from 'lucide-vue-next'
 import type { FolderTreeNode } from '@/lib/folder-tree'
 
@@ -49,7 +50,7 @@ function toggleExpand() {
   <template v-if="node.type === 'folder'">
     <div
       class="flex items-center gap-1.5 py-1.5 cursor-pointer text-sm transition-colors text-(--text-secondary) hover:bg-(--bg-hover) group"
-      :style="{ paddingLeft: `${depth * 16 + 12}px` }"
+      :style="{ paddingLeft: `${depth * SIDEBAR_DEPTH_INDENT + SIDEBAR_BASE_PADDING}px` }"
       @click="toggleExpand"
       @contextmenu.prevent="emit('folder-context', $event, node.path)"
     >
@@ -111,7 +112,7 @@ function toggleExpand() {
           ? 'bg-(--bg-active) text-(--text-primary) font-medium'
           : 'text-(--text-secondary) hover:bg-(--bg-hover)'
       "
-      :style="{ paddingLeft: `${depth * 16 + 12}px` }"
+      :style="{ paddingLeft: `${depth * SIDEBAR_DEPTH_INDENT + SIDEBAR_BASE_PADDING}px` }"
       @click="emit('switch-doc', node.docId!)"
       @dblclick="emit('start-rename', node.docId!, node.name, $event)"
       @contextmenu.prevent="emit('doc-context', $event, node.docId!)"

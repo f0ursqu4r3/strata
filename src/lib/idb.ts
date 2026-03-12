@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Op, Snapshot, Node, StatusDef } from '@/types'
+import { IDB_FLUSH_DELAY } from '@/lib/constants'
 
 interface OpRecord extends Op {
   // seq is also the primary key
@@ -72,7 +73,6 @@ let _opBuffer: Op[] = []
 let _flushTimer: ReturnType<typeof setTimeout> | null = null
 let _flushPromise: Promise<void> | null = null
 let _flushDocId = ''
-const FLUSH_DELAY = 50
 
 function _scheduleFlush() {
   if (_flushTimer) return
@@ -80,7 +80,7 @@ function _scheduleFlush() {
   _flushTimer = setTimeout(() => {
     _flushTimer = null
     flushOpBuffer()
-  }, FLUSH_DELAY)
+  }, IDB_FLUSH_DELAY)
 }
 
 export function flushOpBuffer(): Promise<void> {

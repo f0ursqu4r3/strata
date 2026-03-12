@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { SUBMENU_WIDTH_THRESHOLD } from '@/lib/constants'
 import {
   Pencil,
   Trash2,
@@ -42,7 +43,7 @@ onMounted(() => {
   const el = baseMenuRef.value?.menuRef
   if (!el) return
   const rect = el.getBoundingClientRect()
-  subLeft.value = rect.right + 160 > window.innerWidth
+  subLeft.value = rect.right + SUBMENU_WIDTH_THRESHOLD > window.innerWidth
 })
 
 function onSetDueDate(dueDate: number | null) {

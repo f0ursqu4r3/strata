@@ -2,6 +2,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { searchAllDocs, type SearchResult } from '@/lib/search-index'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocStore } from '@/stores/doc'
+import { SEARCH_DEBOUNCE_DELAY } from '@/lib/constants'
 
 export type { SearchResult }
 
@@ -32,7 +33,7 @@ export function useGlobalSearch(emit: {
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => {
       debouncedQuery.value = val
-    }, 200)
+    }, SEARCH_DEBOUNCE_DELAY)
   })
 
   const currentDocResults = computed(() => {

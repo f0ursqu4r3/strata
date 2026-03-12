@@ -1,6 +1,7 @@
 import { ref, watch, nextTick, onUnmounted, type Ref } from 'vue'
 import { useDocStore } from '@/stores/doc'
 import { getTitle, getBody, combineText } from '@/lib/text-utils'
+import { POPOVER_OFFSET, POPOVER_PADDING } from '@/lib/constants'
 import type { Node } from '@/types'
 
 export function useBoardEditing(isDragging: Ref<boolean>, editingCardId: Ref<string | null>) {
@@ -80,10 +81,10 @@ export function useBoardEditing(isDragging: Ref<boolean>, editingCardId: Ref<str
     const vw = window.innerWidth
     const popH = 120 // estimate
     const popW = 220
-    const spaceBelow = vh - rect.bottom - 8
-    const top = spaceBelow >= popH ? rect.bottom + 4 : rect.top - popH - 4
-    const left = Math.min(rect.left, vw - popW - 8)
-    return { left: `${Math.max(4, left)}px`, top: `${Math.max(4, top)}px` }
+    const spaceBelow = vh - rect.bottom - POPOVER_PADDING
+    const top = spaceBelow >= popH ? rect.bottom + POPOVER_OFFSET : rect.top - popH - POPOVER_OFFSET
+    const left = Math.min(rect.left, vw - popW - POPOVER_PADDING)
+    return { left: `${Math.max(POPOVER_OFFSET, left)}px`, top: `${Math.max(POPOVER_OFFSET, top)}px` }
   }
 
   function onTagsClick(e: MouseEvent, nodeId: string) {

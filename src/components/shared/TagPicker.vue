@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from "vue";
+import { MAX_TAG_SUGGESTIONS, TAG_ITEM_HEIGHT, TAG_DROPDOWN_PADDING, DEFAULT_DROPDOWN_HEIGHT, TAG_PICKER_HIDE_DELAY } from '@/lib/constants';
 import { X } from "lucide-vue-next";
 import { useDocStore } from "@/stores/doc";
 import { useSettingsStore } from "@/stores/settings";
@@ -32,7 +33,7 @@ const suggestions = computed(() => {
   return store.allTags
     .filter((t) => !existing.has(t))
     .filter((t) => !q || t.toLowerCase().includes(q))
-    .slice(0, 8);
+    .slice(0, MAX_TAG_SUGGESTIONS);
 });
 
 const showDropdown = computed(() => inputFocused.value && suggestions.value.length > 0);
@@ -40,7 +41,7 @@ const showDropdown = computed(() => inputFocused.value && suggestions.value.leng
 // Update dropdown position when it becomes visible
 watch(showDropdown, (val) => {
   if (val) nextTick(() => {
-    const dropH = Math.min(suggestions.value.length * 30 + 4, 256);
+    const dropH = Math.min(suggestions.value.length * TAG_ITEM_HEIGHT + TAG_DROPDOWN_PADDING, DEFAULT_DROPDOWN_HEIGHT);
     updateDropdownPos(inputRef.value, { dropHeight: dropH, width: "192px" });
   });
 });
@@ -96,7 +97,7 @@ function onFocus() {
 
 function onBlur() {
   // Small delay so click on suggestion registers before dropdown hides
-  setTimeout(() => { inputFocused.value = false; }, 150);
+  setTimeout(() => { inputFocused.value = false; }, TAG_PICKER_HIDE_DELAY);
 }
 
 function toggleColorPicker(tag: string, e: MouseEvent) {
