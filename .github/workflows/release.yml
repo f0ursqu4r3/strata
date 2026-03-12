@@ -94,10 +94,10 @@ jobs:
       - name: Write Apple API key to disk
         if: contains(matrix.target, 'apple-darwin')
         env:
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY_CONTENT }}
         run: |
           mkdir -p "$RUNNER_TEMP/apple-keys"
-          echo -n "$APPLE_API_KEY" > "$RUNNER_TEMP/apple-keys/AuthKey.p8"
+          echo -n "$APPLE_API_KEY_CONTENT" > "$RUNNER_TEMP/apple-keys/AuthKey.p8"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
