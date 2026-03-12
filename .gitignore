@@ -43,3 +43,4 @@ src-tauri/target/
 
 # Claude
 .claude/
+.superpowers/
