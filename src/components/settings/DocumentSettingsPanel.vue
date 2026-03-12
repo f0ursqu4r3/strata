@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, type CSSProperties } from 'vue'
+import { ref, computed } from 'vue'
 import { OVERLAY_Z_INDEX } from '@/lib/constants'
 import { Settings2 } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settings'
@@ -7,13 +7,19 @@ import { useDocStore } from '@/stores/doc'
 import { UiModal } from '@/components/ui'
 import { TAG_COLOR_PRESETS, TAG_COLOR_KEYS, tagStyle } from '@/lib/tag-colors'
 import { useClickOutside } from '@/composables/useClickOutside'
+import { useDropdownPosition } from '@/composables/useDropdownPosition'
 
 const emit = defineEmits<{ close: []; openStatusEditor: [] }>()
 const settings = useSettingsStore()
 const store = useDocStore()
 const colorPickerTag = ref<string | null>(null)
-const colorPickerStyle = ref<CSSProperties>({})
 const colorPickerRef = ref<HTMLElement | null>(null)
+const { style: colorPickerPos, update: updateColorPickerPos } = useDropdownPosition({ dropHeight: 40, dropWidth: 220 })
+const colorPickerStyle = computed(() => ({
+  position: 'fixed' as const,
+  ...colorPickerPos.value,
+  zIndex: OVERLAY_Z_INDEX,
+}))
 
 useClickOutside(colorPickerRef, () => {
   colorPickerTag.value = null
@@ -25,18 +31,7 @@ function toggleColorPicker(tag: string, e: MouseEvent) {
     return
   }
   const btn = e.currentTarget as HTMLElement
-  const rect = btn.getBoundingClientRect()
-  const popoverWidth = 220
-  const popoverHeight = 40
-  let left = rect.left
-  let top = rect.bottom + 4
-  if (left + popoverWidth > window.innerWidth - 8) {
-    left = Math.max(8, window.innerWidth - popoverWidth - 8)
-  }
-  if (top + popoverHeight > window.innerHeight - 8) {
-    top = rect.top - popoverHeight - 4
-  }
-  colorPickerStyle.value = { position: 'fixed', left: `${left}px`, top: `${top}px`, zIndex: OVERLAY_Z_INDEX }
+  updateColorPickerPos(btn)
   colorPickerTag.value = tag
 }
 

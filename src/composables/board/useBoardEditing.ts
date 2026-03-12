@@ -1,8 +1,8 @@
 import { ref, nextTick, type Ref } from 'vue'
 import { usePickerClickOutside } from '@/composables/usePickerClickOutside'
+import { useDropdownPosition } from '@/composables/useDropdownPosition'
 import { useDocStore } from '@/stores/doc'
 import { getTitle, getBody, combineText } from '@/lib/text-utils'
-import { POPOVER_OFFSET, POPOVER_PADDING } from '@/lib/constants'
 import type { Node } from '@/types'
 
 export function useBoardEditing(isDragging: Ref<boolean>, editingCardId: Ref<string | null>) {
@@ -73,33 +73,21 @@ export function useBoardEditing(isDragging: Ref<boolean>, editingCardId: Ref<str
   // Tag and date pickers
   const editingTagsCardId = ref<string | null>(null)
   const editingDateCardId = ref<string | null>(null)
-  const datePickerPos = ref<{ left: string; top: string }>({ left: '0px', top: '0px' })
-  const tagPickerPos = ref<{ left: string; top: string }>({ left: '0px', top: '0px' })
-
-  function computePopoverPos(trigger: HTMLElement): { left: string; top: string } {
-    const rect = trigger.getBoundingClientRect()
-    const vh = window.innerHeight
-    const vw = window.innerWidth
-    const popH = 120 // estimate
-    const popW = 220
-    const spaceBelow = vh - rect.bottom - POPOVER_PADDING
-    const top = spaceBelow >= popH ? rect.bottom + POPOVER_OFFSET : rect.top - popH - POPOVER_OFFSET
-    const left = Math.min(rect.left, vw - popW - POPOVER_PADDING)
-    return { left: `${Math.max(POPOVER_OFFSET, left)}px`, top: `${Math.max(POPOVER_OFFSET, top)}px` }
-  }
+  const tagPickerPos = useDropdownPosition({ dropHeight: 120, dropWidth: 220 })
+  const datePickerPos = useDropdownPosition({ dropHeight: 120, dropWidth: 220 })
 
   function onTagsClick(e: MouseEvent, nodeId: string) {
     e.stopPropagation()
     editingTagsCardId.value = nodeId
     const card = (e.currentTarget as HTMLElement).closest('[data-card-id]') as HTMLElement | null
-    if (card) tagPickerPos.value = computePopoverPos(card)
+    if (card) tagPickerPos.update(card)
   }
 
   function onDateClick(e: MouseEvent, nodeId: string) {
     e.stopPropagation()
     editingDateCardId.value = nodeId
     const trigger = e.currentTarget as HTMLElement
-    datePickerPos.value = computePopoverPos(trigger)
+    datePickerPos.update(trigger)
   }
 
   function onTagPickerClickOutside(e: MouseEvent) {
@@ -135,8 +123,8 @@ export function useBoardEditing(isDragging: Ref<boolean>, editingCardId: Ref<str
     closeColumnContextMenu,
     editingTagsCardId,
     editingDateCardId,
-    datePickerPos,
-    tagPickerPos,
+    datePickerPos: datePickerPos.style,
+    tagPickerPos: tagPickerPos.style,
     onTagsClick,
     onDateClick,
   }
