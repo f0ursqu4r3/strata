@@ -9,17 +9,14 @@ import {
   downloadExport as doDownloadExport,
   type ExportFormat,
 } from "@/lib/doc-export";
-import { updateIndexForDoc } from "@/lib/search-index";
-import { isFileSystemMode, isSingleFileMode } from "@/lib/platform";
+import { isFileSystemMode } from "@/lib/platform";
 import { useDocView } from "./doc-view";
+import { useDocSync } from "./doc-sync";
 import { buildCompensatingOp } from "@/lib/undo-ops";
-import { serializeToMarkdown, parseMarkdown } from "@/lib/markdown-serialize";
+import { parseMarkdown } from "@/lib/markdown-serialize";
 import { reconcileParsed } from "@/lib/reconcile";
 import {
   SNAPSHOT_INTERVAL,
-  FILE_SAVE_DELAY,
-  WRITE_COOLDOWN,
-  INDEX_UPDATE_DELAY,
   TEXT_DEBOUNCE_DELAY,
   MAX_UNDO,
 } from "@/lib/constants";
@@ -66,70 +63,17 @@ export const useDocStore = defineStore("doc", () => {
   const currentDocId = ref<string>("");
   const suppressTransitions = ref(false);
 
-  // ── Debounced search-index updater ──
-  let _indexTimer: ReturnType<typeof setTimeout> | null = null;
-  function scheduleIndexUpdate() {
-    if (_indexTimer) clearTimeout(_indexTimer);
-    _indexTimer = setTimeout(() => {
-      _indexTimer = null;
-      if (currentDocId.value) {
-        updateIndexForDoc(currentDocId.value, nodes.value);
-      }
-    }, INDEX_UPDATE_DELAY);
-  }
-
-  // ── Debounced file save (Tauri mode) ──
-  let _fileSaveTimer: ReturnType<typeof setTimeout> | null = null;
-  let _lastWriteAt = 0;
-
-  function scheduleFileSave() {
-    if (!isFileSystemMode()) return;
-    if (_fileSaveTimer) clearTimeout(_fileSaveTimer);
-    _fileSaveTimer = setTimeout(() => {
-      _fileSaveTimer = null;
-      saveToFile();
-    }, FILE_SAVE_DELAY);
-  }
-
-  function hasUnsavedChanges(): boolean {
-    return _fileSaveTimer !== null;
-  }
-
-  function recentlyWritten(): boolean {
-    return Date.now() - _lastWriteAt < WRITE_COOLDOWN;
-  }
-
-  async function getFilePath(): Promise<string | null> {
-    const { useSettingsStore } = await import("@/stores/settings");
-    const settings = useSettingsStore();
-    if (isSingleFileMode()) {
-      return settings.singleFilePath || null;
-    }
-    if (!settings.workspacePath || !currentDocId.value) return null;
-    return `${settings.workspacePath}/${currentDocId.value}`;
-  }
-
-  async function saveToFile() {
-    if (!isFileSystemMode() || !currentDocId.value) return;
-    flushTextDebounce();
-    const filePath = await getFilePath();
-    if (!filePath) return;
-    const { writeFile } = await import("@/lib/fs");
-    const content = serializeToMarkdown({
-      nodes: nodes.value,
-      rootId: rootId.value,
-      statusConfig: statusConfig.value,
-      tagColors: tagColors.value,
-    });
-    await writeFile(filePath, content);
-    _lastWriteAt = Date.now();
-  }
-
   // ── Status configuration (per-document) ──
   const statusConfig = ref<StatusDef[]>([...DEFAULT_STATUSES]);
 
   // ── Per-document tag colors ──
   const tagColors = ref<Record<string, string>>({});
+
+  // ── File sync (extracted) ──
+  const sync = useDocSync({
+    nodes, rootId, statusConfig, tagColors, currentDocId,
+    flushTextDebounce: () => flushTextDebounce(),
+  });
 
   const statusDefs = computed(() => statusConfig.value);
 
@@ -262,10 +206,10 @@ export const useDocStore = defineStore("doc", () => {
       op.type === "tombstone" ||
       op.type === "restore"
     ) {
-      scheduleIndexUpdate();
+      sync.scheduleIndexUpdate();
     }
 
-    scheduleFileSave();
+    sync.scheduleFileSave();
 
     if (opsSinceSnapshot.value >= SNAPSHOT_INTERVAL) {
       await takeSnapshot();
@@ -404,8 +348,8 @@ export const useDocStore = defineStore("doc", () => {
     // Persist (don't re-apply to memory, already done)
     lastSeq.value = op.seq;
     opsSinceSnapshot.value++;
-    scheduleIndexUpdate();
-    scheduleFileSave();
+    sync.scheduleIndexUpdate();
+    sync.scheduleFileSave();
     saveOp(op).then(() => {
       if (opsSinceSnapshot.value >= SNAPSHOT_INTERVAL) {
         takeSnapshot();
@@ -512,7 +456,7 @@ export const useDocStore = defineStore("doc", () => {
   async function addStatus(def: StatusDef) {
     statusConfig.value = [...statusConfig.value, def];
     if (!isFileSystemMode()) await saveStatusConfig(statusConfig.value);
-    scheduleFileSave();
+    sync.scheduleFileSave();
   }
 
   async function removeStatus(statusId: string, replacementId: string) {
@@ -525,7 +469,7 @@ export const useDocStore = defineStore("doc", () => {
     }
     statusConfig.value = statusConfig.value.filter((s) => s.id !== statusId);
     if (!isFileSystemMode()) await saveStatusConfig(statusConfig.value);
-    scheduleFileSave();
+    sync.scheduleFileSave();
   }
 
   async function updateStatus(statusId: string, updates: Partial<Omit<StatusDef, "id">>) {
@@ -533,14 +477,14 @@ export const useDocStore = defineStore("doc", () => {
       s.id === statusId ? { ...s, ...updates } : s,
     );
     if (!isFileSystemMode()) await saveStatusConfig(statusConfig.value);
-    scheduleFileSave();
+    sync.scheduleFileSave();
   }
 
   async function reorderStatuses(orderedIds: string[]) {
     const byId = new Map(statusConfig.value.map((s) => [s.id, s]));
     statusConfig.value = orderedIds.map((id) => byId.get(id)!).filter(Boolean);
     if (!isFileSystemMode()) await saveStatusConfig(statusConfig.value);
-    scheduleFileSave();
+    sync.scheduleFileSave();
   }
 
   // ── Tag color CRUD ──
@@ -553,7 +497,7 @@ export const useDocStore = defineStore("doc", () => {
       tagColors.value = rest;
     }
     if (!isFileSystemMode()) await saveTagColors(tagColors.value);
-    scheduleFileSave();
+    sync.scheduleFileSave();
   }
 
   // ── Outline keyboard actions ──
@@ -740,11 +684,7 @@ export const useDocStore = defineStore("doc", () => {
     flushTextDebounce();
     // Force-flush any pending file save so the current document is written
     // to disk before we reset state and load the new one.
-    if (_fileSaveTimer) {
-      clearTimeout(_fileSaveTimer);
-      _fileSaveTimer = null;
-      await saveToFile();
-    }
+    await sync.flushPendingSave();
     if (!isFileSystemMode()) {
       await flushOpBuffer();
       setCurrentDocId(docId);
@@ -791,7 +731,7 @@ export const useDocStore = defineStore("doc", () => {
   }
 
   async function initFromFile() {
-    const filePath = await getFilePath();
+    const filePath = await sync.getFilePath();
     if (!filePath) return;
 
     const { readFile } = await import("@/lib/fs");
@@ -845,11 +785,11 @@ export const useDocStore = defineStore("doc", () => {
     }
 
     ready.value = true;
-    scheduleIndexUpdate();
+    sync.scheduleIndexUpdate();
   }
 
   async function refreshFromFile() {
-    const filePath = await getFilePath();
+    const filePath = await sync.getFilePath();
     if (!filePath) return;
 
     const { readFile } = await import("@/lib/fs");
@@ -872,7 +812,7 @@ export const useDocStore = defineStore("doc", () => {
     statusConfig.value = reconciled.statusConfig;
     tagColors.value = reconciled.tagColors;
     triggerRef(nodes);
-    scheduleIndexUpdate();
+    sync.scheduleIndexUpdate();
     nextTick(() => {
       suppressTransitions.value = false;
     });
@@ -1025,7 +965,7 @@ export const useDocStore = defineStore("doc", () => {
     ready.value = true;
 
     // Update cross-document search index
-    scheduleIndexUpdate();
+    sync.scheduleIndexUpdate();
   }
 
   function selectNode(id: string) {
@@ -1407,9 +1347,9 @@ export const useDocStore = defineStore("doc", () => {
     importNodes,
     resetDocument,
     suppressTransitions,
-    saveToFile,
-    hasUnsavedChanges,
-    recentlyWritten,
+    saveToFile: sync.saveToFile,
+    hasUnsavedChanges: sync.hasUnsavedChanges,
+    recentlyWritten: sync.recentlyWritten,
     refreshFromFile,
   };
 });
