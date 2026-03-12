@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { OUTLINE_DEPTH_INDENT, OUTLINE_BASE_PADDING } from '@/lib/constants'
-import { ChevronRight, ChevronDown, Calendar, Tag } from 'lucide-vue-next'
+import { ChevronRight, Calendar, Tag } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
 import TagPicker from '@/components/shared/TagPicker.vue'
@@ -147,8 +147,11 @@ function onRowPointerDown(e: PointerEvent) {
       @dblclick.stop="onBulletDblClick"
     >
       <template v-if="hasChildren">
-        <ChevronDown v-if="!node.collapsed" class="w-3.5 h-3.5" />
-        <ChevronRight v-else class="w-3.5 h-3.5" />
+        <ChevronRight
+          class="w-3.5 h-3.5 transition-transform"
+          :style="{ transitionDuration: '120ms' }"
+          :class="{ 'rotate-90': !node.collapsed }"
+        />
       </template>
       <template v-else>
         <span class="w-1.5 h-1.5 rounded-full bg-(--border-hover)" />
