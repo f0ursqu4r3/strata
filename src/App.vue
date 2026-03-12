@@ -583,7 +583,8 @@ function onZoomRoot() {
     <div class="flex flex-1 overflow-hidden">
       <!-- Document sidebar (hidden in single-file mode) -->
       <DocumentSidebar
-        v-if="settings.sidebarOpen && !isSingleFileMode()"
+        v-if="!isSingleFileMode()"
+        :open="settings.sidebarOpen"
         @close="settings.setSidebarOpen(false)"
       />
 
