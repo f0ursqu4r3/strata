@@ -33,6 +33,13 @@ export const DRAG_OPACITY = '0.9'
 export const DRAG_BORDER_RADIUS = '4px'
 export const DRAG_TRANSITION = 'box-shadow 0.15s, transform 0.15s'
 
+// ── Transitions ────────────────────────────────────────
+export const TRANSITION_FAST = 100 // ms — overlays, hover states
+export const TRANSITION_BASE = 120 // ms — sidebar, expand/collapse, status icon
+export const TRANSITION_FLIP = 150 // ms — FLIP list reorder, drag reflow
+export const TRANSITION_STATUS_FLASH = 300 // ms — status change row bg pulse
+export const TRANSITION_EASING = 'ease-out'
+
 // ── Popover / Dropdown ──────────────────────────────────
 export const POPOVER_PADDING = 8 // px from viewport edge
 export const POPOVER_OFFSET = 4 // px gap between trigger and popover
