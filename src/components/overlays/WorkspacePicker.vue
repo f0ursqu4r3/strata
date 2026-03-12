@@ -49,7 +49,7 @@ async function pickTauriFile() {
 
 async function pickBrowserFile() {
   try {
-    const [fileHandle] = await window.showOpenFilePicker({
+    const [fileHandle] = await (window as any).showOpenFilePicker({
       types: [{ description: "Markdown", accept: { "text/markdown": [".md"] } }],
     });
     const { setFileHandle } = await import("@/lib/web-fs");

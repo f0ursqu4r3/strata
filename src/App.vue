@@ -32,7 +32,7 @@ import DocumentSettingsPanel from "@/components/settings/DocumentSettingsPanel.v
 import GlobalSearch from "@/components/overlays/GlobalSearch.vue";
 import CommandPalette from "@/components/overlays/CommandPalette.vue";
 import ShortcutEditor from "@/components/settings/ShortcutEditor.vue";
-import { matchesCombo } from "@/lib/shortcuts";
+import { matchesCombo, type ShortcutDef } from "@/lib/shortcuts";
 import { isTauri, hasFileSystemAccess, isFileSystemMode, setFileSystemActive, isSingleFileMode, setSingleFileMode } from "@/lib/platform";
 import WorkspacePicker from "@/components/overlays/WorkspacePicker.vue";
 import type { ViewMode } from "@/types";
@@ -337,13 +337,13 @@ function onGlobalKeydown(e: KeyboardEvent) {
     showShortcuts.value = !showShortcuts.value;
     e.preventDefault();
   }
-  const searchDef = settings.resolvedShortcuts.find((s) => s.action === "globalSearch");
+  const searchDef = settings.resolvedShortcuts.find((s: ShortcutDef) => s.action === "globalSearch");
   if (searchDef && matchesCombo(e, searchDef.combo)) {
     showGlobalSearch.value = !showGlobalSearch.value;
     store.filters.search = "";
     e.preventDefault();
   }
-  const paletteDef = settings.resolvedShortcuts.find((s) => s.action === "commandPalette");
+  const paletteDef = settings.resolvedShortcuts.find((s: ShortcutDef) => s.action === "commandPalette");
   if (paletteDef && matchesCombo(e, paletteDef.combo)) {
     showCommandPalette.value = !showCommandPalette.value;
     e.preventDefault();

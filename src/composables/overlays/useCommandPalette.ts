@@ -1,7 +1,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
-import { comboToString } from '@/lib/shortcuts'
+import { comboToString, type ShortcutDef } from '@/lib/shortcuts'
 
 interface CommandItem {
   id: string
@@ -55,7 +55,7 @@ export function useCommandPalette(emit: {
     )
 
     // General actions with shortcut display
-    const shortcutMap = new Map(settings.resolvedShortcuts.map((s) => [s.action, comboToString(s.combo)]))
+    const shortcutMap = new Map<string, string>(settings.resolvedShortcuts.map((s: ShortcutDef) => [s.action, comboToString(s.combo)]))
     items.push(
       { id: 'undo', label: 'Undo', category: 'Edit', shortcut: shortcutMap.get('undo'), execute: () => { store.flushTextDebounce(); store.undo() } },
       { id: 'redo', label: 'Redo', category: 'Edit', shortcut: shortcutMap.get('redo'), execute: () => { store.flushTextDebounce(); store.redo() } },

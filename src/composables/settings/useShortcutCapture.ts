@@ -5,6 +5,7 @@ import {
   findConflicts,
   DEFAULT_SHORTCUTS,
   type ShortcutAction,
+  type ShortcutDef,
   type KeyCombo,
 } from '@/lib/shortcuts'
 
@@ -31,14 +32,14 @@ export function useShortcutCapture() {
 
   const conflicts = computed(() => {
     if (!editingAction.value || !capturedCombo.value) return []
-    const def = settings.resolvedShortcuts.find((s) => s.action === editingAction.value)
+    const def = settings.resolvedShortcuts.find((s: ShortcutDef) => s.action === editingAction.value)
     if (!def) return []
     return findConflicts(settings.resolvedShortcuts, capturedCombo.value, def.context, editingAction.value)
   })
 
   function isCustomized(action: ShortcutAction): boolean {
     const defaultDef = DEFAULT_SHORTCUTS.find((s) => s.action === action)
-    const resolved = settings.resolvedShortcuts.find((s) => s.action === action)
+    const resolved = settings.resolvedShortcuts.find((s: ShortcutDef) => s.action === action)
     if (!defaultDef || !resolved) return false
     return comboToString(defaultDef.combo) !== comboToString(resolved.combo)
   }

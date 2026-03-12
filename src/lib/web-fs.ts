@@ -55,7 +55,7 @@ export async function restoreHandle(): Promise<boolean> {
     if (!handle) return false
 
     // Re-request permission
-    const perm = await handle.requestPermission({ mode: 'readwrite' })
+    const perm = await (handle as any).requestPermission({ mode: 'readwrite' })
     if (perm !== 'granted') return false
 
     _dirHandle = handle
@@ -112,7 +112,7 @@ export async function restoreFileHandle(): Promise<boolean> {
 
     if (!handle) return false
 
-    const perm = await handle.requestPermission({ mode: 'readwrite' })
+    const perm = await (handle as any).requestPermission({ mode: 'readwrite' })
     if (perm !== 'granted') return false
 
     _fileHandle = handle

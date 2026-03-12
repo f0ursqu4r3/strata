@@ -33,7 +33,7 @@ interface PersistedSettings {
   singleFilePath?: string
 }
 
-function loadSettings(): { theme: string; fontSize: number; showTags: boolean; showBoardTags: boolean; sidebarOpen: boolean; shortcuts: Record<string, KeyCombo>; workspacePath: string; vimMode: boolean } {
+function loadSettings(): { theme: string; fontSize: number; showTags: boolean; showBoardTags: boolean; sidebarOpen: boolean; shortcuts: Record<string, KeyCombo>; workspacePath: string; vimMode: boolean; openMode: OpenMode; singleFilePath: string } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
