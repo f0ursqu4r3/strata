@@ -15,7 +15,7 @@ const FILE_HANDLE_KEY = 'single-file'
 let _dirHandle: FileSystemDirectoryHandle | null = null
 let _pollTimer: ReturnType<typeof setInterval> | null = null
 let _knownFiles: Map<string, number> = new Map() // relPath → lastModified
-let _writeGuard: Set<string> = new Set()
+const _writeGuard: Set<string> = new Set()
 
 const _eventTarget = new EventTarget()
 
@@ -57,6 +57,7 @@ export async function restoreHandle(): Promise<boolean> {
     if (!handle) return false
 
     // Re-request permission
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const perm = await (handle as any).requestPermission({ mode: 'readwrite' })
     if (perm !== 'granted') return false
 
@@ -114,6 +115,7 @@ export async function restoreFileHandle(): Promise<boolean> {
 
     if (!handle) return false
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const perm = await (handle as any).requestPermission({ mode: 'readwrite' })
     if (perm !== 'granted') return false
 
@@ -217,7 +219,10 @@ export async function listWorkspaceFiles(): Promise<string[]> {
     for await (const entry of dir.values()) {
       if (entry.kind === 'directory') {
         if (!shouldSkipDir(entry.name)) {
-          await walk(entry as FileSystemDirectoryHandle, prefix ? `${prefix}/${entry.name}` : entry.name)
+          await walk(
+            entry as FileSystemDirectoryHandle,
+            prefix ? `${prefix}/${entry.name}` : entry.name,
+          )
         }
       } else if (
         entry.kind === 'file' &&

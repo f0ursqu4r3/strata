@@ -28,12 +28,8 @@ function onDelete() {
 
 <template>
   <BaseContextMenu :x="x" :y="y" aria-label="Document actions" @close="emit('close')">
-    <UiMenuItem :icon="Pencil" @click="onRename">
-      Rename
-    </UiMenuItem>
+    <UiMenuItem :icon="Pencil" @click="onRename"> Rename </UiMenuItem>
     <UiMenuDivider />
-    <UiMenuItem :icon="Trash2" danger @click="onDelete">
-      Delete
-    </UiMenuItem>
+    <UiMenuItem :icon="Trash2" danger @click="onDelete"> Delete </UiMenuItem>
   </BaseContextMenu>
 </template>

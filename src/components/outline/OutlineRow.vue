@@ -1,43 +1,41 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { OUTLINE_DEPTH_INDENT, OUTLINE_BASE_PADDING } from '@/lib/constants';
-import { ChevronRight, ChevronDown, Calendar, Tag } from "lucide-vue-next";
-import { useDocStore } from "@/stores/doc";
-import { useSettingsStore } from "@/stores/settings";
-import TagPicker from "@/components/shared/TagPicker.vue";
-import { resolveStatusIcon } from "@/lib/status-icons";
-import { tagStyle } from "@/lib/tag-colors";
-import { dueDateUrgency, formatDueDate } from "@/lib/due-date";
-import DatePicker from "@/components/shared/DatePicker.vue";
-import { useRowEditing } from "@/composables/outline/useRowEditing";
-import type { Node } from "@/types";
+import { computed } from 'vue'
+import { OUTLINE_DEPTH_INDENT, OUTLINE_BASE_PADDING } from '@/lib/constants'
+import { ChevronRight, ChevronDown, Calendar, Tag } from 'lucide-vue-next'
+import { useDocStore } from '@/stores/doc'
+import { useSettingsStore } from '@/stores/settings'
+import TagPicker from '@/components/shared/TagPicker.vue'
+import { resolveStatusIcon } from '@/lib/status-icons'
+import { tagStyle } from '@/lib/tag-colors'
+import { dueDateUrgency, formatDueDate } from '@/lib/due-date'
+import DatePicker from '@/components/shared/DatePicker.vue'
+import { useRowEditing } from '@/composables/outline/useRowEditing'
+import type { Node } from '@/types'
 
 const props = defineProps<{
-  node: Node;
-  depth: number;
-}>();
+  node: Node
+  depth: number
+}>()
 
 const emit = defineEmits<{
-  contextmenu: [nodeId: string, x: number, y: number];
-  "row-pointerdown": [nodeId: string, event: PointerEvent];
-}>();
+  contextmenu: [nodeId: string, x: number, y: number]
+  'row-pointerdown': [nodeId: string, event: PointerEvent]
+}>()
 
-const store = useDocStore();
-const settings = useSettingsStore();
+const store = useDocStore()
+const settings = useSettingsStore()
 
-const isSelected = computed(() => store.isSelected(props.node.id));
-const isEditing = computed(() => store.editing.id === props.node.id);
-const hasChildren = computed(() => store.getChildren(props.node.id).length > 0);
-const nodeDueUrgency = computed(() => dueDateUrgency(props.node.dueDate));
-const nodeDueLabel = computed(() =>
-  props.node.dueDate ? formatDueDate(props.node.dueDate) : null,
-);
+const isSelected = computed(() => store.isSelected(props.node.id))
+const isEditing = computed(() => store.editing.id === props.node.id)
+const hasChildren = computed(() => store.getChildren(props.node.id).length > 0)
+const nodeDueUrgency = computed(() => dueDateUrgency(props.node.dueDate))
+const nodeDueLabel = computed(() => (props.node.dueDate ? formatDueDate(props.node.dueDate) : null))
 const isSearchMatch = computed(() => {
-  const matches = store.searchMatchIds;
-  if (!matches) return false;
-  const q = store.filters.search.trim().toLowerCase();
-  return q !== "" && props.node.text.toLowerCase().includes(q);
-});
+  const matches = store.searchMatchIds
+  if (!matches) return false
+  const q = store.filters.search.trim().toLowerCase()
+  return q !== '' && props.node.text.toLowerCase().includes(q)
+})
 
 const {
   localText,
@@ -62,55 +60,60 @@ const {
   currentStatusDef,
   onStatusClick,
   onPickStatus,
-} = useRowEditing(props, () => isEditing.value);
+} = useRowEditing(props, () => isEditing.value)
+
+function onDatePickerUpdate(value: number | null) {
+  store.setDueDate(props.node.id, value)
+  showDatePicker.value = false
+}
 
 function onClick(e: MouseEvent) {
-  if ((e.target as HTMLElement).closest?.("a")) return;
+  if ((e.target as HTMLElement).closest?.('a')) return
 
   if (e.shiftKey) {
-    e.preventDefault();
-    store.rangeSelectTo(props.node.id);
-    return;
+    e.preventDefault()
+    store.rangeSelectTo(props.node.id)
+    return
   }
   if (e.metaKey || e.ctrlKey) {
-    e.preventDefault();
-    store.toggleSelectNode(props.node.id);
-    return;
+    e.preventDefault()
+    store.toggleSelectNode(props.node.id)
+    return
   }
 
-  store.selectNode(props.node.id);
+  store.selectNode(props.node.id)
   if (!isEditing.value) {
-    const clickedBody = (e.target as HTMLElement).closest?.("[data-body-display]");
-    if (clickedBody && localText.value.includes("\n")) {
-      focusBodyOnEdit.value = true;
+    const clickedBody = (e.target as HTMLElement).closest?.('[data-body-display]')
+    if (clickedBody && localText.value.includes('\n')) {
+      focusBodyOnEdit.value = true
     }
-    store.startEditing(props.node.id, "click");
+    store.startEditing(props.node.id, 'click')
   }
 }
 
 function onContextMenu(e: MouseEvent) {
-  e.preventDefault();
-  store.selectNode(props.node.id);
-  emit("contextmenu", props.node.id, e.clientX, e.clientY);
+  e.preventDefault()
+  store.selectNode(props.node.id)
+  emit('contextmenu', props.node.id, e.clientX, e.clientY)
 }
 
 function onBulletClick(e: MouseEvent) {
-  e.stopPropagation();
+  e.stopPropagation()
   if (hasChildren.value) {
-    store.toggleCollapsed(props.node.id);
+    store.toggleCollapsed(props.node.id)
   } else {
-    store.zoomIn(props.node.id);
+    store.zoomIn(props.node.id)
   }
 }
 
 function onBulletDblClick(e: MouseEvent) {
-  e.stopPropagation();
-  store.zoomIn(props.node.id);
+  e.stopPropagation()
+  store.zoomIn(props.node.id)
 }
 
 function onRowPointerDown(e: PointerEvent) {
-  if (e.button !== 0 || isEditing.value) return;
-  emit("row-pointerdown", props.node.id, e);
+  if (e.button !== 0 || isEditing.value) return
+  emit('row-pointerdown', props.node.id, e)
 }
 </script>
 
@@ -256,7 +259,11 @@ function onRowPointerDown(e: PointerEvent) {
         v-for="tag in node.tags"
         :key="tag"
         class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:opacity-80"
-        :class="tagStyle(tag, store.tagColors, settings.dark) ? '' : 'bg-(--accent-100) text-(--accent-700) hover:bg-(--accent-200)'"
+        :class="
+          tagStyle(tag, store.tagColors, settings.dark)
+            ? ''
+            : 'bg-(--accent-100) text-(--accent-700) hover:bg-(--accent-200)'
+        "
         :style="tagStyle(tag, store.tagColors, settings.dark) ?? {}"
         @click.stop="showTagPicker = !showTagPicker"
       >
@@ -292,13 +299,7 @@ function onRowPointerDown(e: PointerEvent) {
         {{ nodeDueLabel }}
       </span>
       <div v-if="showDatePicker" class="absolute right-0 top-full z-40 mt-1">
-        <DatePicker
-          :model-value="node.dueDate ?? null"
-          @update:model-value="
-            store.setDueDate(node.id, $event);
-            showDatePicker = false;
-          "
-        />
+        <DatePicker :model-value="node.dueDate ?? null" @update:model-value="onDatePickerUpdate" />
       </div>
     </div>
 

@@ -1,5 +1,5 @@
-import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
 import {
   loadRegistry,
   saveRegistry,
@@ -10,172 +10,174 @@ import {
   setActiveDoc,
   type DocumentMeta,
   type DocumentRegistry,
-} from "@/lib/doc-registry";
-import { migrateOldDB, deleteDocDB, setCurrentDocId } from "@/lib/idb";
-import { removeDocFromIndex } from "@/lib/search-index";
-import { isTauri, isFileSystemMode, isSingleFileMode } from "@/lib/platform";
-import { serializeToMarkdown } from "@/lib/markdown-serialize";
-import { DEFAULT_STATUSES } from "@/types";
+} from '@/lib/doc-registry'
+import { migrateOldDB, deleteDocDB, setCurrentDocId } from '@/lib/idb'
+import { removeDocFromIndex } from '@/lib/search-index'
+import { isTauri, isFileSystemMode, isSingleFileMode } from '@/lib/platform'
+import { serializeToMarkdown } from '@/lib/markdown-serialize'
+import { DEFAULT_STATUSES } from '@/types'
 
 function emptyStrataDoc(): string {
   return serializeToMarkdown({
     nodes: new Map(),
-    rootId: "root",
+    rootId: 'root',
     statusConfig: [...DEFAULT_STATUSES],
-  });
+  })
 }
 
-export const useDocumentsStore = defineStore("documents", () => {
-  const documents = ref<DocumentMeta[]>([]);
-  const activeId = ref<string>("");
-  const folders = ref<string[]>([]);
+export const useDocumentsStore = defineStore('documents', () => {
+  const documents = ref<DocumentMeta[]>([])
+  const activeId = ref<string>('')
+  const folders = ref<string[]>([])
 
   /** Generate a unique document name like "Untitled", "Untitled 2", etc. */
   function nextUntitledName(): string {
-    const names = new Set(documents.value.map((d) => {
-      // Use base name without directory prefix or .md extension
-      const n = d.name;
-      const slash = n.lastIndexOf("/");
-      return slash >= 0 ? n.substring(slash + 1) : n;
-    }));
-    if (!names.has("Untitled")) return "Untitled";
-    let i = 2;
-    while (names.has(`Untitled ${i}`)) i++;
-    return `Untitled ${i}`;
+    const names = new Set(
+      documents.value.map((d) => {
+        // Use base name without directory prefix or .md extension
+        const n = d.name
+        const slash = n.lastIndexOf('/')
+        return slash >= 0 ? n.substring(slash + 1) : n
+      }),
+    )
+    if (!names.has('Untitled')) return 'Untitled'
+    let i = 2
+    while (names.has(`Untitled ${i}`)) i++
+    return `Untitled ${i}`
   }
 
   const sortedDocuments = computed(() =>
     [...documents.value].sort((a, b) => a.name.localeCompare(b.name)),
-  );
+  )
 
   async function init(): Promise<string> {
     if (isSingleFileMode()) {
-      return initSingleFile();
+      return initSingleFile()
     }
     if (isFileSystemMode()) {
-      return initFromFilesystem();
+      return initFromFilesystem()
     }
-    return initFromRegistry();
+    return initFromRegistry()
   }
 
   // ── Single-file mode ──
 
   async function initSingleFile(): Promise<string> {
-    const { useSettingsStore } = await import("@/stores/settings");
-    const settings = useSettingsStore();
-    const filePath = settings.singleFilePath;
-    if (!filePath) return "";
+    const { useSettingsStore } = await import('@/stores/settings')
+    const settings = useSettingsStore()
+    const filePath = settings.singleFilePath
+    if (!filePath) return ''
 
     // Extract filename for display
-    const fileName = filePath.includes("/")
-      ? filePath.substring(filePath.lastIndexOf("/") + 1)
-      : filePath;
+    const fileName = filePath.includes('/')
+      ? filePath.substring(filePath.lastIndexOf('/') + 1)
+      : filePath
 
-    const docId = fileName;
+    const docId = fileName
     documents.value = [
       {
         id: docId,
-        name: fileName.replace(/\.md$/, ""),
+        name: fileName.replace(/\.md$/, ''),
         createdAt: 0,
         lastModified: 0,
       },
-    ];
-    activeId.value = docId;
-    return docId;
+    ]
+    activeId.value = docId
+    return docId
   }
 
   // ── Web mode: localStorage registry (existing behavior) ──
 
   async function initFromRegistry(): Promise<string> {
-    const migratedId = await migrateOldDB();
+    const migratedId = await migrateOldDB()
     if (migratedId) {
       const registry: DocumentRegistry = {
         documents: [
           {
             id: migratedId,
-            name: "My Document",
+            name: 'My Document',
             createdAt: Date.now(),
             lastModified: Date.now(),
           },
         ],
         activeDocumentId: migratedId,
-      };
-      saveRegistry(registry);
+      }
+      saveRegistry(registry)
     }
 
-    const registry = loadRegistry();
-    documents.value = registry.documents;
+    const registry = loadRegistry()
+    documents.value = registry.documents
 
     if (documents.value.length === 0) {
-      const meta = addDoc("My Document");
-      documents.value = [meta];
-      activeId.value = meta.id;
+      const meta = addDoc('My Document')
+      documents.value = [meta]
+      activeId.value = meta.id
     } else {
-      activeId.value = registry.activeDocumentId ?? documents.value[0]!.id;
+      activeId.value = registry.activeDocumentId ?? documents.value[0]!.id
     }
 
-    setCurrentDocId(activeId.value);
-    return activeId.value;
+    setCurrentDocId(activeId.value)
+    return activeId.value
   }
 
   // ── Filesystem mode (Tauri native or browser File System Access API) ──
 
   async function initFromFilesystem(): Promise<string> {
-    const { useSettingsStore } = await import("@/stores/settings");
-    const settings = useSettingsStore();
-    const workspace = settings.workspacePath;
+    const { useSettingsStore } = await import('@/stores/settings')
+    const settings = useSettingsStore()
+    const workspace = settings.workspacePath
 
     if (!workspace) {
       // No workspace chosen yet — UI will show WorkspacePicker
-      return "";
+      return ''
     }
 
-    let files: string[];
+    let files: string[]
     try {
-      const fs = await import("@/lib/fs");
-      files = await fs.listWorkspaceFiles(workspace);
+      const fs = await import('@/lib/fs')
+      files = await fs.listWorkspaceFiles(workspace)
     } catch (err) {
-      console.error("[strata] Failed to list workspace files:", err);
-      files = [];
+      console.error('[strata] Failed to list workspace files:', err)
+      files = []
     }
 
     documents.value = files.map((relPath) => ({
       id: relPath,
-      name: relPath.replace(/\.md$/, ""),
+      name: relPath.replace(/\.md$/, ''),
       createdAt: 0,
       lastModified: 0,
-    }));
-    activeId.value = files[0] ?? "";
+    }))
+    activeId.value = files[0] ?? ''
 
-    await loadFolders();
+    await loadFolders()
 
-    return activeId.value;
+    return activeId.value
   }
 
   function createDocument(name: string, folder?: string): string {
     if (isFileSystemMode()) {
-      return createDocumentFile(name, folder);
+      return createDocumentFile(name, folder)
     }
-    const meta = addDoc(name);
-    documents.value = loadRegistry().documents;
-    return meta.id;
+    const meta = addDoc(name)
+    documents.value = loadRegistry().documents
+    return meta.id
   }
 
   function createDocumentFile(name: string, folder?: string): string {
-    const relPath = folder ? `${folder}/${name}.md` : `${name}.md`;
-    const displayName = folder ? `${folder}/${name}` : name;
+    const relPath = folder ? `${folder}/${name}.md` : `${name}.md`
+    const displayName = folder ? `${folder}/${name}` : name
     // Write is async but we return the id synchronously; the file will be created when the doc store inits
-    import("@/lib/fs").then(({ writeFile, ensureDir }) => {
-      import("@/stores/settings").then(({ useSettingsStore }) => {
-        const settings = useSettingsStore();
+    import('@/lib/fs').then(({ writeFile, ensureDir }) => {
+      import('@/stores/settings').then(({ useSettingsStore }) => {
+        const settings = useSettingsStore()
         const promise = folder
           ? ensureDir(`${settings.workspacePath}/${folder}`)
-          : Promise.resolve();
+          : Promise.resolve()
         promise.then(() => {
-          writeFile(`${settings.workspacePath}/${relPath}`, emptyStrataDoc());
-        });
-      });
-    });
+          writeFile(`${settings.workspacePath}/${relPath}`, emptyStrataDoc())
+        })
+      })
+    })
     documents.value = [
       ...documents.value,
       {
@@ -184,144 +186,142 @@ export const useDocumentsStore = defineStore("documents", () => {
         createdAt: Date.now(),
         lastModified: Date.now(),
       },
-    ];
-    return relPath;
+    ]
+    return relPath
   }
 
   async function loadFolders(): Promise<void> {
-    if (!isFileSystemMode() || isSingleFileMode()) return;
-    const { useSettingsStore } = await import("@/stores/settings");
-    const settings = useSettingsStore();
-    if (!settings.workspacePath) return;
+    if (!isFileSystemMode() || isSingleFileMode()) return
+    const { useSettingsStore } = await import('@/stores/settings')
+    const settings = useSettingsStore()
+    if (!settings.workspacePath) return
     try {
-      const { listSubdirs } = await import("@/lib/fs");
-      folders.value = await listSubdirs(settings.workspacePath);
+      const { listSubdirs } = await import('@/lib/fs')
+      folders.value = await listSubdirs(settings.workspacePath)
     } catch (err) {
-      console.error("[strata] Failed to list subdirs:", err);
-      folders.value = [];
+      console.error('[strata] Failed to list subdirs:', err)
+      folders.value = []
     }
   }
 
   async function createFolder(folderPath: string): Promise<void> {
-    const { ensureDir } = await import("@/lib/fs");
-    const { useSettingsStore } = await import("@/stores/settings");
-    const settings = useSettingsStore();
-    await ensureDir(`${settings.workspacePath}/${folderPath}`);
-    await loadFolders();
+    const { ensureDir } = await import('@/lib/fs')
+    const { useSettingsStore } = await import('@/stores/settings')
+    const settings = useSettingsStore()
+    await ensureDir(`${settings.workspacePath}/${folderPath}`)
+    await loadFolders()
   }
 
   async function switchDocument(docId: string): Promise<void> {
     if (!isFileSystemMode()) {
-      setActiveDoc(docId);
-      setCurrentDocId(docId);
+      setActiveDoc(docId)
+      setCurrentDocId(docId)
     }
-    activeId.value = docId;
+    activeId.value = docId
     if (!isFileSystemMode()) {
-      touchDoc(docId);
-      documents.value = loadRegistry().documents;
+      touchDoc(docId)
+      documents.value = loadRegistry().documents
     }
   }
 
   /** Check if a document name already exists (case-insensitive for filesystem safety). */
   function nameConflicts(name: string, excludeId?: string): boolean {
     return documents.value.some((d) => {
-      if (excludeId && d.id === excludeId) return false;
-      const n = d.name;
-      const slash = n.lastIndexOf("/");
-      const base = slash >= 0 ? n.substring(slash + 1) : n;
-      return base.toLowerCase() === name.toLowerCase();
-    });
+      if (excludeId && d.id === excludeId) return false
+      const n = d.name
+      const slash = n.lastIndexOf('/')
+      const base = slash >= 0 ? n.substring(slash + 1) : n
+      return base.toLowerCase() === name.toLowerCase()
+    })
   }
 
   function renameDocument(docId: string, name: string): void {
-    if (nameConflicts(name, docId)) return; // silently skip if name taken
+    if (nameConflicts(name, docId)) return // silently skip if name taken
     if (isFileSystemMode()) {
-      renameDocumentFile(docId, name);
-      return;
+      renameDocumentFile(docId, name)
+      return
     }
-    renameDoc(docId, name);
-    documents.value = loadRegistry().documents;
+    renameDoc(docId, name)
+    documents.value = loadRegistry().documents
   }
 
   async function renameDocumentFile(oldId: string, newName: string): Promise<void> {
-    const { renameFile } = await import("@/lib/fs");
-    const { useSettingsStore } = await import("@/stores/settings");
-    const settings = useSettingsStore();
+    const { renameFile } = await import('@/lib/fs')
+    const { useSettingsStore } = await import('@/stores/settings')
+    const settings = useSettingsStore()
     // Preserve directory prefix from old ID (e.g., "notes/Old.md" → "notes/")
-    const dirPrefix = oldId.includes("/") ? oldId.substring(0, oldId.lastIndexOf("/") + 1) : "";
-    const newRelPath = `${dirPrefix}${newName}.md`;
+    const dirPrefix = oldId.includes('/') ? oldId.substring(0, oldId.lastIndexOf('/') + 1) : ''
+    const newRelPath = `${dirPrefix}${newName}.md`
     await renameFile(
       `${settings.workspacePath}/${oldId}`,
       `${settings.workspacePath}/${newRelPath}`,
-    );
+    )
     documents.value = documents.value.map((d) =>
-      d.id === oldId ? { ...d, id: newRelPath, name: newRelPath.replace(/\.md$/, "") } : d,
-    );
+      d.id === oldId ? { ...d, id: newRelPath, name: newRelPath.replace(/\.md$/, '') } : d,
+    )
     if (activeId.value === oldId) {
-      activeId.value = newRelPath;
+      activeId.value = newRelPath
     }
   }
 
   async function deleteDocument(docId: string): Promise<void> {
     if (activeId.value === docId) {
-      const other = documents.value.find((d) => d.id !== docId);
+      const other = documents.value.find((d) => d.id !== docId)
       if (other) {
-        await switchDocument(other.id);
+        await switchDocument(other.id)
       } else {
-        activeId.value = "";
+        activeId.value = ''
       }
     }
 
     if (isFileSystemMode()) {
-      const { deleteFile } = await import("@/lib/fs");
-      const { useSettingsStore } = await import("@/stores/settings");
-      const settings = useSettingsStore();
-      await deleteFile(`${settings.workspacePath}/${docId}`);
-      documents.value = documents.value.filter((d) => d.id !== docId);
+      const { deleteFile } = await import('@/lib/fs')
+      const { useSettingsStore } = await import('@/stores/settings')
+      const settings = useSettingsStore()
+      await deleteFile(`${settings.workspacePath}/${docId}`)
+      documents.value = documents.value.filter((d) => d.id !== docId)
     } else {
-      removeDoc(docId);
-      removeDocFromIndex(docId);
-      await deleteDocDB(docId);
-      documents.value = loadRegistry().documents;
+      removeDoc(docId)
+      removeDocFromIndex(docId)
+      await deleteDocDB(docId)
+      documents.value = loadRegistry().documents
     }
   }
 
   function touch(): void {
-    if (isFileSystemMode()) return; // no-op in file mode
-    touchDoc(activeId.value);
-    documents.value = loadRegistry().documents;
+    if (isFileSystemMode()) return // no-op in file mode
+    touchDoc(activeId.value)
+    documents.value = loadRegistry().documents
   }
 
   // ── File watching ──
 
-  let unlistenHandles: Array<() => void> = [];
+  let unlistenHandles: Array<() => void> = []
 
   async function setupFileWatching(pathOrWorkspace: string) {
     if (isSingleFileMode()) {
-      await setupSingleFileWatching(pathOrWorkspace);
-      return;
+      await setupSingleFileWatching(pathOrWorkspace)
+      return
     }
     if (isTauri()) {
-      await setupTauriFileWatching(pathOrWorkspace);
+      await setupTauriFileWatching(pathOrWorkspace)
     } else {
-      await setupWebFileWatching();
+      await setupWebFileWatching()
     }
   }
 
   async function setupSingleFileWatching(filePath: string) {
     if (isTauri()) {
-      const { startWatchingFile } = await import("@/lib/tauri-fs");
-      const { listen } = await import("@tauri-apps/api/event");
-      await startWatchingFile(filePath);
+      const { startWatchingFile } = await import('@/lib/tauri-fs')
+      const { listen } = await import('@tauri-apps/api/event')
+      await startWatchingFile(filePath)
       unlistenHandles.push(
-        await listen<{ relPath: string }>("fs:modified", (e) => onFileModified(e.payload.relPath)),
-      );
+        await listen<{ relPath: string }>('fs:modified', (e) => onFileModified(e.payload.relPath)),
+      )
     } else {
-      const { startWatchingSingleFile, onFsEvent } = await import("@/lib/web-fs");
-      await startWatchingSingleFile();
-      unlistenHandles.push(
-        onFsEvent("modified", onFileModified),
-      );
+      const { startWatchingSingleFile, onFsEvent } = await import('@/lib/web-fs')
+      await startWatchingSingleFile()
+      unlistenHandles.push(onFsEvent('modified', onFileModified))
     }
   }
 
@@ -331,64 +331,64 @@ export const useDocumentsStore = defineStore("documents", () => {
         ...documents.value,
         {
           id: relPath,
-          name: relPath.replace(/\.md$/, ""),
+          name: relPath.replace(/\.md$/, ''),
           createdAt: Date.now(),
           lastModified: Date.now(),
         },
-      ];
+      ]
     }
   }
 
   function onFileDeleted(relPath: string) {
-    documents.value = documents.value.filter((d) => d.id !== relPath);
+    documents.value = documents.value.filter((d) => d.id !== relPath)
     if (activeId.value === relPath) {
-      const other = documents.value[0];
-      if (other) switchDocument(other.id);
+      const other = documents.value[0]
+      if (other) switchDocument(other.id)
     }
   }
 
   async function onFileModified(relPath: string) {
     if (relPath === activeId.value) {
-      const { useDocStore } = await import("@/stores/doc");
-      const docStore = useDocStore();
+      const { useDocStore } = await import('@/stores/doc')
+      const docStore = useDocStore()
       if (!docStore.hasUnsavedChanges() && !docStore.recentlyWritten()) {
-        docStore.refreshFromFile();
+        docStore.refreshFromFile()
       }
     }
   }
 
   async function setupTauriFileWatching(workspace: string) {
-    const { startWatching } = await import("@/lib/tauri-fs");
-    const { listen } = await import("@tauri-apps/api/event");
+    const { startWatching } = await import('@/lib/tauri-fs')
+    const { listen } = await import('@tauri-apps/api/event')
 
-    await startWatching(workspace);
+    await startWatching(workspace)
 
     unlistenHandles.push(
-      await listen<{ relPath: string }>("fs:created", (e) => onFileCreated(e.payload.relPath)),
-      await listen<{ relPath: string }>("fs:deleted", (e) => onFileDeleted(e.payload.relPath)),
-      await listen<{ relPath: string }>("fs:modified", (e) => onFileModified(e.payload.relPath)),
-    );
+      await listen<{ relPath: string }>('fs:created', (e) => onFileCreated(e.payload.relPath)),
+      await listen<{ relPath: string }>('fs:deleted', (e) => onFileDeleted(e.payload.relPath)),
+      await listen<{ relPath: string }>('fs:modified', (e) => onFileModified(e.payload.relPath)),
+    )
   }
 
   async function setupWebFileWatching() {
-    const { startWatching, onFsEvent } = await import("@/lib/web-fs");
+    const { startWatching, onFsEvent } = await import('@/lib/web-fs')
 
-    await startWatching();
+    await startWatching()
 
     unlistenHandles.push(
-      onFsEvent("created", onFileCreated),
-      onFsEvent("deleted", onFileDeleted),
-      onFsEvent("modified", onFileModified),
-    );
+      onFsEvent('created', onFileCreated),
+      onFsEvent('deleted', onFileDeleted),
+      onFsEvent('modified', onFileModified),
+    )
   }
 
   async function teardownFileWatching() {
     for (const unlisten of unlistenHandles) {
-      unlisten();
+      unlisten()
     }
-    unlistenHandles = [];
-    const { stopWatching } = await import("@/lib/fs");
-    await stopWatching();
+    unlistenHandles = []
+    const { stopWatching } = await import('@/lib/fs')
+    await stopWatching()
   }
 
   return {
@@ -408,5 +408,5 @@ export const useDocumentsStore = defineStore("documents", () => {
     createFolder,
     setupFileWatching,
     teardownFileWatching,
-  };
-});
+  }
+})

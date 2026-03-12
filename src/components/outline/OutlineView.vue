@@ -51,14 +51,18 @@ async function ensureDocument(): Promise<boolean> {
 // ── Composables ──
 const visibleRows = computed(() => store.visibleRows)
 
-const { useVirtual, virtualRows, topSpacer, bottomSpacer, onScroll } =
-  useVirtualScroll(visibleRows, containerRef)
+const { useVirtual, virtualRows, topSpacer, bottomSpacer, onScroll } = useVirtualScroll(
+  visibleRows,
+  containerRef,
+)
 
-const { dragNodeId, isDragging, dragSubtreeIds, onRowPointerDown } =
-  useDragReorder(containerRef, dropTargetIdx, dropAsChildId)
+const { dragNodeId, dragSubtreeIds, onRowPointerDown } = useDragReorder(
+  containerRef,
+  dropTargetIdx,
+  dropAsChildId,
+)
 
-const { fileDragOver, onFileDragOver, onFileDragLeave, onFileDrop } =
-  useFileDrop(dragNodeId)
+const { fileDragOver, onFileDragOver, onFileDragLeave, onFileDrop } = useFileDrop(dragNodeId)
 
 const { handleVimKey } = useVimMode(emit, scrollSelectedIntoView)
 
@@ -287,10 +291,7 @@ watch(
       <!-- Normal mode with transitions (suppressed during external file refresh) -->
       <TransitionGroup v-else :name="store.suppressTransitions ? '' : 'outline-row'">
         <template v-for="(row, idx) in store.visibleRows" :key="row.node.id">
-          <div
-            v-if="dropTargetIdx === idx"
-            class="h-0.5 bg-(--accent-500) rounded mx-2 my-px"
-          />
+          <div v-if="dropTargetIdx === idx" class="h-0.5 bg-(--accent-500) rounded mx-2 my-px" />
           <div
             :data-row-idx="idx"
             :class="{
@@ -331,11 +332,7 @@ watch(
     />
 
     <!-- Node history -->
-    <NodeHistory
-      v-if="historyNodeId"
-      :node-id="historyNodeId"
-      @close="historyNodeId = null"
-    />
+    <NodeHistory v-if="historyNodeId" :node-id="historyNodeId" @close="historyNodeId = null" />
 
     <!-- File drop overlay -->
     <div

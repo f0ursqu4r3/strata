@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   loadSearchIndex,
   saveSearchIndex,
@@ -38,7 +38,11 @@ describe('search-index', () => {
     })
 
     it('returns parsed index from localStorage', () => {
-      const stored = { version: 1, entries: [{ docId: 'd1', nodeId: 'n1', text: 'hello' }], updatedAt: { d1: 100 } }
+      const stored = {
+        version: 1,
+        entries: [{ docId: 'd1', nodeId: 'n1', text: 'hello' }],
+        updatedAt: { d1: 100 },
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
       const index = loadSearchIndex()
       expect(index.entries).toHaveLength(1)
@@ -54,7 +58,11 @@ describe('search-index', () => {
 
   describe('saveSearchIndex', () => {
     it('persists index to localStorage', () => {
-      const index = { version: 1, entries: [{ docId: 'd1', nodeId: 'n1', text: 'test' }], updatedAt: { d1: 123 } }
+      const index = {
+        version: 1,
+        entries: [{ docId: 'd1', nodeId: 'n1', text: 'test' }],
+        updatedAt: { d1: 123 },
+      }
       saveSearchIndex(index)
       const raw = localStorage.getItem(STORAGE_KEY)
       expect(raw).not.toBeNull()

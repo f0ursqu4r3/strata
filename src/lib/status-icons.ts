@@ -9,7 +9,7 @@ import {
 import type { Component } from 'vue'
 
 const iconMap: Record<string, Component> = {
-  'circle': Circle,
+  circle: Circle,
   'circle-dot': CircleDot,
   'circle-alert': CircleAlert,
   'circle-check': CircleCheckBig,

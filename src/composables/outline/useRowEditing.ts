@@ -7,10 +7,7 @@ import { renderInlineMarkdown } from '@/lib/inline-markdown'
 import { getTitle, getBody, combineText } from '@/lib/text-utils'
 import type { Node, Status } from '@/types'
 
-export function useRowEditing(
-  props: { node: Node; depth: number },
-  isEditing: () => boolean,
-) {
+export function useRowEditing(props: { node: Node; depth: number }, isEditing: () => boolean) {
   const store = useDocStore()
   const settings = useSettingsStore()
 
@@ -23,7 +20,10 @@ export function useRowEditing(
 
   // ── Picker click-outside ──
   function onDatePickerClickOutside(e: MouseEvent) {
-    if (datePickerWrapperRef.value && !datePickerWrapperRef.value.contains(e.target as HTMLElement)) {
+    if (
+      datePickerWrapperRef.value &&
+      !datePickerWrapperRef.value.contains(e.target as HTMLElement)
+    ) {
       showDatePicker.value = false
     }
   }
@@ -120,52 +120,49 @@ export function useRowEditing(
     },
   )
 
-  watch(
-    isEditing,
-    async (editing) => {
-      if (editing) {
-        localText.value = props.node.text
+  watch(isEditing, async (editing) => {
+    if (editing) {
+      localText.value = props.node.text
+      await nextTick()
+      autoResizeBody()
+      const cursorColumn = store.editing.cursorColumn
+      store.editing.cursorColumn = null
+      const shouldFocusBody =
+        focusBodyOnEdit.value || (store.editing.focusBody && localText.value.includes('\n'))
+      if (shouldFocusBody) {
+        focusBodyOnEdit.value = false
+        store.editing.focusBody = false
         await nextTick()
-        autoResizeBody()
-        const cursorColumn = store.editing.cursorColumn
-        store.editing.cursorColumn = null
-        const shouldFocusBody =
-          focusBodyOnEdit.value || (store.editing.focusBody && localText.value.includes('\n'))
-        if (shouldFocusBody) {
-          focusBodyOnEdit.value = false
-          store.editing.focusBody = false
-          await nextTick()
-          const body = bodyInputRef.value
-          if (body) {
-            body.focus()
-            if (cursorColumn === -1 || cursorColumn === null) {
-              const len = body.value.length
-              body.setSelectionRange(len, len)
-            } else {
-              const pos = Math.min(cursorColumn, body.value.length)
-              body.setSelectionRange(pos, pos)
-            }
+        const body = bodyInputRef.value
+        if (body) {
+          body.focus()
+          if (cursorColumn === -1 || cursorColumn === null) {
+            const len = body.value.length
+            body.setSelectionRange(len, len)
+          } else {
+            const pos = Math.min(cursorColumn, body.value.length)
+            body.setSelectionRange(pos, pos)
           }
-          return
         }
-        const input = titleInputRef.value
-        if (input) {
-          if (document.activeElement !== input) {
-            input.focus()
-          }
-          if (store.editing.trigger === 'keyboard') {
-            if (cursorColumn !== null) {
-              const pos = Math.min(cursorColumn, input.value.length)
-              input.setSelectionRange(pos, pos)
-            } else {
-              const len = input.value.length
-              input.setSelectionRange(len, len)
-            }
+        return
+      }
+      const input = titleInputRef.value
+      if (input) {
+        if (document.activeElement !== input) {
+          input.focus()
+        }
+        if (store.editing.trigger === 'keyboard') {
+          if (cursorColumn !== null) {
+            const pos = Math.min(cursorColumn, input.value.length)
+            input.setSelectionRange(pos, pos)
+          } else {
+            const len = input.value.length
+            input.setSelectionRange(len, len)
           }
         }
       }
-    },
-  )
+    }
+  })
 
   function onTitleInput(e: Event) {
     const newTitle = (e.target as HTMLInputElement).value
@@ -385,7 +382,9 @@ export function useRowEditing(
   }
 
   onUnmounted(() => {
-    document.removeEventListener('pointerdown', onClickOutsideStatus, { capture: true } as EventListenerOptions)
+    document.removeEventListener('pointerdown', onClickOutsideStatus, {
+      capture: true,
+    } as EventListenerOptions)
   })
 
   return {

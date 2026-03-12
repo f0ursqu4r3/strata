@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  rankBetween,
-  rankBefore,
-  rankAfter,
-  initialRank,
-  generateRanks,
-} from '@/lib/rank'
+import { rankBetween, rankBefore, rankAfter, initialRank, generateRanks } from '@/lib/rank'
 
 describe('rank', () => {
   describe('initialRank', () => {

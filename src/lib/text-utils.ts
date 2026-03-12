@@ -3,8 +3,8 @@
  * Treats the first newline as the title/body boundary.
  */
 export function getTitle(text: string): string {
-  if (!text) return ""
-  const idx = text.indexOf("\n")
+  if (!text) return ''
+  const idx = text.indexOf('\n')
   return idx === -1 ? text : text.slice(0, idx)
 }
 
@@ -13,9 +13,9 @@ export function getTitle(text: string): string {
  * Returns empty string if no multiline content.
  */
 export function getBody(text: string): string {
-  if (!text) return ""
-  const idx = text.indexOf("\n")
-  return idx === -1 ? "" : text.slice(idx + 1)
+  if (!text) return ''
+  const idx = text.indexOf('\n')
+  return idx === -1 ? '' : text.slice(idx + 1)
 }
 
 /**

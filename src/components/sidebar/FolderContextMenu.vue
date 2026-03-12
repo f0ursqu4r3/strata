@@ -28,11 +28,7 @@ function onNewFolder() {
 
 <template>
   <BaseContextMenu :x="x" :y="y" aria-label="Folder actions" @close="emit('close')">
-    <UiMenuItem :icon="Plus" @click="onNewDoc">
-      New Document Here
-    </UiMenuItem>
-    <UiMenuItem :icon="FolderPlus" @click="onNewFolder">
-      New Sub-folder
-    </UiMenuItem>
+    <UiMenuItem :icon="Plus" @click="onNewDoc"> New Document Here </UiMenuItem>
+    <UiMenuItem :icon="FolderPlus" @click="onNewFolder"> New Sub-folder </UiMenuItem>
   </BaseContextMenu>
 </template>

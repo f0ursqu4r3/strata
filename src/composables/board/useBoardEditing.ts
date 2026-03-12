@@ -2,7 +2,7 @@ import { ref, nextTick, type Ref } from 'vue'
 import { usePickerClickOutside } from '@/composables/usePickerClickOutside'
 import { useDropdownPosition } from '@/composables/useDropdownPosition'
 import { useDocStore } from '@/stores/doc'
-import { getTitle, getBody, combineText } from '@/lib/text-utils'
+import { getBody, combineText } from '@/lib/text-utils'
 import type { Node } from '@/types'
 
 export function useBoardEditing(isDragging: Ref<boolean>, editingCardId: Ref<string | null>) {

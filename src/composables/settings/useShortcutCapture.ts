@@ -32,9 +32,16 @@ export function useShortcutCapture() {
 
   const conflicts = computed(() => {
     if (!editingAction.value || !capturedCombo.value) return []
-    const def = settings.resolvedShortcuts.find((s: ShortcutDef) => s.action === editingAction.value)
+    const def = settings.resolvedShortcuts.find(
+      (s: ShortcutDef) => s.action === editingAction.value,
+    )
     if (!def) return []
-    return findConflicts(settings.resolvedShortcuts, capturedCombo.value, def.context, editingAction.value)
+    return findConflicts(
+      settings.resolvedShortcuts,
+      capturedCombo.value,
+      def.context,
+      editingAction.value,
+    )
   })
 
   function isCustomized(action: ShortcutAction): boolean {

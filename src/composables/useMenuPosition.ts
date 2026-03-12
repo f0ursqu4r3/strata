@@ -5,11 +5,7 @@ import { POPOVER_PADDING } from '@/lib/constants'
  * Adjusts a context menu's position so it stays within the viewport.
  * Returns reactive `style` object to bind to the menu element.
  */
-export function useMenuPosition(
-  menuRef: Ref<HTMLElement | null>,
-  x: number,
-  y: number,
-) {
+export function useMenuPosition(menuRef: Ref<HTMLElement | null>, x: number, y: number) {
   const style = ref({ left: `${x}px`, top: `${y}px` })
 
   onMounted(() => {

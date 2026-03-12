@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { inject, type Ref } from 'vue'
 import { SIDEBAR_DEPTH_INDENT, SIDEBAR_BASE_PADDING } from '@/lib/constants'
-import { ChevronRight, Folder, FolderOpen, FileText, Plus, Trash2, FolderPlus } from 'lucide-vue-next'
+import {
+  ChevronRight,
+  Folder,
+  FolderOpen,
+  FileText,
+  Plus,
+  Trash2,
+  FolderPlus,
+} from 'lucide-vue-next'
 import type { FolderTreeNode } from '@/lib/folder-tree'
 
 const props = defineProps<{
@@ -58,7 +66,10 @@ function toggleExpand() {
         class="w-3 h-3 shrink-0 text-(--text-faint) transition-transform"
         :class="{ 'rotate-90': isExpanded() }"
       />
-      <component :is="isExpanded() ? FolderOpen : Folder" class="w-3.5 h-3.5 shrink-0 text-(--text-faint)" />
+      <component
+        :is="isExpanded() ? FolderOpen : Folder"
+        class="w-3.5 h-3.5 shrink-0 text-(--text-faint)"
+      />
       <span class="flex-1 truncate">{{ node.name }}</span>
       <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 pr-2">
         <button
@@ -125,13 +136,20 @@ function toggleExpand() {
           ref="renameInputRef"
           :value="renameText"
           class="w-full bg-transparent border rounded px-1 py-0.5 text-sm text-(--text-primary) outline-none focus:ring-1"
-          :class="renameConflict ? 'border-(--color-danger) focus:ring-(--color-danger)' : 'border-(--border-secondary) focus:ring-(--accent-400)'"
+          :class="
+            renameConflict
+              ? 'border-(--color-danger) focus:ring-(--color-danger)'
+              : 'border-(--border-secondary) focus:ring-(--accent-400)'
+          "
           @input="emit('update:renameText', ($event.target as HTMLInputElement).value)"
           @blur="emit('finish-rename')"
           @keydown="emit('rename-keydown', $event)"
           @click.stop
         />
-        <div v-if="renameConflict" class="absolute left-0 top-full text-[10px] text-(--color-danger) mt-0.5">
+        <div
+          v-if="renameConflict"
+          class="absolute left-0 top-full text-[10px] text-(--color-danger) mt-0.5"
+        >
           Name already exists
         </div>
       </div>

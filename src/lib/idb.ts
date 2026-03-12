@@ -2,9 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { Op, Snapshot, Node, StatusDef } from '@/types'
 import { IDB_FLUSH_DELAY } from '@/lib/constants'
 
-interface OpRecord extends Op {
-  // seq is also the primary key
-}
+type OpRecord = Op
 
 interface SnapshotRecord {
   id: string
@@ -164,7 +162,7 @@ export async function deleteDocDB(docId: string): Promise<void> {
 // ── Migration: move old single "strata" DB to new per-doc format ──
 export async function migrateOldDB(): Promise<string | null> {
   // Check if old "strata" database exists
-  if (!await Dexie.exists('strata')) return null
+  if (!(await Dexie.exists('strata'))) return null
 
   const oldDb = new Dexie('strata') as StrataDB
   oldDb.version(1).stores({

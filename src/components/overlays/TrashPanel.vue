@@ -27,10 +27,7 @@ function formatDate(ts: number | undefined): string {
 
 <template>
   <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex justify-end bg-black/30"
-      @mousedown.self="emit('close')"
-    >
+    <div class="fixed inset-0 z-50 flex justify-end bg-black/30" @mousedown.self="emit('close')">
       <div class="bg-(--bg-secondary) w-full max-w-sm h-full shadow-2xl flex flex-col">
         <!-- Header -->
         <div class="flex items-center justify-between px-5 py-4 border-b border-(--border-primary)">
@@ -51,7 +48,10 @@ function formatDate(ts: number | undefined): string {
 
         <!-- Trash list -->
         <div class="flex-1 overflow-y-auto">
-          <div v-if="store.trashedNodes.length === 0" class="p-6 text-center text-(--text-faint) text-sm">
+          <div
+            v-if="store.trashedNodes.length === 0"
+            class="p-6 text-center text-(--text-faint) text-sm"
+          >
             Trash is empty
           </div>
           <div

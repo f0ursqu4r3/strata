@@ -1,35 +1,29 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { Settings2, Calendar, Tag, Plus } from "lucide-vue-next";
-import { useDocStore } from "@/stores/doc";
-import { useSettingsStore } from "@/stores/settings";
-import { renderInlineMarkdown } from "@/lib/inline-markdown";
-import { dueDateUrgency, formatDueDate } from "@/lib/due-date";
-import { getTitle } from "@/lib/text-utils";
-import type { Node } from "@/types";
-import ContextMenu from "../shared/ContextMenu.vue";
-import ColumnContextMenu from "./ColumnContextMenu.vue";
-import TagPicker from "../shared/TagPicker.vue";
-import DatePicker from "../shared/DatePicker.vue";
-import { useBoardDrag } from "@/composables/board/useBoardDrag";
-import { useBoardEditing } from "@/composables/board/useBoardEditing";
-import { tagStyle } from "@/lib/tag-colors";
+import { ref } from 'vue'
+import { Settings2, Calendar, Tag } from 'lucide-vue-next'
+import { useDocStore } from '@/stores/doc'
+import { useSettingsStore } from '@/stores/settings'
+import { renderInlineMarkdown } from '@/lib/inline-markdown'
+import { dueDateUrgency, formatDueDate } from '@/lib/due-date'
+import { getTitle } from '@/lib/text-utils'
+import type { Node } from '@/types'
+import ContextMenu from '../shared/ContextMenu.vue'
+import ColumnContextMenu from './ColumnContextMenu.vue'
+import TagPicker from '../shared/TagPicker.vue'
+import DatePicker from '../shared/DatePicker.vue'
+import { useBoardDrag } from '@/composables/board/useBoardDrag'
+import { useBoardEditing } from '@/composables/board/useBoardEditing'
+import { tagStyle } from '@/lib/tag-colors'
 
-const store = useDocStore();
-const settings = useSettingsStore();
-const emit = defineEmits<{ openStatusEditor: [] }>();
+const store = useDocStore()
+const settings = useSettingsStore()
+const emit = defineEmits<{ openStatusEditor: [] }>()
 
 // Shared ref: drag needs to read editingCardId, editing needs to read isDragging
-const editingCardId = ref<string | null>(null);
+const editingCardId = ref<string | null>(null)
 
-const {
-  dragNodeId,
-  dragOverColumn,
-  isDragging,
-  dropInsertIndex,
-  onCardPointerDown,
-  columnRefs,
-} = useBoardDrag(editingCardId);
+const { dragNodeId, dragOverColumn, isDragging, dropInsertIndex, onCardPointerDown, columnRefs } =
+  useBoardDrag(editingCardId)
 
 const {
   editInputRef,
@@ -50,10 +44,15 @@ const {
   tagPickerPos,
   onTagsClick,
   onDateClick,
-} = useBoardEditing(isDragging, editingCardId);
+} = useBoardEditing(isDragging, editingCardId)
 
 function childCount(node: Node): number {
-  return store.getChildren(node.id).length;
+  return store.getChildren(node.id).length
+}
+
+function onDatePickerUpdate(nodeId: string, value: number | null) {
+  store.setDueDate(nodeId, value)
+  editingDateCardId.value = null
 }
 </script>
 
@@ -82,7 +81,12 @@ function childCount(node: Node): number {
       </button>
     </div>
 
-    <div class="flex-1 overflow-x-auto overflow-y-auto" role="region" aria-label="Kanban board" @contextmenu.prevent>
+    <div
+      class="flex-1 overflow-x-auto overflow-y-auto"
+      role="region"
+      aria-label="Kanban board"
+      @contextmenu.prevent
+    >
       <div class="flex flex-col justify-center sm:flex-row gap-3 p-3 pt-1 min-w-max min-h-full">
         <div
           v-for="col in store.kanbanColumns"
@@ -142,7 +146,7 @@ function childCount(node: Node): number {
                   <!-- eslint-disable vue/no-v-html -->
                   <div
                     class="text-(--text-secondary) leading-snug overflow-hidden text-ellipsis whitespace-nowrap strata-text"
-                    :class="{ 'invisible': editingCardId === node.id }"
+                    :class="{ invisible: editingCardId === node.id }"
                     v-html="renderInlineMarkdown(getTitle(node.text) || '(empty)')"
                   />
                   <input
@@ -191,10 +195,7 @@ function childCount(node: Node): number {
                     >
                       <DatePicker
                         :model-value="node.dueDate ?? null"
-                        @update:model-value="
-                          store.setDueDate(node.id, $event);
-                          editingDateCardId = null;
-                        "
+                        @update:model-value="onDatePickerUpdate(node.id, $event)"
                       />
                     </div>
                   </Teleport>
@@ -202,7 +203,10 @@ function childCount(node: Node): number {
 
                 <!-- Tags -->
                 <div
-                  v-if="settings.showBoardTags && (node.tags?.length > 0 || editingTagsCardId === node.id)"
+                  v-if="
+                    settings.showBoardTags &&
+                    (node.tags?.length > 0 || editingTagsCardId === node.id)
+                  "
                   class="relative mt-1.5"
                 >
                   <div
@@ -214,12 +218,19 @@ function childCount(node: Node): number {
                       v-for="tag in node.tags?.slice(0, 3)"
                       :key="tag"
                       class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
-                      :class="tagStyle(tag, store.tagColors, settings.dark) ? '' : 'bg-(--accent-100) text-(--accent-700) hover:bg-(--accent-200)'"
+                      :class="
+                        tagStyle(tag, store.tagColors, settings.dark)
+                          ? ''
+                          : 'bg-(--accent-100) text-(--accent-700) hover:bg-(--accent-200)'
+                      "
                       :style="tagStyle(tag, store.tagColors, settings.dark) ?? {}"
                     >
                       {{ tag }}
                     </span>
-                    <span v-if="(node.tags?.length ?? 0) > 3" class="text-[10px] text-(--text-faint)">
+                    <span
+                      v-if="(node.tags?.length ?? 0) > 3"
+                      class="text-[10px] text-(--text-faint)"
+                    >
                       +{{ node.tags!.length - 3 }}
                     </span>
                   </div>
@@ -237,7 +248,12 @@ function childCount(node: Node): number {
 
                 <!-- Hover actions for adding tag/date -->
                 <div
-                  v-if="!node.dueDate && editingDateCardId !== node.id && (!node.tags?.length && editingTagsCardId !== node.id)"
+                  v-if="
+                    !node.dueDate &&
+                    editingDateCardId !== node.id &&
+                    !node.tags?.length &&
+                    editingTagsCardId !== node.id
+                  "
                   class="flex gap-1 mt-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity"
                 >
                   <button
@@ -259,7 +275,10 @@ function childCount(node: Node): number {
 
                 <!-- Show add icons when only one of tag/date exists -->
                 <div
-                  v-else-if="(node.dueDate && !node.tags?.length && settings.showBoardTags) || (!node.dueDate && node.tags?.length)"
+                  v-else-if="
+                    (node.dueDate && !node.tags?.length && settings.showBoardTags) ||
+                    (!node.dueDate && node.tags?.length)
+                  "
                   class="flex gap-1 mt-1 opacity-0 group-hover/card:opacity-100 transition-opacity"
                 >
                   <button
@@ -271,7 +290,9 @@ function childCount(node: Node): number {
                     <Calendar class="w-3 h-3" />
                   </button>
                   <button
-                    v-if="settings.showBoardTags && !node.tags?.length && editingTagsCardId !== node.id"
+                    v-if="
+                      settings.showBoardTags && !node.tags?.length && editingTagsCardId !== node.id
+                    "
                     class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
                     title="Add tag"
                     @click.stop="onTagsClick($event, node.id)"

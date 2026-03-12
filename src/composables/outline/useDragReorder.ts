@@ -1,7 +1,15 @@
 import { ref, computed, onUnmounted, type Ref } from 'vue'
 import { useDocStore } from '@/stores/doc'
 import { rankBefore, rankBetween, rankAfter, initialRank } from '@/lib/rank'
-import { DRAG_THRESHOLD, DROP_ZONE_BEFORE, DROP_ZONE_AFTER, DRAG_OPACITY, DRAG_SHADOW_ROW, DRAG_BORDER_RADIUS, OVERLAY_Z_INDEX } from '@/lib/constants'
+import {
+  DRAG_THRESHOLD,
+  DROP_ZONE_BEFORE,
+  DROP_ZONE_AFTER,
+  DRAG_OPACITY,
+  DRAG_SHADOW_ROW,
+  DRAG_BORDER_RADIUS,
+  OVERLAY_Z_INDEX,
+} from '@/lib/constants'
 
 export function useDragReorder(
   containerRef: Ref<HTMLElement | null>,

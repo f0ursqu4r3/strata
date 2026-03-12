@@ -1,0 +1,17 @@
+#!/bin/sh
+
+echo "Running pre-push checks..."
+
+echo "→ Type check"
+bun run type-check || { echo "Type check failed"; exit 1; }
+
+echo "→ Lint"
+bun run lint || { echo "Lint failed"; exit 1; }
+
+echo "→ Format check"
+bun run format || { echo "Format check failed"; exit 1; }
+
+echo "→ Build"
+bun run build-only || { echo "Build failed"; exit 1; }
+
+echo "All pre-push checks passed!"

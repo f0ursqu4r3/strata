@@ -4,7 +4,9 @@ import { DEFAULT_STATUSES } from '@/types'
 import type { Node, StatusDef } from '@/types'
 import { initialRank, rankAfter } from '@/lib/rank'
 
-function makeNode(overrides: Partial<Node> & { id: string; parentId: string | null; pos: string }): Node {
+function makeNode(
+  overrides: Partial<Node> & { id: string; parentId: string | null; pos: string },
+): Node {
   return {
     text: '',
     collapsed: false,
@@ -16,7 +18,17 @@ function makeNode(overrides: Partial<Node> & { id: string; parentId: string | nu
   }
 }
 
-function buildTree(specs: { text: string; parentId: string | null; status?: string; tags?: string[]; dueDate?: number | null; collapsed?: boolean }[], rootId: string): Map<string, Node> {
+function buildTree(
+  specs: {
+    text: string
+    parentId: string | null
+    status?: string
+    tags?: string[]
+    dueDate?: number | null
+    collapsed?: boolean
+  }[],
+  rootId: string,
+): Map<string, Node> {
   const nodes = new Map<string, Node>()
   nodes.set(rootId, makeNode({ id: rootId, parentId: null, pos: initialRank(), text: 'Root' }))
 
@@ -25,16 +37,19 @@ function buildTree(specs: { text: string; parentId: string | null; status?: stri
     const s = specs[i]!
     const id = `node-${i}`
     pos = i === 0 ? initialRank() : rankAfter(pos)
-    nodes.set(id, makeNode({
+    nodes.set(
       id,
-      parentId: s.parentId,
-      pos,
-      text: s.text,
-      status: s.status ?? 'todo',
-      tags: s.tags ?? [],
-      dueDate: s.dueDate ?? undefined,
-      collapsed: s.collapsed ?? false,
-    }))
+      makeNode({
+        id,
+        parentId: s.parentId,
+        pos,
+        text: s.text,
+        status: s.status ?? 'todo',
+        tags: s.tags ?? [],
+        dueDate: s.dueDate ?? undefined,
+        collapsed: s.collapsed ?? false,
+      }),
+    )
   }
   return nodes
 }
@@ -42,10 +57,13 @@ function buildTree(specs: { text: string; parentId: string | null; status?: stri
 describe('serializeToMarkdown', () => {
   it('serializes a simple flat list with checkboxes', () => {
     const rootId = 'root'
-    const nodes = buildTree([
-      { text: 'First item', parentId: rootId },
-      { text: 'Second item', parentId: rootId, status: 'done' },
-    ], rootId)
+    const nodes = buildTree(
+      [
+        { text: 'First item', parentId: rootId },
+        { text: 'Second item', parentId: rootId, status: 'done' },
+      ],
+      rootId,
+    )
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
@@ -59,10 +77,13 @@ describe('serializeToMarkdown', () => {
 
   it('serializes nested children with indentation', () => {
     const rootId = 'root'
-    const nodes = buildTree([
-      { text: 'Parent', parentId: rootId },
-      { text: 'Child', parentId: 'node-0' },
-    ], rootId)
+    const nodes = buildTree(
+      [
+        { text: 'Parent', parentId: rootId },
+        { text: 'Child', parentId: 'node-0' },
+      ],
+      rootId,
+    )
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
@@ -72,9 +93,10 @@ describe('serializeToMarkdown', () => {
 
   it('serializes tags', () => {
     const rootId = 'root'
-    const nodes = buildTree([
-      { text: 'Tagged item', parentId: rootId, tags: ['urgent', 'backend'] },
-    ], rootId)
+    const nodes = buildTree(
+      [{ text: 'Tagged item', parentId: rootId, tags: ['urgent', 'backend'] }],
+      rootId,
+    )
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
@@ -84,9 +106,7 @@ describe('serializeToMarkdown', () => {
   it('serializes due dates', () => {
     const rootId = 'root'
     const dueDate = new Date('2026-03-15T00:00:00').getTime()
-    const nodes = buildTree([
-      { text: 'Due item', parentId: rootId, dueDate },
-    ], rootId)
+    const nodes = buildTree([{ text: 'Due item', parentId: rootId, dueDate }], rootId)
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
@@ -95,9 +115,7 @@ describe('serializeToMarkdown', () => {
 
   it('serializes collapsed marker', () => {
     const rootId = 'root'
-    const nodes = buildTree([
-      { text: 'Collapsed', parentId: rootId, collapsed: true },
-    ], rootId)
+    const nodes = buildTree([{ text: 'Collapsed', parentId: rootId, collapsed: true }], rootId)
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
@@ -106,10 +124,13 @@ describe('serializeToMarkdown', () => {
 
   it('skips deleted nodes', () => {
     const rootId = 'root'
-    const nodes = buildTree([
-      { text: 'Visible', parentId: rootId },
-      { text: 'Deleted', parentId: rootId },
-    ], rootId)
+    const nodes = buildTree(
+      [
+        { text: 'Visible', parentId: rootId },
+        { text: 'Deleted', parentId: rootId },
+      ],
+      rootId,
+    )
     nodes.get('node-1')!.deleted = true
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
@@ -120,9 +141,7 @@ describe('serializeToMarkdown', () => {
 
   it('uses minimal frontmatter with default statuses', () => {
     const rootId = 'root'
-    const nodes = buildTree([
-      { text: 'Item', parentId: rootId },
-    ], rootId)
+    const nodes = buildTree([{ text: 'Item', parentId: rootId }], rootId)
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
@@ -149,9 +168,7 @@ describe('serializeToMarkdown', () => {
 
   it('handles multiline text', () => {
     const rootId = 'root'
-    const nodes = buildTree([
-      { text: 'Line one\nLine two\nLine three', parentId: rootId },
-    ], rootId)
+    const nodes = buildTree([{ text: 'Line one\nLine two\nLine three', parentId: rootId }], rootId)
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
@@ -167,10 +184,13 @@ describe('serializeToMarkdown', () => {
       { id: 'done', label: 'Done', color: '#bbb', icon: 'circle-check', final: true },
       { id: 'archived', label: 'Archived', color: '#ccc', icon: 'archive', final: true },
     ]
-    const nodes = buildTree([
-      { text: 'Done item', parentId: rootId, status: 'done' },
-      { text: 'Archived item', parentId: rootId, status: 'archived' },
-    ], rootId)
+    const nodes = buildTree(
+      [
+        { text: 'Done item', parentId: rootId, status: 'done' },
+        { text: 'Archived item', parentId: rootId, status: 'archived' },
+      ],
+      rootId,
+    )
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig })
 
@@ -286,7 +306,9 @@ doc-type: strata
 
     const items = [...result.nodes.values()].filter((n) => n.parentId === result.rootId)
     expect(items).toHaveLength(2)
-    expect(items[0]!.text).toBe('Task with mixed content\n1. item 1\n2. item 2\n\n- bullet 1\n- bullet 2')
+    expect(items[0]!.text).toBe(
+      'Task with mixed content\n1. item 1\n2. item 2\n\n- bullet 1\n- bullet 2',
+    )
     expect(items[1]!.text).toBe('Another task')
   })
 
@@ -405,11 +427,14 @@ describe('round-trip', () => {
       { id: 'done', label: 'Done', color: '#22c55e', icon: 'circle-check', final: true },
     ]
 
-    const nodes = buildTree([
-      { text: 'Top level task', parentId: rootId, status: 'in_progress', tags: ['dev'] },
-      { text: 'Child task', parentId: 'node-0', status: 'todo', dueDate },
-      { text: 'Another top level', parentId: rootId, status: 'done', collapsed: true },
-    ], rootId)
+    const nodes = buildTree(
+      [
+        { text: 'Top level task', parentId: rootId, status: 'in_progress', tags: ['dev'] },
+        { text: 'Child task', parentId: 'node-0', status: 'todo', dueDate },
+        { text: 'Another top level', parentId: rootId, status: 'done', collapsed: true },
+      ],
+      rootId,
+    )
 
     const md1 = serializeToMarkdown({ nodes, rootId, statusConfig })
     const parsed = parseMarkdown(md1)

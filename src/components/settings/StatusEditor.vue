@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Plus, Trash2, ChevronUp, ChevronDown, CircleCheck } from "lucide-vue-next";
-import { useDocStore } from "@/stores/doc";
-import { resolveStatusIcon, AVAILABLE_ICONS, STATUS_COLOR_PALETTE } from "@/lib/status-icons";
-import { UiModal, UiIconButton, UiButton, UiColorPicker, UiIconPicker } from "@/components/ui";
-import { useStatusCrud } from "@/composables/settings/useStatusCrud";
+import { Plus, Trash2, ChevronUp, ChevronDown, CircleCheck } from 'lucide-vue-next'
+import { useDocStore } from '@/stores/doc'
+import { resolveStatusIcon, AVAILABLE_ICONS, STATUS_COLOR_PALETTE } from '@/lib/status-icons'
+import { UiModal, UiIconButton, UiButton, UiColorPicker, UiIconPicker } from '@/components/ui'
+import { useStatusCrud } from '@/composables/settings/useStatusCrud'
 
-const emit = defineEmits<{ close: [] }>();
-const store = useDocStore();
+const emit = defineEmits<{ close: [] }>()
+const store = useDocStore()
 
 const {
   deletingId,
@@ -23,7 +23,7 @@ const {
   onStartDelete,
   onConfirmDelete,
   onCloseMain,
-} = useStatusCrud(emit);
+} = useStatusCrud(emit)
 </script>
 
 <template>
@@ -40,7 +40,11 @@ const {
           <UiIconButton size="sm" :disabled="idx === 0" @click="onMoveUp(idx)">
             <ChevronUp class="w-3 h-3" />
           </UiIconButton>
-          <UiIconButton size="sm" :disabled="idx === store.statusDefs.length - 1" @click="onMoveDown(idx)">
+          <UiIconButton
+            size="sm"
+            :disabled="idx === store.statusDefs.length - 1"
+            @click="onMoveDown(idx)"
+          >
             <ChevronDown class="w-3 h-3" />
           </UiIconButton>
         </div>
@@ -56,7 +60,11 @@ const {
 
         <!-- Label -->
         <input
-          :ref="(el) => { if (el) labelInputs[idx] = el as HTMLInputElement }"
+          :ref="
+            (el) => {
+              if (el) labelInputs[idx] = el as HTMLInputElement
+            }
+          "
           :value="s.label"
           class="flex-1 min-w-0 text-sm bg-transparent border-b border-transparent focus:border-(--border-hover) text-(--text-primary) outline-none px-1 py-0.5"
           @change="onLabelChange(s.id, ($event.target as HTMLInputElement).value)"
@@ -73,7 +81,11 @@ const {
         <!-- Complete toggle -->
         <button
           class="p-1.5 rounded-md cursor-pointer transition-colors"
-          :class="s.final ? 'bg-(--accent-100) text-(--accent-600)' : 'text-(--text-faint) hover:bg-(--bg-hover) hover:text-(--text-muted)'"
+          :class="
+            s.final
+              ? 'bg-(--accent-100) text-(--accent-600)'
+              : 'text-(--text-faint) hover:bg-(--bg-hover) hover:text-(--text-muted)'
+          "
           :title="s.final ? 'Marks items as complete' : 'Click to mark as completion status'"
           @click="onToggleFinal(s.id, s.final)"
         >

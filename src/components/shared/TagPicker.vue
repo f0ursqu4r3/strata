@@ -1,118 +1,131 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted, watch } from "vue";
-import { MAX_TAG_SUGGESTIONS, TAG_ITEM_HEIGHT, TAG_DROPDOWN_PADDING, DEFAULT_DROPDOWN_HEIGHT, TAG_PICKER_HIDE_DELAY } from '@/lib/constants';
-import { X } from "lucide-vue-next";
-import { useDocStore } from "@/stores/doc";
-import { useSettingsStore } from "@/stores/settings";
-import { TAG_COLOR_PRESETS, TAG_COLOR_KEYS, tagStyle } from "@/lib/tag-colors";
-import { useDropdownPosition } from "@/composables/useDropdownPosition";
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import {
+  MAX_TAG_SUGGESTIONS,
+  TAG_ITEM_HEIGHT,
+  TAG_DROPDOWN_PADDING,
+  DEFAULT_DROPDOWN_HEIGHT,
+  TAG_PICKER_HIDE_DELAY,
+} from '@/lib/constants'
+import { X } from 'lucide-vue-next'
+import { useDocStore } from '@/stores/doc'
+import { useSettingsStore } from '@/stores/settings'
+import { TAG_COLOR_PRESETS, TAG_COLOR_KEYS, tagStyle } from '@/lib/tag-colors'
+import { useDropdownPosition } from '@/composables/useDropdownPosition'
 
 const props = defineProps<{
-  nodeId: string;
-  tags: string[];
-}>();
+  nodeId: string
+  tags: string[]
+}>()
 
-const store = useDocStore();
-const settings = useSettingsStore();
-const inputRef = ref<HTMLInputElement | null>(null);
-const query = ref("");
-const pickerRef = ref<HTMLDivElement | null>(null);
-const highlightIdx = ref(0);
-const inputFocused = ref(false);
-const colorPickerTag = ref<string | null>(null);
+const store = useDocStore()
+const settings = useSettingsStore()
+const inputRef = ref<HTMLInputElement | null>(null)
+const query = ref('')
+const pickerRef = ref<HTMLDivElement | null>(null)
+const highlightIdx = ref(0)
+const inputFocused = ref(false)
+const colorPickerTag = ref<string | null>(null)
 
 // Fixed position for the autocomplete dropdown (teleported to body)
-const { style: dropdownStyle, update: updateDropdownPos } = useDropdownPosition();
+const { style: dropdownStyle, update: updateDropdownPos } = useDropdownPosition()
 
 // Fixed position for the color picker popover (teleported to body)
-const { style: colorPickerStyle, update: updateColorPickerPos } = useDropdownPosition();
+const { style: colorPickerStyle, update: updateColorPickerPos } = useDropdownPosition()
 
 const suggestions = computed(() => {
-  const q = query.value.trim().toLowerCase();
-  const existing = new Set(props.tags);
+  const q = query.value.trim().toLowerCase()
+  const existing = new Set(props.tags)
   return store.allTags
     .filter((t) => !existing.has(t))
     .filter((t) => !q || t.toLowerCase().includes(q))
-    .slice(0, MAX_TAG_SUGGESTIONS);
-});
+    .slice(0, MAX_TAG_SUGGESTIONS)
+})
 
-const showDropdown = computed(() => inputFocused.value && suggestions.value.length > 0);
+const showDropdown = computed(() => inputFocused.value && suggestions.value.length > 0)
 
 // Update dropdown position when it becomes visible
 watch(showDropdown, (val) => {
-  if (val) nextTick(() => {
-    const dropH = Math.min(suggestions.value.length * TAG_ITEM_HEIGHT + TAG_DROPDOWN_PADDING, DEFAULT_DROPDOWN_HEIGHT);
-    updateDropdownPos(inputRef.value, { dropHeight: dropH });
-  });
-});
+  if (val)
+    nextTick(() => {
+      const dropH = Math.min(
+        suggestions.value.length * TAG_ITEM_HEIGHT + TAG_DROPDOWN_PADDING,
+        DEFAULT_DROPDOWN_HEIGHT,
+      )
+      updateDropdownPos(inputRef.value, { dropHeight: dropH })
+    })
+})
 
 function getTagStyle(tag: string) {
-  return tagStyle(tag, store.tagColors, settings.dark);
+  return tagStyle(tag, store.tagColors, settings.dark)
 }
 
 function addTag(tag: string) {
-  const trimmed = tag.trim();
-  if (!trimmed) return;
-  store.addTag(props.nodeId, trimmed);
-  query.value = "";
-  highlightIdx.value = 0;
-  inputRef.value?.focus();
+  const trimmed = tag.trim()
+  if (!trimmed) return
+  store.addTag(props.nodeId, trimmed)
+  query.value = ''
+  highlightIdx.value = 0
+  inputRef.value?.focus()
 }
 
 function removeTag(tag: string) {
-  store.removeTag(props.nodeId, tag);
+  store.removeTag(props.nodeId, tag)
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    e.stopPropagation();
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    e.stopPropagation()
     if (showDropdown.value && highlightIdx.value < suggestions.value.length) {
-      addTag(suggestions.value[highlightIdx.value]!);
+      addTag(suggestions.value[highlightIdx.value]!)
     } else if (query.value.trim()) {
-      addTag(query.value);
+      addTag(query.value)
     }
-  } else if (e.key === "ArrowDown") {
-    e.preventDefault();
-    if (highlightIdx.value < suggestions.value.length - 1) highlightIdx.value++;
-  } else if (e.key === "ArrowUp") {
-    e.preventDefault();
-    if (highlightIdx.value > 0) highlightIdx.value--;
-  } else if (e.key === "Backspace" && !query.value && props.tags.length > 0) {
-    removeTag(props.tags[props.tags.length - 1]!);
-  } else if (e.key === "Escape") {
-    e.stopPropagation();
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    if (highlightIdx.value < suggestions.value.length - 1) highlightIdx.value++
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    if (highlightIdx.value > 0) highlightIdx.value--
+  } else if (e.key === 'Backspace' && !query.value && props.tags.length > 0) {
+    removeTag(props.tags[props.tags.length - 1]!)
+  } else if (e.key === 'Escape') {
+    e.stopPropagation()
     if (colorPickerTag.value) {
-      colorPickerTag.value = null;
+      colorPickerTag.value = null
     } else {
-      inputRef.value?.blur();
+      inputRef.value?.blur()
     }
   }
 }
 
 function onFocus() {
-  inputFocused.value = true;
-  highlightIdx.value = 0;
+  inputFocused.value = true
+  highlightIdx.value = 0
 }
 
 function onBlur() {
   // Small delay so click on suggestion registers before dropdown hides
-  setTimeout(() => { inputFocused.value = false; }, TAG_PICKER_HIDE_DELAY);
+  setTimeout(() => {
+    inputFocused.value = false
+  }, TAG_PICKER_HIDE_DELAY)
 }
 
 function toggleColorPicker(tag: string, e: MouseEvent) {
-  e.stopPropagation();
-  const next = colorPickerTag.value === tag ? null : tag;
-  colorPickerTag.value = next;
-  if (next) nextTick(() => {
-    const el = pickerRef.value?.querySelector(`[data-tag-pill="${next}"]`) as HTMLElement | null;
-    updateColorPickerPos(el, { dropHeight: 36 });
-  });
+  e.stopPropagation()
+  const next = colorPickerTag.value === tag ? null : tag
+  colorPickerTag.value = next
+  if (next)
+    nextTick(() => {
+      const el = pickerRef.value?.querySelector(`[data-tag-pill="${next}"]`) as HTMLElement | null
+      updateColorPickerPos(el, { dropHeight: 36 })
+    })
 }
 
 function pickColor(tag: string, colorKey: string | null) {
-  store.setTagColor(tag, colorKey);
-  colorPickerTag.value = null;
+  store.setTagColor(tag, colorKey)
+  colorPickerTag.value = null
 }
 
 function onClickOutside(e: MouseEvent) {
@@ -122,13 +135,13 @@ function onClickOutside(e: MouseEvent) {
 }
 
 onMounted(() => {
-  nextTick(() => inputRef.value?.focus());
-  document.addEventListener("mousedown", onClickOutside);
-});
+  nextTick(() => inputRef.value?.focus())
+  document.addEventListener('mousedown', onClickOutside)
+})
 
 onUnmounted(() => {
-  document.removeEventListener("mousedown", onClickOutside);
-});
+  document.removeEventListener('mousedown', onClickOutside)
+})
 </script>
 
 <template>
@@ -169,7 +182,11 @@ onUnmounted(() => {
           <!-- Default (no color) -->
           <button
             class="w-5 h-5 rounded-full border-2 cursor-pointer bg-(--accent-100)"
-            :class="!store.tagColors[colorPickerTag] ? 'border-(--accent-500)' : 'border-transparent hover:border-(--border-hover)'"
+            :class="
+              !store.tagColors[colorPickerTag]
+                ? 'border-(--accent-500)'
+                : 'border-transparent hover:border-(--border-hover)'
+            "
             title="Default"
             @click="pickColor(colorPickerTag!, null)"
           />
@@ -177,8 +194,16 @@ onUnmounted(() => {
             v-for="key in TAG_COLOR_KEYS"
             :key="key"
             class="w-5 h-5 rounded-full border-2 cursor-pointer"
-            :class="store.tagColors[colorPickerTag!] === key ? 'border-(--text-primary)' : 'border-transparent hover:border-(--border-hover)'"
-            :style="{ backgroundColor: settings.dark ? TAG_COLOR_PRESETS[key]!.darkBg : TAG_COLOR_PRESETS[key]!.lightBg }"
+            :class="
+              store.tagColors[colorPickerTag!] === key
+                ? 'border-(--text-primary)'
+                : 'border-transparent hover:border-(--border-hover)'
+            "
+            :style="{
+              backgroundColor: settings.dark
+                ? TAG_COLOR_PRESETS[key]!.darkBg
+                : TAG_COLOR_PRESETS[key]!.lightBg,
+            }"
             :title="TAG_COLOR_PRESETS[key]!.label"
             @click="pickColor(colorPickerTag!, key)"
           />
@@ -217,7 +242,11 @@ onUnmounted(() => {
           <span
             class="w-2 h-2 rounded-full shrink-0"
             :class="getTagStyle(s) ? '' : 'bg-(--accent-300)'"
-            :style="getTagStyle(s) ? { backgroundColor: (getTagStyle(s) as Record<string, string>).color } : {}"
+            :style="
+              getTagStyle(s)
+                ? { backgroundColor: (getTagStyle(s) as Record<string, string>).color }
+                : {}
+            "
           />
           {{ s }}
         </button>

@@ -23,9 +23,7 @@ const {
 <template>
   <UiModal title="Keyboard Shortcuts" max-width="lg" @close="emit('close')">
     <template #header-actions>
-      <UiButton variant="ghost" size="xs" @click="resetAll">
-        Reset all
-      </UiButton>
+      <UiButton variant="ghost" size="xs" @click="resetAll"> Reset all </UiButton>
     </template>
 
     <div class="p-5 space-y-5">
@@ -50,9 +48,11 @@ const {
                 <template v-else>
                   <kbd
                     class="px-1.5 py-0.5 text-xs font-mono rounded border"
-                    :class="conflicts.length > 0
-                      ? 'bg-red-50 text-red-700 border-red-200'
-                      : 'bg-(--bg-kbd) text-(--text-tertiary) border-(--border-primary)'"
+                    :class="
+                      conflicts.length > 0
+                        ? 'bg-red-50 text-red-700 border-red-200'
+                        : 'bg-(--bg-kbd) text-(--text-tertiary) border-(--border-primary)'
+                    "
                   >
                     {{ comboToString(capturedCombo) }}
                   </kbd>
@@ -68,9 +68,7 @@ const {
                 >
                   Save
                 </UiButton>
-                <UiButton variant="ghost" size="xs" @click="cancelCapture">
-                  Cancel
-                </UiButton>
+                <UiButton variant="ghost" size="xs" @click="cancelCapture"> Cancel </UiButton>
               </template>
               <template v-else>
                 <UiKbd>{{ comboToString(def.combo) }}</UiKbd>

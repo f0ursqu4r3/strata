@@ -1,7 +1,13 @@
 import { ref, computed, onUnmounted, type Ref } from 'vue'
 import { useDocStore } from '@/stores/doc'
 import type { Node } from '@/types'
-import { DRAG_THRESHOLD, OVERLAY_Z_INDEX, DRAG_SHADOW_CARD, DRAG_SCALE, DRAG_TRANSITION } from '@/lib/constants'
+import {
+  DRAG_THRESHOLD,
+  OVERLAY_Z_INDEX,
+  DRAG_SHADOW_CARD,
+  DRAG_SCALE,
+  DRAG_TRANSITION,
+} from '@/lib/constants'
 
 export function useBoardDrag(editingCardId: Ref<string | null>) {
   const store = useDocStore()

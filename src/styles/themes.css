@@ -4,7 +4,7 @@
    ══════════════════════════════════════════════ */
 
 /* ── GitHub Light ── */
-html[data-theme="github-light"] {
+html[data-theme='github-light'] {
   color-scheme: light;
 
   --bg-primary: #ffffff;
@@ -50,7 +50,7 @@ html[data-theme="github-light"] {
 }
 
 /* ── GitHub Dark ── */
-html[data-theme="github-dark"] {
+html[data-theme='github-dark'] {
   color-scheme: dark;
 
   --bg-primary: #0d1117;
@@ -96,7 +96,7 @@ html[data-theme="github-dark"] {
 }
 
 /* ── Monokai ── */
-html[data-theme="monokai"] {
+html[data-theme='monokai'] {
   color-scheme: dark;
 
   --bg-primary: #272822;
@@ -142,7 +142,7 @@ html[data-theme="monokai"] {
 }
 
 /* ── Nord ── */
-html[data-theme="nord"] {
+html[data-theme='nord'] {
   color-scheme: dark;
 
   --bg-primary: #2e3440;
@@ -188,7 +188,7 @@ html[data-theme="nord"] {
 }
 
 /* ── Dracula ── */
-html[data-theme="dracula"] {
+html[data-theme='dracula'] {
   color-scheme: dark;
 
   --bg-primary: #282a36;
@@ -234,7 +234,7 @@ html[data-theme="dracula"] {
 }
 
 /* ── Solarized Light ── */
-html[data-theme="solarized-light"] {
+html[data-theme='solarized-light'] {
   color-scheme: light;
 
   --bg-primary: #fdf6e3;
@@ -280,7 +280,7 @@ html[data-theme="solarized-light"] {
 }
 
 /* ── Solarized Dark ── */
-html[data-theme="solarized-dark"] {
+html[data-theme='solarized-dark'] {
   color-scheme: dark;
 
   --bg-primary: #002b36;
@@ -326,7 +326,7 @@ html[data-theme="solarized-dark"] {
 }
 
 /* ── One Dark ── */
-html[data-theme="one-dark"] {
+html[data-theme='one-dark'] {
   color-scheme: dark;
 
   --bg-primary: #282c34;
@@ -372,7 +372,7 @@ html[data-theme="one-dark"] {
 }
 
 /* ── Catppuccin Mocha ── */
-html[data-theme="catppuccin-mocha"] {
+html[data-theme='catppuccin-mocha'] {
   color-scheme: dark;
 
   --bg-primary: #1e1e2e;
@@ -418,7 +418,7 @@ html[data-theme="catppuccin-mocha"] {
 }
 
 /* ── Gruvbox Dark ── */
-html[data-theme="gruvbox-dark"] {
+html[data-theme='gruvbox-dark'] {
   color-scheme: dark;
 
   --bg-primary: #282828;
@@ -464,7 +464,7 @@ html[data-theme="gruvbox-dark"] {
 }
 
 /* ── Tokyo Night ── */
-html[data-theme="tokyo-night"] {
+html[data-theme='tokyo-night'] {
   color-scheme: dark;
 
   --bg-primary: #1a1b26;

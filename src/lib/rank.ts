@@ -115,7 +115,7 @@ export function initialRank(): string {
 export function generateRanks(count: number, before?: string, after?: string): string[] {
   const ranks: string[] = []
   let prev = before ?? ALPHABET[1]!
-  const end = after ?? (ALPHABET[BASE - 1]! + ALPHABET[BASE - 1]!)
+  const end = after ?? ALPHABET[BASE - 1]! + ALPHABET[BASE - 1]!
 
   for (let i = 0; i < count; i++) {
     const next = rankBetween(prev, end)

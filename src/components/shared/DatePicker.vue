@@ -52,10 +52,7 @@ function onClear() {
 </script>
 
 <template>
-  <div
-    class="strata-popup p-2 min-w-48"
-    @click.stop
-  >
+  <div class="strata-popup p-2 min-w-48" @click.stop>
     <!-- Quick presets -->
     <div class="flex gap-1 mb-2">
       <button

@@ -25,14 +25,35 @@ function makeNode(overrides: Partial<Node> = {}): Node {
 function makeTestTree(): { nodes: Map<string, Node>; statusMap: Map<string, StatusDef> } {
   const nodes = new Map<string, Node>()
   nodes.set('root', makeNode({ id: 'root', parentId: null, pos: 'n', text: 'Root' }))
-  nodes.set('a', makeNode({ id: 'a', parentId: 'root', pos: 'a', text: 'Task A', status: 'todo', tags: ['urgent'] }))
-  nodes.set('a1', makeNode({ id: 'a1', parentId: 'a', pos: 'a', text: 'Subtask A1', status: 'in_progress' }))
-  nodes.set('b', makeNode({ id: 'b', parentId: 'root', pos: 'b', text: 'Task B\nExtra line', status: 'done' }))
+  nodes.set(
+    'a',
+    makeNode({
+      id: 'a',
+      parentId: 'root',
+      pos: 'a',
+      text: 'Task A',
+      status: 'todo',
+      tags: ['urgent'],
+    }),
+  )
+  nodes.set(
+    'a1',
+    makeNode({ id: 'a1', parentId: 'a', pos: 'a', text: 'Subtask A1', status: 'in_progress' }),
+  )
+  nodes.set(
+    'b',
+    makeNode({ id: 'b', parentId: 'root', pos: 'b', text: 'Task B\nExtra line', status: 'done' }),
+  )
   nodes.set('c', makeNode({ id: 'c', parentId: 'root', pos: 'c', text: 'Task C', status: 'todo' }))
 
   const statusMap = new Map<string, StatusDef>()
   statusMap.set('todo', { id: 'todo', label: 'Todo', color: '#94a3b8', icon: 'circle' })
-  statusMap.set('in_progress', { id: 'in_progress', label: 'In Progress', color: '#3b82f6', icon: 'circle-dot' })
+  statusMap.set('in_progress', {
+    id: 'in_progress',
+    label: 'In Progress',
+    color: '#3b82f6',
+    icon: 'circle-dot',
+  })
   statusMap.set('done', { id: 'done', label: 'Done', color: '#22c55e', icon: 'circle-check' })
 
   return { nodes, statusMap }
@@ -184,7 +205,10 @@ describe('exportToPlaintext', () => {
   it('uses status label for unknown status', () => {
     const nodes = new Map<string, Node>()
     nodes.set('root', makeNode({ id: 'root', parentId: null, text: 'Root' }))
-    nodes.set('x', makeNode({ id: 'x', parentId: 'root', pos: 'a', text: 'Test', status: 'custom' }))
+    nodes.set(
+      'x',
+      makeNode({ id: 'x', parentId: 'root', pos: 'a', text: 'Test', status: 'custom' }),
+    )
     const statusMap = new Map<string, StatusDef>()
 
     const txt = exportToPlaintext(nodes, 'root', statusMap)

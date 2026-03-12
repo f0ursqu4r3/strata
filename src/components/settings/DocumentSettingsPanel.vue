@@ -14,7 +14,10 @@ const settings = useSettingsStore()
 const store = useDocStore()
 const colorPickerTag = ref<string | null>(null)
 const colorPickerRef = ref<HTMLElement | null>(null)
-const { style: colorPickerPos, update: updateColorPickerPos } = useDropdownPosition({ dropHeight: 40, dropWidth: 220 })
+const { style: colorPickerPos, update: updateColorPickerPos } = useDropdownPosition({
+  dropHeight: 40,
+  dropWidth: 220,
+})
 const colorPickerStyle = computed(() => ({
   position: 'fixed' as const,
   ...colorPickerPos.value,
@@ -60,23 +63,20 @@ function pickColor(tag: string, colorKey: string | null) {
 
       <!-- Tags -->
       <div>
-        <h3 class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide mb-3">
-          Tags
-        </h3>
+        <h3 class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide mb-3">Tags</h3>
         <div v-if="store.allTags.length > 0" class="flex flex-wrap gap-2">
-          <div
-            v-for="tag in store.allTags"
-            :key="tag"
-          >
+          <div v-for="tag in store.allTags" :key="tag">
             <button
               class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[12px] font-medium cursor-pointer border transition-colors"
-              :class="tagStyle(tag, store.tagColors, settings.dark) ? 'border-transparent' : 'bg-(--accent-100) text-(--accent-700) border-transparent'"
+              :class="
+                tagStyle(tag, store.tagColors, settings.dark)
+                  ? 'border-transparent'
+                  : 'bg-(--accent-100) text-(--accent-700) border-transparent'
+              "
               :style="tagStyle(tag, store.tagColors, settings.dark) ?? {}"
               @click="toggleColorPicker(tag, $event)"
             >
-              <span
-                class="w-2.5 h-2.5 rounded-full border border-current opacity-60"
-              />
+              <span class="w-2.5 h-2.5 rounded-full border border-current opacity-60" />
               {{ tag }}
             </button>
           </div>
@@ -102,7 +102,11 @@ function pickColor(tag: string, colorKey: string | null) {
       <div class="flex gap-1">
         <button
           class="w-5 h-5 rounded-full border-2 cursor-pointer bg-(--accent-100)"
-          :class="!store.tagColors[colorPickerTag] ? 'border-(--accent-500)' : 'border-transparent hover:border-(--border-hover)'"
+          :class="
+            !store.tagColors[colorPickerTag]
+              ? 'border-(--accent-500)'
+              : 'border-transparent hover:border-(--border-hover)'
+          "
           title="Default"
           @click="pickColor(colorPickerTag!, null)"
         />
@@ -110,8 +114,16 @@ function pickColor(tag: string, colorKey: string | null) {
           v-for="key in TAG_COLOR_KEYS"
           :key="key"
           class="w-5 h-5 rounded-full border-2 cursor-pointer"
-          :class="store.tagColors[colorPickerTag!] === key ? 'border-(--text-primary)' : 'border-transparent hover:border-(--border-hover)'"
-          :style="{ backgroundColor: settings.dark ? TAG_COLOR_PRESETS[key]!.darkBg : TAG_COLOR_PRESETS[key]!.lightBg }"
+          :class="
+            store.tagColors[colorPickerTag!] === key
+              ? 'border-(--text-primary)'
+              : 'border-transparent hover:border-(--border-hover)'
+          "
+          :style="{
+            backgroundColor: settings.dark
+              ? TAG_COLOR_PRESETS[key]!.darkBg
+              : TAG_COLOR_PRESETS[key]!.lightBg,
+          }"
           :title="TAG_COLOR_PRESETS[key]!.label"
           @click="pickColor(colorPickerTag!, key)"
         />

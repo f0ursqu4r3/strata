@@ -35,7 +35,9 @@ const baseMenuRef = ref<InstanceType<typeof BaseContextMenu> | null>(null)
 const showStatusSub = ref(false)
 const showDatePicker = ref(false)
 
-const isMultiSelect = computed(() => store.selection.ids.size > 1 && store.selection.ids.has(props.nodeId))
+const isMultiSelect = computed(
+  () => store.selection.ids.size > 1 && store.selection.ids.has(props.nodeId),
+)
 
 // Flip submenus to open left if near right edge
 const subLeft = ref(false)
@@ -111,16 +113,10 @@ function onHistory() {
     min-width="min-w-44"
     @close="emit('close')"
   >
-    <UiMenuItem v-if="!isMultiSelect" :icon="Pencil" @click="onEdit">
-      Edit
-    </UiMenuItem>
+    <UiMenuItem v-if="!isMultiSelect" :icon="Pencil" @click="onEdit"> Edit </UiMenuItem>
 
     <!-- Status submenu -->
-    <div
-      class="relative"
-      @mouseenter="showStatusSub = true"
-      @mouseleave="showStatusSub = false"
-    >
+    <div class="relative" @mouseenter="showStatusSub = true" @mouseleave="showStatusSub = false">
       <button
         class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary) cursor-pointer"
         role="menuitem"
@@ -145,15 +141,17 @@ function onHistory() {
           role="menuitem"
           @click="onSetStatus(s.id)"
         >
-          <component :is="resolveStatusIcon(s.icon)" class="w-3.5 h-3.5" :style="{ color: s.color }" />
+          <component
+            :is="resolveStatusIcon(s.icon)"
+            class="w-3.5 h-3.5"
+            :style="{ color: s.color }"
+          />
           {{ s.label }}
         </button>
       </div>
     </div>
 
-    <UiMenuItem v-if="!isMultiSelect" :icon="Tag" @click="onTags">
-      Tags
-    </UiMenuItem>
+    <UiMenuItem v-if="!isMultiSelect" :icon="Tag" @click="onTags"> Tags </UiMenuItem>
 
     <!-- Due date -->
     <div v-if="!isMultiSelect" class="relative">
@@ -165,7 +163,11 @@ function onHistory() {
         <Calendar class="w-3.5 h-3.5 text-(--text-faint)" />
         <span class="flex-1">Due date</span>
       </button>
-      <div v-if="showDatePicker" class="absolute top-0 z-10" :class="subLeft ? 'right-full' : 'left-full'">
+      <div
+        v-if="showDatePicker"
+        class="absolute top-0 z-10"
+        :class="subLeft ? 'right-full' : 'left-full'"
+      >
         <DatePicker
           :model-value="store.nodes.get(nodeId)?.dueDate ?? null"
           @update:model-value="onSetDueDate($event)"
@@ -173,17 +175,11 @@ function onHistory() {
       </div>
     </div>
 
-    <UiMenuItem v-if="!isMultiSelect" :icon="ZoomIn" @click="onZoomIn">
-      Zoom in
-    </UiMenuItem>
+    <UiMenuItem v-if="!isMultiSelect" :icon="ZoomIn" @click="onZoomIn"> Zoom in </UiMenuItem>
 
-    <UiMenuItem v-if="!isMultiSelect" :icon="Copy" @click="onDuplicate">
-      Duplicate
-    </UiMenuItem>
+    <UiMenuItem v-if="!isMultiSelect" :icon="Copy" @click="onDuplicate"> Duplicate </UiMenuItem>
 
-    <UiMenuItem v-if="!isMultiSelect" :icon="Clock" @click="onHistory">
-      History
-    </UiMenuItem>
+    <UiMenuItem v-if="!isMultiSelect" :icon="Clock" @click="onHistory"> History </UiMenuItem>
 
     <UiMenuDivider />
 

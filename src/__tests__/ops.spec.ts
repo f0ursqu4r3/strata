@@ -250,9 +250,7 @@ describe('ops', () => {
         makeNode({ id: 'c1', parentId: 'root', text: 'Old Text' }),
       ]
       setSeq(10)
-      const ops: Op[] = [
-        makeOp('updateText', { type: 'updateText', id: 'c1', text: 'New Text' }),
-      ]
+      const ops: Op[] = [makeOp('updateText', { type: 'updateText', id: 'c1', text: 'New Text' })]
       const state = rebuildState(snapshotNodes, ops)
       expect(state.get('c1')!.text).toBe('New Text')
     })

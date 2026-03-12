@@ -86,7 +86,9 @@ const settings = useSettingsStore()
         <label class="flex items-center justify-between cursor-pointer mb-3">
           <div>
             <span class="text-sm text-(--text-secondary)">Vim keyboard mode</span>
-            <p class="text-[11px] text-(--text-faint) mt-0.5">j/k navigate, i edit, dd delete, o new sibling</p>
+            <p class="text-[11px] text-(--text-faint) mt-0.5">
+              j/k navigate, i edit, dd delete, o new sibling
+            </p>
           </div>
           <UiToggle
             :model-value="settings.vimMode"

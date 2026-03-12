@@ -22,9 +22,7 @@ const store = useDocStore()
 function onAddCard() {
   const parentId = store.effectiveZoomId
   const children = store.getChildren(parentId)
-  const pos = children.length > 0
-    ? rankAfter(children[children.length - 1]!.pos)
-    : initialRank()
+  const pos = children.length > 0 ? rankAfter(children[children.length - 1]!.pos) : initialRank()
   const op = store.createNode(parentId, pos, '', props.statusId as Status)
   const newId = (op.payload as { id: string }).id
   store.selectNode(newId)
@@ -39,13 +37,15 @@ function onManageStatuses() {
 </script>
 
 <template>
-  <BaseContextMenu :x="x" :y="y" aria-label="Column actions" min-width="min-w-40" @close="emit('close')">
-    <UiMenuItem :icon="Plus" @click="onAddCard">
-      Add card
-    </UiMenuItem>
+  <BaseContextMenu
+    :x="x"
+    :y="y"
+    aria-label="Column actions"
+    min-width="min-w-40"
+    @close="emit('close')"
+  >
+    <UiMenuItem :icon="Plus" @click="onAddCard"> Add card </UiMenuItem>
     <UiMenuDivider />
-    <UiMenuItem :icon="Settings2" @click="onManageStatuses">
-      Manage statuses
-    </UiMenuItem>
+    <UiMenuItem :icon="Settings2" @click="onManageStatuses"> Manage statuses </UiMenuItem>
   </BaseContextMenu>
 </template>

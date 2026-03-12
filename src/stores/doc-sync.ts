@@ -20,64 +20,64 @@ export function useDocSync(deps: DocSyncDeps) {
   let _indexTimer: ReturnType<typeof setTimeout> | null = null
 
   function scheduleIndexUpdate() {
-    if (_indexTimer) clearTimeout(_indexTimer);
+    if (_indexTimer) clearTimeout(_indexTimer)
     _indexTimer = setTimeout(() => {
-      _indexTimer = null;
+      _indexTimer = null
       if (deps.currentDocId.value) {
-        updateIndexForDoc(deps.currentDocId.value, deps.nodes.value);
+        updateIndexForDoc(deps.currentDocId.value, deps.nodes.value)
       }
-    }, INDEX_UPDATE_DELAY);
+    }, INDEX_UPDATE_DELAY)
   }
 
   function scheduleFileSave() {
-    if (!isFileSystemMode()) return;
-    if (_fileSaveTimer) clearTimeout(_fileSaveTimer);
+    if (!isFileSystemMode()) return
+    if (_fileSaveTimer) clearTimeout(_fileSaveTimer)
     _fileSaveTimer = setTimeout(() => {
-      _fileSaveTimer = null;
-      saveToFile();
-    }, FILE_SAVE_DELAY);
+      _fileSaveTimer = null
+      saveToFile()
+    }, FILE_SAVE_DELAY)
   }
 
   function hasUnsavedChanges(): boolean {
-    return _fileSaveTimer !== null;
+    return _fileSaveTimer !== null
   }
 
   function recentlyWritten(): boolean {
-    return Date.now() - _lastWriteAt < WRITE_COOLDOWN;
+    return Date.now() - _lastWriteAt < WRITE_COOLDOWN
   }
 
   async function getFilePath(): Promise<string | null> {
-    const { useSettingsStore } = await import("@/stores/settings");
-    const settings = useSettingsStore();
+    const { useSettingsStore } = await import('@/stores/settings')
+    const settings = useSettingsStore()
     if (isSingleFileMode()) {
-      return settings.singleFilePath || null;
+      return settings.singleFilePath || null
     }
-    if (!settings.workspacePath || !deps.currentDocId.value) return null;
-    return `${settings.workspacePath}/${deps.currentDocId.value}`;
+    if (!settings.workspacePath || !deps.currentDocId.value) return null
+    return `${settings.workspacePath}/${deps.currentDocId.value}`
   }
 
   async function saveToFile() {
-    if (!isFileSystemMode() || !deps.currentDocId.value) return;
-    deps.flushTextDebounce();
-    const filePath = await getFilePath();
-    if (!filePath) return;
-    const { writeFile } = await import("@/lib/fs");
+    if (!isFileSystemMode() || !deps.currentDocId.value) return
+    deps.flushTextDebounce()
+    const filePath = await getFilePath()
+    if (!filePath) return
+    const { writeFile } = await import('@/lib/fs')
     const content = serializeToMarkdown({
       nodes: deps.nodes.value,
       rootId: deps.rootId.value,
       statusConfig: deps.statusConfig.value,
       tagColors: deps.tagColors.value,
-    });
-    await writeFile(filePath, content);
-    _lastWriteAt = Date.now();
+    })
+    await writeFile(filePath, content)
+    _lastWriteAt = Date.now()
   }
 
   /** Cancel any pending debounced save and write immediately. */
   async function flushPendingSave() {
     if (_fileSaveTimer) {
-      clearTimeout(_fileSaveTimer);
-      _fileSaveTimer = null;
-      await saveToFile();
+      clearTimeout(_fileSaveTimer)
+      _fileSaveTimer = null
+      await saveToFile()
     }
   }
 

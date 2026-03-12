@@ -68,10 +68,7 @@ const maxWidthClasses: Record<string, string> = {
         </div>
 
         <!-- Footer -->
-        <div
-          v-if="$slots.footer"
-          class="px-5 py-3 border-t border-(--border-primary) shrink-0"
-        >
+        <div v-if="$slots.footer" class="px-5 py-3 border-t border-(--border-primary) shrink-0">
           <slot name="footer" />
         </div>
       </div>

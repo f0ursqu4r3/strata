@@ -63,8 +63,11 @@ export function matchesDueDateFilter(
   if (filter === 'all') return true
   if (dueDate == null) return false
   switch (filter) {
-    case 'overdue': return isOverdue(dueDate)
-    case 'today': return isDueToday(dueDate) || isOverdue(dueDate)
-    case 'week': return isDueThisWeek(dueDate) || isOverdue(dueDate)
+    case 'overdue':
+      return isOverdue(dueDate)
+    case 'today':
+      return isDueToday(dueDate) || isOverdue(dueDate)
+    case 'week':
+      return isDueThisWeek(dueDate) || isOverdue(dueDate)
   }
 }

@@ -35,10 +35,7 @@ function sortTree(node: FolderTreeNode): void {
   }
 }
 
-export function buildFolderTree(
-  documents: DocumentMeta[],
-  folders: string[],
-): FolderTreeNode {
+export function buildFolderTree(documents: DocumentMeta[], folders: string[]): FolderTreeNode {
   const root: FolderTreeNode = {
     name: '',
     path: '',
@@ -54,7 +51,7 @@ export function buildFolderTree(
   // Insert all documents into the tree
   for (const doc of documents) {
     const parts = doc.id.split('/')
-    const fileName = parts.pop()!
+    parts.pop()
     const folderPath = parts.join('/')
     const parent = folderPath ? ensureFolderNode(root, folderPath) : root
     const displayName = doc.name.includes('/')

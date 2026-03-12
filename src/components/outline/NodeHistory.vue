@@ -106,11 +106,7 @@ onMounted(async () => {
         <!-- Vertical line -->
         <div class="absolute left-2 top-1 bottom-1 w-px bg-(--border-primary)" />
 
-        <div
-          v-for="op in ops"
-          :key="op.opId"
-          class="relative mb-4 last:mb-0"
-        >
+        <div v-for="op in ops" :key="op.opId" class="relative mb-4 last:mb-0">
           <!-- Dot -->
           <div
             class="absolute -left-4 top-1 w-2.5 h-2.5 rounded-full border-2 border-(--bg-secondary)"

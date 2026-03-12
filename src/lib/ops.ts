@@ -159,10 +159,7 @@ export function applyOp(nodes: Map<string, Node>, op: Op): string | null {
 /**
  * Rebuild full state from a snapshot's nodes + a list of ops.
  */
-export function rebuildState(
-  snapshotNodes: Node[],
-  ops: Op[],
-): Map<string, Node> {
+export function rebuildState(snapshotNodes: Node[], ops: Op[]): Map<string, Node> {
   const nodes = new Map<string, Node>()
   for (const n of snapshotNodes) {
     nodes.set(n.id, { ...n })

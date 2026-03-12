@@ -2,7 +2,12 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { themeRegistry, getTheme, getPairedTheme } from '@/data/theme-registry'
 import type { ThemeKey } from '@/data/theme-registry'
-import { DEFAULT_SHORTCUTS, type ShortcutAction, type KeyCombo, type ShortcutDef } from '@/lib/shortcuts'
+import {
+  DEFAULT_SHORTCUTS,
+  type ShortcutAction,
+  type KeyCombo,
+  type ShortcutDef,
+} from '@/lib/shortcuts'
 
 const STORAGE_KEY = 'strata-settings'
 
@@ -33,7 +38,18 @@ interface PersistedSettings {
   singleFilePath?: string
 }
 
-function loadSettings(): { theme: string; fontSize: number; showTags: boolean; showBoardTags: boolean; sidebarOpen: boolean; shortcuts: Record<string, KeyCombo>; workspacePath: string; vimMode: boolean; openMode: OpenMode; singleFilePath: string } {
+function loadSettings(): {
+  theme: string
+  fontSize: number
+  showTags: boolean
+  showBoardTags: boolean
+  sidebarOpen: boolean
+  shortcuts: Record<string, KeyCombo>
+  workspacePath: string
+  vimMode: boolean
+  openMode: OpenMode
+  singleFilePath: string
+} {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
@@ -53,7 +69,18 @@ function loadSettings(): { theme: string; fontSize: number; showTags: boolean; s
       const valid = themeRegistry.some((t) => t.key === themeKey)
       if (!valid) themeKey = 'github-light'
 
-      return { theme: themeKey, fontSize: parsed.fontSize ?? 14, showTags: parsed.showTags ?? true, showBoardTags: parsed.showBoardTags ?? true, sidebarOpen: parsed.sidebarOpen ?? false, shortcuts: parsed.shortcuts ?? {}, workspacePath: parsed.workspacePath ?? '', vimMode: parsed.vimMode ?? false, openMode: parsed.openMode ?? 'folder', singleFilePath: parsed.singleFilePath ?? '' }
+      return {
+        theme: themeKey,
+        fontSize: parsed.fontSize ?? 14,
+        showTags: parsed.showTags ?? true,
+        showBoardTags: parsed.showBoardTags ?? true,
+        sidebarOpen: parsed.sidebarOpen ?? false,
+        shortcuts: parsed.shortcuts ?? {},
+        workspacePath: parsed.workspacePath ?? '',
+        vimMode: parsed.vimMode ?? false,
+        openMode: parsed.openMode ?? 'folder',
+        singleFilePath: parsed.singleFilePath ?? '',
+      }
     }
   } catch {
     // ignore
@@ -200,7 +227,21 @@ export const useSettingsStore = defineStore('settings', () => {
     applyFontSize()
   }
 
-  watch([theme, fontSize, showTags, showBoardTags, sidebarOpen, shortcutOverrides, workspacePath, vimMode, openMode, singleFilePath], persist)
+  watch(
+    [
+      theme,
+      fontSize,
+      showTags,
+      showBoardTags,
+      sidebarOpen,
+      shortcutOverrides,
+      workspacePath,
+      vimMode,
+      openMode,
+      singleFilePath,
+    ],
+    persist,
+  )
 
   return {
     theme,

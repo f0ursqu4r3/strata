@@ -28,11 +28,7 @@ md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
 }
 
 // Style inline code
-const defaultCodeInline =
-  md.renderer.rules.code_inline ??
-  ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
-
-md.renderer.rules.code_inline = (tokens, idx, options, env, self) => {
+md.renderer.rules.code_inline = (tokens, idx, _options, _env, _self) => {
   const token = tokens[idx]!
   return `<code class="strata-md-code">${md.utils.escapeHtml(token.content)}</code>`
 }

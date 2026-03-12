@@ -34,44 +34,143 @@ export function useCommandPalette(emit: {
 
     // View modes
     items.push(
-      { id: 'view-outline', label: 'Switch to Outline', category: 'View', execute: () => store.setViewMode('outline') },
-      { id: 'view-split', label: 'Switch to Split', category: 'View', execute: () => store.setViewMode('split') },
-      { id: 'view-board', label: 'Switch to Board', category: 'View', execute: () => store.setViewMode('board') },
+      {
+        id: 'view-outline',
+        label: 'Switch to Outline',
+        category: 'View',
+        execute: () => store.setViewMode('outline'),
+      },
+      {
+        id: 'view-split',
+        label: 'Switch to Split',
+        category: 'View',
+        execute: () => store.setViewMode('split'),
+      },
+      {
+        id: 'view-board',
+        label: 'Switch to Board',
+        category: 'View',
+        execute: () => store.setViewMode('board'),
+      },
     )
 
     // Toggles
     items.push(
-      { id: 'toggle-sidebar', label: 'Toggle Sidebar', category: 'View', execute: () => settings.setSidebarOpen(!settings.sidebarOpen) },
-      { id: 'toggle-tags', label: 'Toggle Tags', category: 'View', execute: () => settings.setShowTags(!settings.showTags) },
+      {
+        id: 'toggle-sidebar',
+        label: 'Toggle Sidebar',
+        category: 'View',
+        execute: () => settings.setSidebarOpen(!settings.sidebarOpen),
+      },
+      {
+        id: 'toggle-tags',
+        label: 'Toggle Tags',
+        category: 'View',
+        execute: () => settings.setShowTags(!settings.showTags),
+      },
     )
 
     // Panels
     items.push(
-      { id: 'open-settings', label: 'Open Settings', category: 'General', execute: () => emit('openSettings') },
-      { id: 'open-doc-settings', label: 'Document Settings', category: 'General', execute: () => emit('openDocSettings') },
-      { id: 'open-shortcuts', label: 'Keyboard Shortcuts', category: 'General', execute: () => emit('openShortcuts') },
-      { id: 'open-trash', label: 'Open Trash', category: 'General', execute: () => emit('openTrash') },
-      { id: 'open-search', label: 'Search All Documents', category: 'General', execute: () => emit('openSearch') },
+      {
+        id: 'open-settings',
+        label: 'Open Settings',
+        category: 'General',
+        execute: () => emit('openSettings'),
+      },
+      {
+        id: 'open-doc-settings',
+        label: 'Document Settings',
+        category: 'General',
+        execute: () => emit('openDocSettings'),
+      },
+      {
+        id: 'open-shortcuts',
+        label: 'Keyboard Shortcuts',
+        category: 'General',
+        execute: () => emit('openShortcuts'),
+      },
+      {
+        id: 'open-trash',
+        label: 'Open Trash',
+        category: 'General',
+        execute: () => emit('openTrash'),
+      },
+      {
+        id: 'open-search',
+        label: 'Search All Documents',
+        category: 'General',
+        execute: () => emit('openSearch'),
+      },
     )
 
     // General actions with shortcut display
-    const shortcutMap = new Map<string, string>(settings.resolvedShortcuts.map((s: ShortcutDef) => [s.action, comboToString(s.combo)]))
+    const shortcutMap = new Map<string, string>(
+      settings.resolvedShortcuts.map((s: ShortcutDef) => [s.action, comboToString(s.combo)]),
+    )
     items.push(
-      { id: 'undo', label: 'Undo', category: 'Edit', shortcut: shortcutMap.get('undo'), execute: () => { store.flushTextDebounce(); store.undo() } },
-      { id: 'redo', label: 'Redo', category: 'Edit', shortcut: shortcutMap.get('redo'), execute: () => { store.flushTextDebounce(); store.redo() } },
+      {
+        id: 'undo',
+        label: 'Undo',
+        category: 'Edit',
+        shortcut: shortcutMap.get('undo'),
+        execute: () => {
+          store.flushTextDebounce()
+          store.undo()
+        },
+      },
+      {
+        id: 'redo',
+        label: 'Redo',
+        category: 'Edit',
+        shortcut: shortcutMap.get('redo'),
+        execute: () => {
+          store.flushTextDebounce()
+          store.redo()
+        },
+      },
     )
 
     // Node operations (only when a node is selected)
     if (store.selection.current) {
       items.push(
-        { id: 'zoom-in', label: 'Zoom Into Node', category: 'Node', shortcut: shortcutMap.get('zoomIn'), execute: () => store.zoomIn(store.selection.current) },
-        { id: 'zoom-out', label: 'Zoom Out', category: 'Node', shortcut: shortcutMap.get('zoomOut'), execute: () => store.zoomOut() },
-        { id: 'duplicate', label: 'Duplicate Node', category: 'Node', execute: () => store.duplicateNode(store.selection.current) },
-        { id: 'delete', label: 'Delete Node', category: 'Node', shortcut: shortcutMap.get('delete'), execute: () => store.tombstone(store.selection.current) },
-        { id: 'toggle-collapse', label: 'Toggle Collapse', category: 'Node', shortcut: shortcutMap.get('toggleCollapse'), execute: () => {
-          const node = store.nodes.get(store.selection.current)
-          if (node && store.getChildren(node.id).length > 0) store.toggleCollapsed(node.id)
-        }},
+        {
+          id: 'zoom-in',
+          label: 'Zoom Into Node',
+          category: 'Node',
+          shortcut: shortcutMap.get('zoomIn'),
+          execute: () => store.zoomIn(store.selection.current),
+        },
+        {
+          id: 'zoom-out',
+          label: 'Zoom Out',
+          category: 'Node',
+          shortcut: shortcutMap.get('zoomOut'),
+          execute: () => store.zoomOut(),
+        },
+        {
+          id: 'duplicate',
+          label: 'Duplicate Node',
+          category: 'Node',
+          execute: () => store.duplicateNode(store.selection.current),
+        },
+        {
+          id: 'delete',
+          label: 'Delete Node',
+          category: 'Node',
+          shortcut: shortcutMap.get('delete'),
+          execute: () => store.tombstone(store.selection.current),
+        },
+        {
+          id: 'toggle-collapse',
+          label: 'Toggle Collapse',
+          category: 'Node',
+          shortcut: shortcutMap.get('toggleCollapse'),
+          execute: () => {
+            const node = store.nodes.get(store.selection.current)
+            if (node && store.getChildren(node.id).length > 0) store.toggleCollapsed(node.id)
+          },
+        },
       )
 
       // Status changes
@@ -93,7 +192,9 @@ export function useCommandPalette(emit: {
     if (!q) return commands.value
 
     return commands.value
-      .filter((cmd) => cmd.label.toLowerCase().includes(q) || cmd.category.toLowerCase().includes(q))
+      .filter(
+        (cmd) => cmd.label.toLowerCase().includes(q) || cmd.category.toLowerCase().includes(q),
+      )
       .sort((a, b) => {
         const aLabel = a.label.toLowerCase()
         const bLabel = b.label.toLowerCase()

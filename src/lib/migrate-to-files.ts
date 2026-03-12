@@ -1,5 +1,11 @@
 import { loadRegistry } from '@/lib/doc-registry'
-import { setCurrentDocId, loadLatestSnapshot, loadOpsAfter, loadAllOps, loadStatusConfig } from '@/lib/idb'
+import {
+  setCurrentDocId,
+  loadLatestSnapshot,
+  loadOpsAfter,
+  loadAllOps,
+  loadStatusConfig,
+} from '@/lib/idb'
 import { applyOp, setSeq } from '@/lib/ops'
 import { serializeToMarkdown } from '@/lib/markdown-serialize'
 import { writeFile } from '@/lib/fs'

@@ -12,14 +12,8 @@ const emit = defineEmits<{
   openSearch: []
 }>()
 
-const {
-  query,
-  selectedIdx,
-  inputRef,
-  resultsRef,
-  filteredCommands,
-  onExecute,
-} = useCommandPalette(emit)
+const { query, selectedIdx, inputRef, resultsRef, filteredCommands, onExecute } =
+  useCommandPalette(emit)
 </script>
 
 <template>
@@ -30,7 +24,9 @@ const {
     aria-label="Command palette"
     @mousedown.self="emit('close')"
   >
-    <div class="bg-(--bg-secondary) rounded-xl shadow-2xl w-full max-w-xl flex flex-col max-h-[60vh]">
+    <div
+      class="bg-(--bg-secondary) rounded-xl shadow-2xl w-full max-w-xl flex flex-col max-h-[60vh]"
+    >
       <!-- Input -->
       <div class="flex items-center gap-2 px-4 py-3 border-b border-(--border-primary)">
         <Command class="w-4 h-4 text-(--text-faint) shrink-0" />
@@ -61,9 +57,11 @@ const {
           v-for="(cmd, idx) in filteredCommands"
           :key="cmd.id"
           class="w-full text-left px-4 py-2 text-sm cursor-pointer transition-colors flex items-center justify-between gap-2"
-          :class="idx === selectedIdx
-            ? 'bg-(--bg-hover) text-(--text-primary)'
-            : 'text-(--text-secondary) hover:bg-(--bg-hover)'"
+          :class="
+            idx === selectedIdx
+              ? 'bg-(--bg-hover) text-(--text-primary)'
+              : 'text-(--text-secondary) hover:bg-(--bg-hover)'
+          "
           :data-selected="idx === selectedIdx"
           @click="onExecute(cmd)"
           @mouseenter="selectedIdx = idx"
@@ -74,7 +72,9 @@ const {
       </div>
 
       <!-- Footer -->
-      <div class="px-4 py-2 border-t border-(--border-primary) text-[11px] text-(--text-faint) flex gap-3">
+      <div
+        class="px-4 py-2 border-t border-(--border-primary) text-[11px] text-(--text-faint) flex gap-3"
+      >
         <span><UiKbd size="xs">↑↓</UiKbd> navigate</span>
         <span><UiKbd size="xs">Enter</UiKbd> run</span>
         <span><UiKbd size="xs">Esc</UiKbd> close</span>

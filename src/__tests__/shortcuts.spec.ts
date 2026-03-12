@@ -4,7 +4,6 @@ import {
   comboToString,
   stringToCombo,
   findConflicts,
-  DEFAULT_SHORTCUTS,
   type KeyCombo,
   type ShortcutDef,
 } from '@/lib/shortcuts'
@@ -81,7 +80,9 @@ describe('comboToString', () => {
   })
 
   it('formats all modifiers', () => {
-    expect(comboToString({ key: 'a', ctrl: true, shift: true, alt: true, meta: true })).toBe('Ctrl+Shift+Alt+Meta+A')
+    expect(comboToString({ key: 'a', ctrl: true, shift: true, alt: true, meta: true })).toBe(
+      'Ctrl+Shift+Alt+Meta+A',
+    )
   })
 
   it('maps special key names', () => {
@@ -145,9 +146,27 @@ describe('stringToCombo', () => {
 
 describe('findConflicts', () => {
   const shortcuts: ShortcutDef[] = [
-    { action: 'undo', combo: { key: 'z', ctrl: true }, label: 'Undo', category: 'General', context: 'global' },
-    { action: 'moveUp', combo: { key: 'ArrowUp' }, label: 'Move up', category: 'Nav', context: 'outline' },
-    { action: 'stopEditing', combo: { key: 'Escape' }, label: 'Stop editing', category: 'Nav', context: 'editing' },
+    {
+      action: 'undo',
+      combo: { key: 'z', ctrl: true },
+      label: 'Undo',
+      category: 'General',
+      context: 'global',
+    },
+    {
+      action: 'moveUp',
+      combo: { key: 'ArrowUp' },
+      label: 'Move up',
+      category: 'Nav',
+      context: 'outline',
+    },
+    {
+      action: 'stopEditing',
+      combo: { key: 'Escape' },
+      label: 'Stop editing',
+      category: 'Nav',
+      context: 'editing',
+    },
   ]
 
   it('finds conflict in same context', () => {

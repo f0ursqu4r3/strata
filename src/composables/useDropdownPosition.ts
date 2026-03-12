@@ -28,9 +28,10 @@ export function useDropdownPosition(opts?: DropdownPositionOpts) {
     const dropW = overrides?.dropWidth ?? opts?.dropWidth ?? rect.width
 
     const spaceBelow = vh - rect.bottom - POPOVER_PADDING
-    const top = spaceBelow >= dropH
-      ? rect.bottom + POPOVER_OFFSET
-      : Math.max(POPOVER_MIN_EDGE, rect.top - dropH - POPOVER_OFFSET)
+    const top =
+      spaceBelow >= dropH
+        ? rect.bottom + POPOVER_OFFSET
+        : Math.max(POPOVER_MIN_EDGE, rect.top - dropH - POPOVER_OFFSET)
 
     let left = rect.left
     if (left + dropW > vw - POPOVER_PADDING) {

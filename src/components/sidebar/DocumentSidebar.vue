@@ -40,7 +40,9 @@ function loadExpanded(): Set<string> {
       const wsKey = settings.workspacePath || '_default'
       if (parsed[wsKey]) return new Set(parsed[wsKey])
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return new Set()
 }
 
@@ -51,7 +53,9 @@ function saveExpanded(folders: Set<string>) {
     const wsKey = settings.workspacePath || '_default'
     all[wsKey] = [...folders]
     localStorage.setItem(EXPANDED_KEY, JSON.stringify(all))
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 const expandedFolders = ref<Set<string>>(loadExpanded())
@@ -59,9 +63,7 @@ watch(expandedFolders, (v) => saveExpanded(v))
 provide('expandedFolders', expandedFolders)
 
 // Build the folder tree from documents + folders
-const folderTree = computed(() =>
-  buildFolderTree(docsStore.sortedDocuments, docsStore.folders),
-)
+const folderTree = computed(() => buildFolderTree(docsStore.sortedDocuments, docsStore.folders))
 
 // Context menus
 const docCtxMenu = ref<{ docId: string; x: number; y: number } | null>(null)
@@ -112,7 +114,7 @@ async function onCreateFolder(parentPath: string) {
   let folderName = baseName
   let i = 2
   const existing = new Set(docsStore.folders)
-  const fullPath = () => parentPath ? `${parentPath}/${folderName}` : folderName
+  const fullPath = () => (parentPath ? `${parentPath}/${folderName}` : folderName)
   while (existing.has(fullPath())) {
     folderName = `${baseName} ${i}`
     i++
@@ -190,7 +192,9 @@ async function onDelete(docId: string, e?: MouseEvent) {
   <div class="flex flex-col h-full bg-(--bg-secondary) border-r border-(--border-primary) w-56">
     <!-- Header -->
     <div class="flex items-center justify-between px-3 py-3 border-b border-(--border-primary)">
-      <span class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide">Documents</span>
+      <span class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide"
+        >Documents</span
+      >
       <div class="flex items-center gap-1">
         <button
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
@@ -247,7 +251,10 @@ async function onDelete(docId: string, e?: MouseEvent) {
     >
       <div v-if="isFileSystemMode()" class="flex items-center gap-1.5">
         <FolderOpen class="w-3 h-3 shrink-0 text-(--text-faint)" />
-        <span class="flex-1 text-[11px] text-(--text-faint) truncate" :title="settings.workspacePath">
+        <span
+          class="flex-1 text-[11px] text-(--text-faint) truncate"
+          :title="settings.workspacePath"
+        >
           {{ settings.workspacePath || '(not set)' }}
         </span>
         <button

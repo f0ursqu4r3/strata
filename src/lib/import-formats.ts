@@ -69,7 +69,12 @@ export function parseOPMLImport(content: string): ImportNode[] {
       const text = outline.getAttribute('text') ?? ''
       const status = outline.getAttribute('status') ?? undefined
       const tagsAttr = outline.getAttribute('tags')
-      const tags = tagsAttr ? tagsAttr.split(',').map((t) => t.trim()).filter(Boolean) : undefined
+      const tags = tagsAttr
+        ? tagsAttr
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : undefined
       const children = walkOutlines(outline)
       nodes.push({ text, status, tags, children })
     }
@@ -142,7 +147,11 @@ export function flattenImportNodes(
   function walk(nodes: ImportNode[], parentId: string) {
     let siblingPos: string | undefined
     for (const node of nodes) {
-      const pos = siblingPos ? rankAfter(siblingPos) : (parentId === targetParentId && lastPos ? rankAfter(lastPos) : initialRank())
+      const pos = siblingPos
+        ? rankAfter(siblingPos)
+        : parentId === targetParentId && lastPos
+          ? rankAfter(lastPos)
+          : initialRank()
       siblingPos = pos
       if (parentId === targetParentId) lastPos = pos
 

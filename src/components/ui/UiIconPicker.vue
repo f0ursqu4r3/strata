@@ -10,7 +10,7 @@ interface Props {
   align?: 'left' | 'right'
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   color: 'currentColor',
   align: 'left',
 })
@@ -43,11 +43,7 @@ function select(icon: string) {
       class="p-1.5 rounded-md hover:bg-(--bg-hover) cursor-pointer"
       @click="toggle"
     >
-      <component
-        :is="resolveIcon(modelValue)"
-        class="w-4 h-4"
-        :style="{ color }"
-      />
+      <component :is="resolveIcon(modelValue)" class="w-4 h-4" :style="{ color }" />
     </button>
     <div
       v-if="open"
@@ -62,11 +58,7 @@ function select(icon: string) {
         :class="{ 'bg-(--bg-active)': modelValue === icon }"
         @click="select(icon)"
       >
-        <component
-          :is="resolveIcon(icon)"
-          class="w-4 h-4"
-          :style="{ color }"
-        />
+        <component :is="resolveIcon(icon)" class="w-4 h-4" :style="{ color }" />
       </button>
     </div>
   </div>

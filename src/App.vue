@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from "vue";
+import { ref, computed, watch, nextTick } from 'vue'
 import {
   Layers,
   Search,
@@ -14,103 +14,146 @@ import {
   Calendar,
   GitBranch,
   FileText,
-} from "lucide-vue-next";
-import { Splitpanes, Pane } from "splitpanes";
-import "splitpanes/dist/splitpanes.css";
-import { useDocStore } from "@/stores/doc";
-import { useSettingsStore } from "@/stores/settings";
-import { useDocumentsStore } from "@/stores/documents";
-import OutlineView from "@/components/outline/OutlineView.vue";
-import KanbanBoard from "@/components/board/KanbanBoard.vue";
-import ShortcutsModal from "@/components/settings/ShortcutsModal.vue";
-import SettingsPanel from "@/components/settings/SettingsPanel.vue";
-import DocumentSidebar from "@/components/sidebar/DocumentSidebar.vue";
-import TrashPanel from "@/components/overlays/TrashPanel.vue";
-import ExportMenu from "@/components/overlays/ExportMenu.vue";
-import StatusEditor from "@/components/settings/StatusEditor.vue";
-import DocumentSettingsPanel from "@/components/settings/DocumentSettingsPanel.vue";
-import GlobalSearch from "@/components/overlays/GlobalSearch.vue";
-import CommandPalette from "@/components/overlays/CommandPalette.vue";
-import ShortcutEditor from "@/components/settings/ShortcutEditor.vue";
-import { isTauri, isSingleFileMode, isFileSystemMode, setFileSystemActive, setSingleFileMode } from "@/lib/platform";
-import WorkspacePicker from "@/components/overlays/WorkspacePicker.vue";
-import { useAppInit } from "@/composables/useAppInit";
-import { useGlobalKeyboard } from "@/composables/useGlobalKeyboard";
-import type { ViewMode } from "@/types";
-import { tagStyle } from "@/lib/tag-colors";
+} from 'lucide-vue-next'
+import { Splitpanes, Pane } from 'splitpanes'
+import 'splitpanes/dist/splitpanes.css'
+import { useDocStore } from '@/stores/doc'
+import { useSettingsStore } from '@/stores/settings'
+import { useDocumentsStore } from '@/stores/documents'
+import OutlineView from '@/components/outline/OutlineView.vue'
+import KanbanBoard from '@/components/board/KanbanBoard.vue'
+import ShortcutsModal from '@/components/settings/ShortcutsModal.vue'
+import SettingsPanel from '@/components/settings/SettingsPanel.vue'
+import DocumentSidebar from '@/components/sidebar/DocumentSidebar.vue'
+import TrashPanel from '@/components/overlays/TrashPanel.vue'
+import ExportMenu from '@/components/overlays/ExportMenu.vue'
+import StatusEditor from '@/components/settings/StatusEditor.vue'
+import DocumentSettingsPanel from '@/components/settings/DocumentSettingsPanel.vue'
+import GlobalSearch from '@/components/overlays/GlobalSearch.vue'
+import CommandPalette from '@/components/overlays/CommandPalette.vue'
+import ShortcutEditor from '@/components/settings/ShortcutEditor.vue'
+import {
+  isTauri,
+  isSingleFileMode,
+  isFileSystemMode,
+  setFileSystemActive,
+  setSingleFileMode,
+} from '@/lib/platform'
+import WorkspacePicker from '@/components/overlays/WorkspacePicker.vue'
+import { useAppInit } from '@/composables/useAppInit'
+import { useGlobalKeyboard } from '@/composables/useGlobalKeyboard'
+import type { ViewMode } from '@/types'
+import { tagStyle } from '@/lib/tag-colors'
 
-const store = useDocStore();
-const settings = useSettingsStore();
-const docsStore = useDocumentsStore();
-const showShortcuts = ref(false);
-const showSettings = ref(false);
-const showTrash = ref(false);
-const showStatusEditor = ref(false);
-const showDocSettings = ref(false);
-const showGlobalSearch = ref(false);
-const showCommandPalette = ref(false);
-const showShortcutEditor = ref(false);
-const showTagFilter = ref(false);
-const showDueDateFilter = ref(false);
-const tagFilterQuery = ref("");
-const tagFilterRef = ref<HTMLElement | null>(null);
-const tagFilterInputRef = ref<HTMLInputElement | null>(null);
-const dueDateFilterRef = ref<HTMLElement | null>(null);
+const store = useDocStore()
+const settings = useSettingsStore()
+const docsStore = useDocumentsStore()
+const showShortcuts = ref(false)
+const showSettings = ref(false)
+const showTrash = ref(false)
+const showStatusEditor = ref(false)
+const showDocSettings = ref(false)
+const showGlobalSearch = ref(false)
+const showCommandPalette = ref(false)
+const showShortcutEditor = ref(false)
+const showTagFilter = ref(false)
+const showDueDateFilter = ref(false)
+const tagFilterQuery = ref('')
+const tagFilterRef = ref<HTMLElement | null>(null)
+const tagFilterInputRef = ref<HTMLInputElement | null>(null)
+const dueDateFilterRef = ref<HTMLElement | null>(null)
 
 const filteredTags = computed(() => {
-  const q = tagFilterQuery.value.trim().toLowerCase();
-  if (!q) return store.allTags;
-  return store.allTags.filter((t) => t.toLowerCase().includes(q));
-});
+  const q = tagFilterQuery.value.trim().toLowerCase()
+  if (!q) return store.allTags
+  return store.allTags.filter((t) => t.toLowerCase().includes(q))
+})
 
 function openTagFilter() {
-  showTagFilter.value = !showTagFilter.value;
+  showTagFilter.value = !showTagFilter.value
   if (showTagFilter.value) {
-    tagFilterQuery.value = "";
-    nextTick(() => tagFilterInputRef.value?.focus());
+    tagFilterQuery.value = ''
+    nextTick(() => tagFilterInputRef.value?.focus())
   }
 }
 
 function applyTagFilter(tag: string | null) {
-  store.filters.tag = tag;
-  showTagFilter.value = false;
+  store.filters.tag = tag
+  showTagFilter.value = false
 }
 
 function onTagFilterKeydown(e: KeyboardEvent) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    const q = tagFilterQuery.value.trim();
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    const q = tagFilterQuery.value.trim()
     if (q) {
       // Use the first matching tag or the typed value
-      const match = filteredTags.value[0];
-      applyTagFilter(match ?? q);
+      const match = filteredTags.value[0]
+      applyTagFilter(match ?? q)
     }
-  } else if (e.key === "Escape") {
-    showTagFilter.value = false;
+  } else if (e.key === 'Escape') {
+    showTagFilter.value = false
   }
+}
+
+function clearDueDateFilter() {
+  store.filters.dueDate = 'all'
+  showDueDateFilter.value = false
+}
+
+function setDueDateFilter(key: string) {
+  store.filters.dueDate = key as 'all' | 'overdue' | 'today' | 'week'
+  showDueDateFilter.value = false
+}
+
+function openCustomizeShortcuts() {
+  showShortcuts.value = false
+  showShortcutEditor.value = true
+}
+
+function openStatusEditorFromDoc() {
+  showDocSettings.value = false
+  showStatusEditor.value = true
+}
+
+function openFromPalette(target: 'settings' | 'docSettings' | 'shortcuts' | 'trash' | 'search') {
+  showCommandPalette.value = false
+  if (target === 'settings') showSettings.value = true
+  else if (target === 'docSettings') showDocSettings.value = true
+  else if (target === 'shortcuts') showShortcuts.value = true
+  else if (target === 'trash') showTrash.value = true
+  else if (target === 'search') showGlobalSearch.value = true
 }
 
 function onGlobalClick(e: MouseEvent) {
-  if (showTagFilter.value && tagFilterRef.value && !tagFilterRef.value.contains(e.target as HTMLElement)) {
-    showTagFilter.value = false;
+  if (
+    showTagFilter.value &&
+    tagFilterRef.value &&
+    !tagFilterRef.value.contains(e.target as HTMLElement)
+  ) {
+    showTagFilter.value = false
   }
-  if (showDueDateFilter.value && dueDateFilterRef.value && !dueDateFilterRef.value.contains(e.target as HTMLElement)) {
-    showDueDateFilter.value = false;
+  if (
+    showDueDateFilter.value &&
+    dueDateFilterRef.value &&
+    !dueDateFilterRef.value.contains(e.target as HTMLElement)
+  ) {
+    showDueDateFilter.value = false
   }
 }
-const fileInputRef = ref<HTMLInputElement | null>(null);
-const outlineRef = ref<InstanceType<typeof OutlineView> | null>(null);
-const needsWorkspacePicker = ref(false);
-const isGitWorkspace = ref(false);
-const gitBranch = ref("");
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const outlineRef = ref<InstanceType<typeof OutlineView> | null>(null)
+const needsWorkspacePicker = ref(false)
+const isGitWorkspace = ref(false)
+const gitBranch = ref('')
 
 const activeDocName = computed(() => {
-  const doc = docsStore.documents.find((d) => d.id === docsStore.activeId);
-  if (!doc) return "";
-  const name = doc.name;
-  const slash = name.lastIndexOf("/");
-  return slash >= 0 ? name.substring(slash + 1) : name;
-});
+  const doc = docsStore.documents.find((d) => d.id === docsStore.activeId)
+  if (!doc) return ''
+  const name = doc.name
+  const slash = name.lastIndexOf('/')
+  return slash >= 0 ? name.substring(slash + 1) : name
+})
 
 useAppInit({
   showShortcuts,
@@ -121,140 +164,143 @@ useAppInit({
   onGlobalClick,
   openWorkspacePicker,
   openFilePicker,
-});
+})
 
 useGlobalKeyboard({
   showShortcuts,
   showGlobalSearch,
   showCommandPalette,
-});
+})
 
 async function openWorkspacePicker() {
   // Tear down current file watching before switching
-  await docsStore.teardownFileWatching();
-  setSingleFileMode(false);
-  needsWorkspacePicker.value = true;
+  await docsStore.teardownFileWatching()
+  setSingleFileMode(false)
+  needsWorkspacePicker.value = true
 }
 
 async function openFilePicker() {
-  await docsStore.teardownFileWatching();
-  needsWorkspacePicker.value = true;
+  await docsStore.teardownFileWatching()
+  needsWorkspacePicker.value = true
 }
 
 async function onWorkspaceSelected() {
-  needsWorkspacePicker.value = false;
+  needsWorkspacePicker.value = false
 
   try {
-    const activeDocId = await docsStore.init();
+    const activeDocId = await docsStore.init()
     if (activeDocId) {
-      await store.loadDocument(activeDocId);
+      await store.loadDocument(activeDocId)
     } else {
-      store.ready = true;
+      store.ready = true
     }
   } catch (err) {
-    console.error("[strata] Failed to initialize:", err);
-    setFileSystemActive(false);
-    setSingleFileMode(false);
-    settings.setWorkspacePath("");
-    settings.setSingleFilePath("");
-    settings.setOpenMode("folder");
-    needsWorkspacePicker.value = true;
-    return;
+    console.error('[strata] Failed to initialize:', err)
+    setFileSystemActive(false)
+    setSingleFileMode(false)
+    settings.setWorkspacePath('')
+    settings.setSingleFilePath('')
+    settings.setOpenMode('folder')
+    needsWorkspacePicker.value = true
+    return
   }
 
   // Set up file watching
   if (isFileSystemMode()) {
-    const watchPath = isSingleFileMode() ? settings.singleFilePath : settings.workspacePath;
+    const watchPath = isSingleFileMode() ? settings.singleFilePath : settings.workspacePath
     if (watchPath) {
       try {
-        await docsStore.setupFileWatching(watchPath);
+        await docsStore.setupFileWatching(watchPath)
       } catch (err) {
-        console.warn("[strata] File watching setup failed:", err);
+        console.warn('[strata] File watching setup failed:', err)
       }
     }
   }
 
   if (isTauri()) {
     const titlePath = isSingleFileMode()
-      ? (settings.singleFilePath.includes("/") ? settings.singleFilePath.substring(settings.singleFilePath.lastIndexOf("/") + 1) : settings.singleFilePath)
-      : settings.workspacePath;
+      ? settings.singleFilePath.includes('/')
+        ? settings.singleFilePath.substring(settings.singleFilePath.lastIndexOf('/') + 1)
+        : settings.singleFilePath
+      : settings.workspacePath
     if (titlePath) {
-      import("@/lib/menu-handler").then(({ updateWindowTitle }) => {
-        updateWindowTitle(titlePath);
-      });
+      import('@/lib/menu-handler').then(({ updateWindowTitle }) => {
+        updateWindowTitle(titlePath)
+      })
     }
   }
 
   // Check git status after manual workspace selection
   if (isFileSystemMode() && settings.workspacePath) {
-    import("@/lib/fs").then(({ isGitRepo, gitBranchName }) => {
-      isGitRepo(settings.workspacePath).then((v) => {
-        isGitWorkspace.value = v;
-        if (v) {
-          gitBranchName(settings.workspacePath).then((b) => {
-            gitBranch.value = b;
-          });
-        }
-      }).catch(() => {});
-    });
+    import('@/lib/fs').then(({ isGitRepo, gitBranchName }) => {
+      isGitRepo(settings.workspacePath)
+        .then((v) => {
+          isGitWorkspace.value = v
+          if (v) {
+            gitBranchName(settings.workspacePath).then((b) => {
+              gitBranch.value = b
+            })
+          }
+        })
+        .catch(() => {})
+    })
   }
 }
 
 async function onGlobalSearchNavigate(docId: string, nodeId: string) {
   if (docsStore.activeId !== docId) {
-    await docsStore.switchDocument(docId);
-    await store.loadDocument(docId);
+    await docsStore.switchDocument(docId)
+    await store.loadDocument(docId)
   }
-  store.navigateToNode(nodeId);
+  store.navigateToNode(nodeId)
 }
 
 const modes: { key: ViewMode; label: string }[] = [
-  { key: "outline", label: "Outline" },
-  { key: "split", label: "Split" },
-  { key: "board", label: "Board" },
-];
+  { key: 'outline', label: 'Outline' },
+  { key: 'split', label: 'Split' },
+  { key: 'board', label: 'Board' },
+]
 
 // Focus management: focus outline when switching to outline/split
 watch(
   () => store.viewMode,
   async () => {
-    if (store.viewMode === "outline" || store.viewMode === "split") {
-      await nextTick();
-      const el = document.querySelector(".outline-focus-target") as HTMLElement | null;
-      el?.focus();
+    if (store.viewMode === 'outline' || store.viewMode === 'split') {
+      await nextTick()
+      const el = document.querySelector('.outline-focus-target') as HTMLElement | null
+      el?.focus()
     }
   },
-);
+)
 
 // Import
 function onImportClick() {
-  fileInputRef.value?.click();
+  fileInputRef.value?.click()
 }
 
 async function onFileSelected(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (!file) return;
-  const text = await file.text();
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const text = await file.text()
   try {
-    await store.importJSON(text);
+    await store.importJSON(text)
   } catch (err) {
-    alert("Failed to import: " + (err as Error).message);
+    alert('Failed to import: ' + (err as Error).message)
   }
   // Reset input
-  if (fileInputRef.value) fileInputRef.value.value = "";
+  if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
-
 function onZoomCrumb(id: string) {
-  store.zoomIn(id);
+  store.zoomIn(id)
 }
 
 function onZoomRoot() {
-  store.zoomIn(store.rootId);
+  store.zoomIn(store.rootId)
   // Actually just clear zoom
-  store.zoomOut();
+  store.zoomOut()
   // Force clear
-  while (store.zoomId) store.zoomOut();
+  while (store.zoomId) store.zoomOut()
 }
 </script>
 
@@ -262,7 +308,10 @@ function onZoomRoot() {
   <!-- Workspace picker -->
   <WorkspacePicker v-if="needsWorkspacePicker" @selected="onWorkspaceSelected" />
 
-  <div v-else-if="store.ready" class="flex flex-col h-full bg-(--bg-primary) text-(--text-secondary)">
+  <div
+    v-else-if="store.ready"
+    class="flex flex-col h-full bg-(--bg-primary) text-(--text-secondary)"
+  >
     <!-- Top bar -->
     <header
       class="grid grid-cols-[1fr_auto_1fr] items-center min-h-11 px-3 sm:px-4 py-1.5 border-b border-(--border-primary) bg-(--bg-primary) shrink-0"
@@ -277,7 +326,9 @@ function onZoomRoot() {
           <PanelLeft class="w-4 h-4" />
         </button>
         <Layers class="w-4 h-4 shrink-0" style="color: var(--accent-500)" />
-        <span class="font-semibold text-sm text-(--text-primary) tracking-tight shrink-0">Strata</span>
+        <span class="font-semibold text-sm text-(--text-primary) tracking-tight shrink-0"
+          >Strata</span
+        >
         <template v-if="isGitWorkspace || activeDocName">
           <span class="text-(--text-faint) text-xs shrink-0">/</span>
           <span
@@ -288,11 +339,14 @@ function onZoomRoot() {
             <GitBranch class="w-3 h-3 inline -mt-px" />
             {{ gitBranch }}
           </span>
-          <span v-if="isGitWorkspace && gitBranch && activeDocName" class="text-(--text-faint) text-xs shrink-0">/</span>
           <span
-            v-if="activeDocName"
-            class="text-sm text-(--text-secondary) truncate"
-          >{{ activeDocName }}</span>
+            v-if="isGitWorkspace && gitBranch && activeDocName"
+            class="text-(--text-faint) text-xs shrink-0"
+            >/</span
+          >
+          <span v-if="activeDocName" class="text-sm text-(--text-secondary) truncate">{{
+            activeDocName
+          }}</span>
         </template>
       </div>
 
@@ -364,7 +418,9 @@ function onZoomRoot() {
             <div class="max-h-52 overflow-y-auto py-1">
               <button
                 class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
-                :class="!store.filters.tag ? 'text-(--accent-600) font-medium' : 'text-(--text-secondary)'"
+                :class="
+                  !store.filters.tag ? 'text-(--accent-600) font-medium' : 'text-(--text-secondary)'
+                "
                 @click="applyTagFilter(null)"
               >
                 All
@@ -373,13 +429,25 @@ function onZoomRoot() {
                 v-for="tag in filteredTags"
                 :key="tag"
                 class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer flex items-center gap-2"
-                :class="store.filters.tag === tag ? 'text-(--accent-600) font-medium bg-(--bg-hover)' : 'text-(--text-secondary)'"
+                :class="
+                  store.filters.tag === tag
+                    ? 'text-(--accent-600) font-medium bg-(--bg-hover)'
+                    : 'text-(--text-secondary)'
+                "
                 @click="applyTagFilter(tag)"
               >
                 <span
                   class="w-2.5 h-2.5 rounded-full shrink-0"
                   :class="tagStyle(tag, store.tagColors, settings.dark) ? '' : 'bg-(--accent-300)'"
-                  :style="tagStyle(tag, store.tagColors, settings.dark) ? { backgroundColor: (tagStyle(tag, store.tagColors, settings.dark) as Record<string, string>).color } : {}"
+                  :style="
+                    tagStyle(tag, store.tagColors, settings.dark)
+                      ? {
+                          backgroundColor: (
+                            tagStyle(tag, store.tagColors, settings.dark) as Record<string, string>
+                          ).color,
+                        }
+                      : {}
+                  "
                 />
                 {{ tag }}
               </button>
@@ -406,12 +474,14 @@ function onZoomRoot() {
             @click="showDueDateFilter = !showDueDateFilter"
           >
             <Calendar class="w-3 h-3" />
-            <span v-if="store.filters.dueDate !== 'all'">{{ { overdue: 'Overdue', today: 'Today', week: 'Week' }[store.filters.dueDate] }}</span>
+            <span v-if="store.filters.dueDate !== 'all'">{{
+              { overdue: 'Overdue', today: 'Today', week: 'Week' }[store.filters.dueDate]
+            }}</span>
             <span v-else>Due</span>
             <button
               v-if="store.filters.dueDate !== 'all'"
               class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
-              @click.stop="store.filters.dueDate = 'all'; showDueDateFilter = false"
+              @click.stop="clearDueDateFilter"
             >
               <X class="w-3 h-3" />
             </button>
@@ -429,8 +499,12 @@ function onZoomRoot() {
               ]"
               :key="opt.key"
               class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
-              :class="store.filters.dueDate === opt.key ? 'text-(--accent-600) font-medium bg-(--bg-hover)' : 'text-(--text-secondary)'"
-              @click="store.filters.dueDate = opt.key as 'all' | 'overdue' | 'today' | 'week'; showDueDateFilter = false"
+              :class="
+                store.filters.dueDate === opt.key
+                  ? 'text-(--accent-600) font-medium bg-(--bg-hover)'
+                  : 'text-(--text-secondary)'
+              "
+              @click="setDueDateFilter(opt.key)"
             >
               {{ opt.label }}
             </button>
@@ -514,10 +588,20 @@ function onZoomRoot() {
       />
 
       <main class="flex-1 overflow-hidden">
-        <div v-if="!docsStore.activeId" class="flex items-center justify-center h-full text-(--text-muted) text-sm">
+        <div
+          v-if="!docsStore.activeId"
+          class="flex items-center justify-center h-full text-(--text-muted) text-sm"
+        >
           <div class="text-center">
             <p>No documents found in this workspace.</p>
-            <p class="mt-1 text-xs text-(--text-faint)">Press <kbd class="px-1.5 py-0.5 rounded bg-(--bg-hover) text-(--text-secondary) text-[11px] font-mono">{{ isTauri() ? '⌘' : 'Ctrl' }}+N</kbd> to create one.</p>
+            <p class="mt-1 text-xs text-(--text-faint)">
+              Press
+              <kbd
+                class="px-1.5 py-0.5 rounded bg-(--bg-hover) text-(--text-secondary) text-[11px] font-mono"
+                >{{ isTauri() ? '⌘' : 'Ctrl' }}+N</kbd
+              >
+              to create one.
+            </p>
           </div>
         </div>
         <Splitpanes v-else-if="store.viewMode === 'split'" class="h-full">
@@ -544,7 +628,11 @@ function onZoomRoot() {
   </div>
 
   <!-- Shortcuts modal -->
-  <ShortcutsModal v-if="showShortcuts" @close="showShortcuts = false" @customize="showShortcuts = false; showShortcutEditor = true" />
+  <ShortcutsModal
+    v-if="showShortcuts"
+    @close="showShortcuts = false"
+    @customize="openCustomizeShortcuts"
+  />
 
   <!-- Settings panel -->
   <SettingsPanel v-if="showSettings" @close="showSettings = false" />
@@ -553,7 +641,11 @@ function onZoomRoot() {
   <TrashPanel v-if="showTrash" @close="showTrash = false" />
 
   <!-- Document settings -->
-  <DocumentSettingsPanel v-if="showDocSettings" @close="showDocSettings = false" @open-status-editor="showDocSettings = false; showStatusEditor = true" />
+  <DocumentSettingsPanel
+    v-if="showDocSettings"
+    @close="showDocSettings = false"
+    @open-status-editor="openStatusEditorFromDoc"
+  />
 
   <!-- Status editor -->
   <StatusEditor v-if="showStatusEditor" @close="showStatusEditor = false" />
@@ -565,11 +657,11 @@ function onZoomRoot() {
   <CommandPalette
     v-if="showCommandPalette"
     @close="showCommandPalette = false"
-    @openSettings="showCommandPalette = false; showSettings = true"
-    @openDocSettings="showCommandPalette = false; showDocSettings = true"
-    @openShortcuts="showCommandPalette = false; showShortcuts = true"
-    @openTrash="showCommandPalette = false; showTrash = true"
-    @openSearch="showCommandPalette = false; showGlobalSearch = true"
+    @openSettings="openFromPalette('settings')"
+    @openDocSettings="openFromPalette('docSettings')"
+    @openShortcuts="openFromPalette('shortcuts')"
+    @openTrash="openFromPalette('trash')"
+    @openSearch="openFromPalette('search')"
   />
 
   <!-- Global search -->
