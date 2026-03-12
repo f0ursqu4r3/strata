@@ -30,7 +30,7 @@ watch(
         const prev = prevStatuses.get(node.id)
         if (prev !== undefined && prev !== node.status) {
           const statusDef = store.statusDefs.find((s) => s.id === node.status)
-          if (statusDef?.isFinal) {
+          if (statusDef?.final) {
             const prevTimeout = flashTimeouts.get(node.id)
             if (prevTimeout) clearTimeout(prevTimeout)
             const next = new Set(flashingCards.value)

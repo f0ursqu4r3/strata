@@ -83,7 +83,7 @@ watch(
   () => props.node.status,
   (newStatus) => {
     const statusDef = store.statusDefs.find((s) => s.id === newStatus)
-    if (statusDef?.isFinal) {
+    if (statusDef?.final) {
       if (flashTimeout) clearTimeout(flashTimeout)
       statusFlash.value = true
       flashTimeout = setTimeout(() => {
