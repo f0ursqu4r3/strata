@@ -17,6 +17,14 @@ import { buildCompensatingOp } from "@/lib/undo-ops";
 import { serializeToMarkdown, parseMarkdown } from "@/lib/markdown-serialize";
 import { reconcileParsed } from "@/lib/reconcile";
 import {
+  SNAPSHOT_INTERVAL,
+  FILE_SAVE_DELAY,
+  WRITE_COOLDOWN,
+  INDEX_UPDATE_DELAY,
+  TEXT_DEBOUNCE_DELAY,
+  MAX_UNDO,
+} from "@/lib/constants";
+import {
   saveOp,
   saveOps,
   loadOpsAfter,
@@ -31,8 +39,6 @@ import {
   loadTagColors,
   saveTagColors,
 } from "@/lib/idb";
-
-const SNAPSHOT_INTERVAL = 200;
 
 export const useDocStore = defineStore("doc", () => {
   // ── Core state ──
@@ -70,13 +76,11 @@ export const useDocStore = defineStore("doc", () => {
       if (currentDocId.value) {
         updateIndexForDoc(currentDocId.value, nodes.value);
       }
-    }, 500);
+    }, INDEX_UPDATE_DELAY);
   }
 
   // ── Debounced file save (Tauri mode) ──
   let _fileSaveTimer: ReturnType<typeof setTimeout> | null = null;
-  const FILE_SAVE_DELAY = 1000;
-  const WRITE_COOLDOWN = 2000;
   let _lastWriteAt = 0;
 
   function scheduleFileSave() {
@@ -150,7 +154,6 @@ export const useDocStore = defineStore("doc", () => {
   }
   const undoStack: UndoEntry[] = [];
   const redoStack: UndoEntry[] = [];
-  const MAX_UNDO = 200;
 
   // Per-document undo/redo history — preserved across document switches
   const _docUndoHistory = new Map<string, { undo: UndoEntry[]; redo: UndoEntry[] }>();
@@ -474,7 +477,7 @@ export const useDocStore = defineStore("doc", () => {
       id,
       setTimeout(() => {
         _commitTextOp(id, text);
-      }, 300),
+      }, TEXT_DEBOUNCE_DELAY),
     );
   }
 
