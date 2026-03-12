@@ -19,13 +19,13 @@ interface DropdownPositionOpts {
 export function useDropdownPosition(opts?: DropdownPositionOpts) {
   const style = ref({ top: '0px', left: '0px' })
 
-  function update(triggerEl: HTMLElement | null) {
+  function update(triggerEl: HTMLElement | null, overrides?: DropdownPositionOpts) {
     if (!triggerEl) return
     const rect = triggerEl.getBoundingClientRect()
     const vh = window.innerHeight
     const vw = window.innerWidth
-    const dropH = opts?.dropHeight ?? DEFAULT_DROPDOWN_HEIGHT
-    const dropW = opts?.dropWidth ?? rect.width
+    const dropH = overrides?.dropHeight ?? opts?.dropHeight ?? DEFAULT_DROPDOWN_HEIGHT
+    const dropW = overrides?.dropWidth ?? opts?.dropWidth ?? rect.width
 
     const spaceBelow = vh - rect.bottom - POPOVER_PADDING
     const top = spaceBelow >= dropH

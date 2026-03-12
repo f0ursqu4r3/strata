@@ -42,7 +42,7 @@ const showDropdown = computed(() => inputFocused.value && suggestions.value.leng
 watch(showDropdown, (val) => {
   if (val) nextTick(() => {
     const dropH = Math.min(suggestions.value.length * TAG_ITEM_HEIGHT + TAG_DROPDOWN_PADDING, DEFAULT_DROPDOWN_HEIGHT);
-    updateDropdownPos(inputRef.value, { dropHeight: dropH, width: "192px" });
+    updateDropdownPos(inputRef.value, { dropHeight: dropH });
   });
 });
 

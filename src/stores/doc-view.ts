@@ -61,7 +61,7 @@ export function useDocView(deps: DocViewDeps) {
     if (filter === "all") return null;
     const direct = new Set<string>();
     for (const node of deps.nodes.value.values()) {
-      if (!node.deleted && matchesDueDateFilter(node.dueDate, filter)) {
+      if (!node.deleted && matchesDueDateFilter(node.dueDate, filter as 'overdue' | 'today' | 'week')) {
         direct.add(node.id);
       }
     }
@@ -114,7 +114,7 @@ export function useDocView(deps: DocViewDeps) {
     const tag = deps.filters.tag;
     if (tag) all = all.filter((n) => n.tags && n.tags.includes(tag));
     const dueFilter = deps.filters.dueDate;
-    if (dueFilter !== "all") all = all.filter((n) => matchesDueDateFilter(n.dueDate, dueFilter));
+    if (dueFilter && dueFilter !== "all") all = all.filter((n) => matchesDueDateFilter(n.dueDate, dueFilter as 'overdue' | 'today' | 'week'));
     return all;
   });
 
