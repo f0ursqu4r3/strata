@@ -3,14 +3,23 @@
   "identifier": "default",
   "description": "enables the default permissions",
   "windows": [
-    "main"
+    "main",
+    "capture",
+    "strata-*"
   ],
   "permissions": [
     "core:default",
     "core:window:allow-set-title",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "core:window:allow-set-size",
+    "core:window:allow-is-visible",
+    "core:window:allow-center",
     "dialog:default",
     "dialog:allow-open",
     "updater:default",
-    "process:default"
+    "process:default",
+    "global-shortcut:default"
   ]
 }

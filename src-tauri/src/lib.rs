@@ -526,9 +526,9 @@ pub fn run() {
 
             // Register default capture shortcut
             use tauri_plugin_global_shortcut::GlobalShortcutExt;
-            let shortcut: tauri_plugin_global_shortcut::Shortcut =
-                "CmdOrCtrl+Shift+Space".parse().unwrap();
-            app.handle().global_shortcut().register(shortcut).ok();
+            if let Ok(shortcut) = "CmdOrCtrl+Shift+Space".parse::<tauri_plugin_global_shortcut::Shortcut>() {
+                let _ = app.handle().global_shortcut().register(shortcut);
+            }
 
             build_menu(app)?;
 
