@@ -29,6 +29,15 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
         import('@tauri-apps/api/core').then(({ invoke }) => invoke('create_window'))
         break
       }
+      case 'scratch-pad': {
+        import('@/lib/idb').then(({ setCurrentDocId }) => {
+          const INBOX_DOC_ID = '__inbox__'
+          setCurrentDocId(INBOX_DOC_ID)
+          docs.activeId = INBOX_DOC_ID
+          store.loadDocument(INBOX_DOC_ID)
+        })
+        break
+      }
       case 'open-file':
         refs.onOpenFile()
         break
