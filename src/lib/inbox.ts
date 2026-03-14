@@ -46,7 +46,7 @@ async function ensureInboxRoot(): Promise<void> {
       id: INBOX_ROOT_ID,
       parentId: null,
       pos: initialRank(),
-      text: 'Inbox',
+      text: 'Scratch Pad',
       status: 'todo',
     })
     await saveInboxOps([op])

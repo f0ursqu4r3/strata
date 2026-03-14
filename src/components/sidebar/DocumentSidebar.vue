@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, provide, watch } from 'vue'
-import { Plus, X, FolderOpen, FolderPlus, Inbox } from 'lucide-vue-next'
-import { INBOX_DOC_ID } from '@/lib/inbox'
+import { Plus, X, FolderOpen, FolderPlus, NotepadText } from 'lucide-vue-next'
+
+const INBOX_DOC_ID = '__inbox__'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
@@ -256,8 +257,8 @@ async function onDelete(docId: string, e?: MouseEvent) {
           : 'text-(--text-secondary) hover:bg-(--bg-hover)'"
         @click="onSwitchToInbox"
       >
-        <Inbox class="w-3.5 h-3.5 shrink-0" />
-        <span>Inbox</span>
+        <NotepadText class="w-3.5 h-3.5 shrink-0" />
+        <span>Scratch Pad</span>
       </button>
     </div>
 
