@@ -30,9 +30,7 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
         break
       }
       case 'scratch-pad': {
-        const INBOX_DOC_ID = '__inbox__'
-        docs.activeId = INBOX_DOC_ID
-        store.loadDocument(INBOX_DOC_ID)
+        import('@tauri-apps/api/core').then(({ invoke }) => invoke('open_scratch_pad'))
         break
       }
       case 'open-file':

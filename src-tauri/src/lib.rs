@@ -394,6 +394,25 @@ fn set_capture_shortcut(app: tauri::AppHandle, shortcut_str: String) -> Result<(
 }
 
 #[tauri::command]
+fn open_scratch_pad(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("scratch-pad") {
+        let _ = win.show();
+        let _ = win.set_focus();
+    } else {
+        tauri::WebviewWindowBuilder::new(
+            &app,
+            "scratch-pad",
+            tauri::WebviewUrl::App("index.html?doc=__inbox__".into()),
+        )
+        .title("Scratch Pad")
+        .inner_size(800.0, 600.0)
+        .build()
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn create_window(app: tauri::AppHandle) -> Result<(), String> {
     let label = format!("strata-{}", std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -538,6 +557,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             create_window,
+            open_scratch_pad,
             set_capture_shortcut,
             list_workspace_files,
             list_subdirs,

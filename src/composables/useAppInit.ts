@@ -41,9 +41,26 @@ export function useAppInit(options: AppInitOptions) {
     settings.init()
     document.addEventListener('mousedown', onGlobalClick)
 
+    const urlParams = new URLSearchParams(window.location.search)
+
+    // Scratch Pad window: load inbox doc directly
+    const docParam = urlParams.get('doc')
+    if (docParam === '__inbox__' && isTauri()) {
+      const { setCurrentDocId } = await import('@/lib/idb')
+      setCurrentDocId('__inbox__')
+      await store.loadDocument('__inbox__')
+      const { setupMenuHandler } = await import('@/lib/menu-handler')
+      await setupMenuHandler({
+        showShortcuts,
+        showSettings,
+        onOpenWorkspace: openWorkspacePicker,
+        onOpenFile: openFilePicker,
+      })
+      return
+    }
+
     // New window: skip auto-restore, show workspace picker
-    const isNewWindow = new URLSearchParams(window.location.search).has('new')
-    if (isNewWindow && isTauri()) {
+    if (urlParams.has('new') && isTauri()) {
       needsWorkspacePicker.value = true
       const { setupMenuHandler } = await import('@/lib/menu-handler')
       await setupMenuHandler({
