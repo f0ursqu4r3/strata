@@ -41,6 +41,20 @@ export function useAppInit(options: AppInitOptions) {
     settings.init()
     document.addEventListener('mousedown', onGlobalClick)
 
+    // New window: skip auto-restore, show workspace picker
+    const isNewWindow = new URLSearchParams(window.location.search).has('new')
+    if (isNewWindow && isTauri()) {
+      needsWorkspacePicker.value = true
+      const { setupMenuHandler } = await import('@/lib/menu-handler')
+      await setupMenuHandler({
+        showShortcuts,
+        showSettings,
+        onOpenWorkspace: openWorkspacePicker,
+        onOpenFile: openFilePicker,
+      })
+      return
+    }
+
     // Restore single-file mode from previous session
     if (settings.openMode === 'single-file' && settings.singleFilePath) {
       setSingleFileMode(true)

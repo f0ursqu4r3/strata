@@ -25,6 +25,10 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
         docs.switchDocument(id).then(() => store.loadDocument(id))
         break
       }
+      case 'new-window': {
+        import('@tauri-apps/api/core').then(({ invoke }) => invoke('create_window'))
+        break
+      }
       case 'open-file':
         refs.onOpenFile()
         break

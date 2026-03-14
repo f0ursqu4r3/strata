@@ -351,6 +351,22 @@ fn stop_watching(state: tauri::State<'_, AppState>) -> Result<(), String> {
     Ok(())
 }
 
+// ── Window management ──
+
+#[tauri::command]
+fn create_window(app: tauri::AppHandle) -> Result<(), String> {
+    let label = format!("strata-{}", std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos());
+    tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App("index.html?new=1".into()))
+        .title("Strata")
+        .inner_size(1200.0, 800.0)
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 // ── Menu builder ──
 
 fn build_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
@@ -375,6 +391,7 @@ fn build_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // File menu
     let mut file_builder = SubmenuBuilder::new(handle, "File")
         .item(&MenuItem::with_id(handle, "new-document", "New Document", true, Some("CmdOrCtrl+N"))?)
+        .item(&MenuItem::with_id(handle, "new-window", "New Window", true, Some("CmdOrCtrl+Shift+N"))?)
         .separator()
         .item(&MenuItem::with_id(handle, "open-file", "Open File…", true, None::<&str>)?)
         .item(&MenuItem::with_id(handle, "open-workspace", "Open Workspace…", true, Some("CmdOrCtrl+O"))?);
@@ -462,6 +479,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            create_window,
             list_workspace_files,
             list_subdirs,
             read_file,
