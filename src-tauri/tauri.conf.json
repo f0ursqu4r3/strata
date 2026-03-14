@@ -41,6 +41,7 @@
     }
   },
   "plugins": {
+    "global-shortcut": {},
     "updater": {
       "endpoints": [
         "https://github.com/f0ursqu4r3/strata/releases/latest/download/latest.json"

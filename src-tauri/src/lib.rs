@@ -353,6 +353,46 @@ fn stop_watching(state: tauri::State<'_, AppState>) -> Result<(), String> {
 
 // ── Window management ──
 
+fn show_or_create_capture(app_handle: &AppHandle) {
+    if let Some(win) = app_handle.get_webview_window("capture") {
+        if win.is_visible().unwrap_or(false) {
+            let _ = win.hide();
+        } else {
+            let _ = win.show();
+            let _ = win.set_focus();
+        }
+    } else {
+        let _ = tauri::WebviewWindowBuilder::new(
+            app_handle,
+            "capture",
+            tauri::WebviewUrl::App("capture.html".into()),
+        )
+        .title("Quick Capture")
+        .inner_size(480.0, 72.0)
+        .resizable(false)
+        .decorations(false)
+        .always_on_top(true)
+        .center()
+        .build();
+    }
+}
+
+#[tauri::command]
+fn set_capture_shortcut(app: tauri::AppHandle, shortcut_str: String) -> Result<(), String> {
+    use tauri_plugin_global_shortcut::GlobalShortcutExt;
+
+    let manager = app.global_shortcut();
+    manager.unregister_all().map_err(|e| e.to_string())?;
+
+    if !shortcut_str.is_empty() {
+        let shortcut: tauri_plugin_global_shortcut::Shortcut = shortcut_str
+            .parse()
+            .map_err(|e| format!("{e:?}"))?;
+        manager.register(shortcut).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn create_window(app: tauri::AppHandle) -> Result<(), String> {
     let label = format!("strata-{}", std::time::SystemTime::now()
@@ -474,12 +514,29 @@ pub fn run() {
 
             app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
 
+            app.handle().plugin(
+                tauri_plugin_global_shortcut::Builder::new()
+                    .with_handler(move |app_handle, _shortcut, event| {
+                        if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                            show_or_create_capture(app_handle);
+                        }
+                    })
+                    .build(),
+            )?;
+
+            // Register default capture shortcut
+            use tauri_plugin_global_shortcut::GlobalShortcutExt;
+            let shortcut: tauri_plugin_global_shortcut::Shortcut =
+                "CmdOrCtrl+Shift+Space".parse().unwrap();
+            app.handle().global_shortcut().register(shortcut).ok();
+
             build_menu(app)?;
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             create_window,
+            set_capture_shortcut,
             list_workspace_files,
             list_subdirs,
             read_file,
