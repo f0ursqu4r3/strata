@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Capture</title>
+  </head>
+  <body>
+    <script>
+      ;(function() {
+        var bg = {
+          'github-light':'#ffffff','github-dark':'#0d1117','monokai':'#272822',
+          'nord':'#2e3440','dracula':'#282a36','solarized-light':'#fdf6e3',
+          'solarized-dark':'#002b36','one-dark':'#282c34','catppuccin-mocha':'#1e1e2e',
+          'gruvbox-dark':'#282828','tokyo-night':'#1a1b26'
+        }
+        try {
+          var s = JSON.parse(localStorage.getItem('strata-settings') || '{}')
+          var t = s.theme
+          if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'github-dark' : 'github-light'
+          if (bg[t]) {
+            document.documentElement.setAttribute('data-theme', t)
+            document.body.style.background = bg[t]
+          }
+        } catch(e) {}
+      })()
+    </script>
+    <div id="capture-app"></div>
+    <script type="module" src="/src/capture.ts"></script>
+  </body>
+</html>
