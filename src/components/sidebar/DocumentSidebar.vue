@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, provide, watch } from 'vue'
-import { Plus, X, FolderOpen, FolderPlus } from 'lucide-vue-next'
+import { Plus, X, FolderOpen, FolderPlus, Inbox } from 'lucide-vue-next'
+import { INBOX_DOC_ID } from '@/lib/inbox'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
@@ -144,6 +145,15 @@ async function onSwitchDoc(docId: string) {
   await docStore.loadDocument(docId)
 }
 
+async function onSwitchToInbox() {
+  if (docsStore.activeId === INBOX_DOC_ID) return
+  docStore.flushTextDebounce()
+  const { setCurrentDocId } = await import('@/lib/idb')
+  setCurrentDocId(INBOX_DOC_ID)
+  docsStore.activeId = INBOX_DOC_ID
+  await docStore.loadDocument(INBOX_DOC_ID)
+}
+
 async function changeWorkspace() {
   if (isTauri()) {
     const { open } = await import('@tauri-apps/plugin-dialog')
@@ -235,6 +245,20 @@ async function onDelete(docId: string, e?: MouseEvent) {
           <X class="w-3.5 h-3.5" />
         </button>
       </div>
+    </div>
+
+    <!-- Inbox -->
+    <div class="px-1 py-1 border-b border-(--border-primary)">
+      <button
+        class="flex items-center gap-2 w-full px-2 py-1.5 rounded text-sm cursor-pointer"
+        :class="docsStore.activeId === INBOX_DOC_ID
+          ? 'bg-(--bg-hover) text-(--text-primary) font-medium'
+          : 'text-(--text-secondary) hover:bg-(--bg-hover)'"
+        @click="onSwitchToInbox"
+      >
+        <Inbox class="w-3.5 h-3.5 shrink-0" />
+        <span>Inbox</span>
+      </button>
     </div>
 
     <!-- Document tree -->
