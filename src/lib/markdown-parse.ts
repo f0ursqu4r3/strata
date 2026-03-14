@@ -33,7 +33,7 @@ export function parseMarkdown(content: string): ParseResult {
   // Find first final status for checkbox mapping
   const firstFinalStatus = statusConfig.find((s) => s.final)?.id ?? defaultStatus
 
-  const rootId = crypto.randomUUID()
+  const rootId = 'n-root'
   const nodes = new Map<string, Node>()
 
   nodes.set(rootId, {
@@ -52,6 +52,8 @@ export function parseMarkdown(content: string): ParseResult {
   const stack: { id: string; depth: number }[] = [{ id: rootId, depth: -1 }]
   // Track last pos per parent to generate ordered positions
   const lastPosByParent = new Map<string, string>()
+  // Track child count per parent for deterministic ID generation
+  const childCountByParent = new Map<string, number>()
   // Track pending blank lines to preserve them within body text (but not trailing)
   let pendingBlankLines = 0
 
@@ -113,12 +115,8 @@ export function parseMarkdown(content: string): ParseResult {
       status = firstFinalStatus
     }
 
-    // Extract collapsed
-    let collapsed = false
-    if (COLLAPSED_RE.test(lineContent)) {
-      collapsed = true
-      lineContent = lineContent.replace(COLLAPSED_RE, '')
-    }
+    // Strip legacy !collapsed marker (collapsed state is managed by the app, not the document)
+    lineContent = lineContent.replace(COLLAPSED_RE, '')
 
     // Extract due date
     let dueDate: number | null = null
@@ -153,13 +151,15 @@ export function parseMarkdown(content: string): ParseResult {
     const pos = lastPos ? rankAfter(lastPos) : initialRank()
     lastPosByParent.set(parentId, pos)
 
-    const id = crypto.randomUUID()
+    const parentCount = childCountByParent.get(parentId) ?? 0
+    childCountByParent.set(parentId, parentCount + 1)
+    const id = parentId === 'n-root' ? `n-${parentCount}` : `${parentId}-${parentCount}`
     nodes.set(id, {
       id,
       parentId,
       pos,
       text,
-      collapsed,
+      collapsed: false,
       status,
       deleted: false,
       tags,
