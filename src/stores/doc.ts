@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, shallowReactive, computed, shallowRef, triggerRef, nextTick } from 'vue'
+import { ref, shallowReactive, computed, shallowRef, triggerRef, nextTick, watch } from 'vue'
 import type { Node, Op, Status, ViewMode, Snapshot, StatusDef } from '@/types'
 import { DEFAULT_STATUSES } from '@/types'
 import { makeOp, applyOp, rebuildState, setSeq } from '@/lib/ops'
@@ -17,6 +17,7 @@ import { buildCompensatingOp } from '@/lib/undo-ops'
 import { parseMarkdown } from '@/lib/markdown-serialize'
 import { reconcileParsed } from '@/lib/reconcile'
 import { SNAPSHOT_INTERVAL, TEXT_DEBOUNCE_DELAY, MAX_UNDO } from '@/lib/constants'
+import { saveViewState, loadViewState } from '@/lib/view-state'
 import {
   saveOp,
   saveOps,
@@ -378,6 +379,14 @@ export const useDocStore = defineStore('doc', () => {
   function toggleCollapsed(id: string) {
     const op = makeOp('toggleCollapsed', { type: 'toggleCollapsed', id })
     dispatch(op)
+    // Persist view state
+    if (currentDocId.value) {
+      const collapsedIds: string[] = []
+      for (const node of nodes.value.values()) {
+        if (node.collapsed) collapsedIds.push(node.id)
+      }
+      saveViewState(currentDocId.value, collapsedIds, zoomId.value)
+    }
   }
 
   function duplicateNode(id: string) {
@@ -517,6 +526,17 @@ export const useDocStore = defineStore('doc', () => {
     flushTextDebounce,
   })
 
+  // ── Persist view state on zoom changes ──
+  watch(zoomId, () => {
+    if (currentDocId.value && ready.value) {
+      const collapsedIds: string[] = []
+      for (const node of nodes.value.values()) {
+        if (node.collapsed) collapsedIds.push(node.id)
+      }
+      saveViewState(currentDocId.value, collapsedIds, zoomId.value)
+    }
+  })
+
   // ── Init / Load ──
 
   async function loadDocument(docId: string) {
@@ -528,8 +548,14 @@ export const useDocStore = defineStore('doc', () => {
       await flushOpBuffer()
       setCurrentDocId(docId)
     }
-    // Save current document's undo/redo history before switching
+    // Save current document's view state and undo/redo history before switching
     if (currentDocId.value) {
+      const collapsedIds: string[] = []
+      for (const node of nodes.value.values()) {
+        if (node.collapsed) collapsedIds.push(node.id)
+      }
+      saveViewState(currentDocId.value, collapsedIds, zoomId.value)
+
       _docUndoHistory.set(currentDocId.value, {
         undo: undoStack.splice(0),
         redo: redoStack.splice(0),
@@ -615,6 +641,20 @@ export const useDocStore = defineStore('doc', () => {
         tags: [],
       })
       nodes.value = nodeMap
+    }
+
+    // Restore view state (collapsed nodes, zoom)
+    if (currentDocId.value) {
+      const viewState = loadViewState(currentDocId.value)
+      if (viewState) {
+        for (const id of viewState.collapsed) {
+          const node = nodes.value.get(id)
+          if (node) node.collapsed = true
+        }
+        if (viewState.zoomId && nodes.value.has(viewState.zoomId)) {
+          zoomId.value = viewState.zoomId
+        }
+      }
     }
 
     // Set selection to first visible
@@ -795,6 +835,20 @@ export const useDocStore = defineStore('doc', () => {
     tagColors.value = savedTagColors ?? {}
 
     nodes.value = nodeMap
+
+    // Restore view state (collapsed nodes, zoom)
+    if (currentDocId.value) {
+      const viewState = loadViewState(currentDocId.value)
+      if (viewState) {
+        for (const id of viewState.collapsed) {
+          const node = nodeMap.get(id)
+          if (node) node.collapsed = true
+        }
+        if (viewState.zoomId && nodeMap.has(viewState.zoomId)) {
+          zoomId.value = viewState.zoomId
+        }
+      }
+    }
 
     // Set selection to first visible if not set
     if (!selection.current || !nodeMap.has(selection.current)) {
