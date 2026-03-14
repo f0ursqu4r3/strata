@@ -30,7 +30,7 @@ export function useDocSync(deps: DocSyncDeps) {
   }
 
   function scheduleFileSave() {
-    if (!isFileSystemMode()) return
+    if (!isFileSystemMode() || deps.currentDocId.value === '__inbox__') return
     if (_fileSaveTimer) clearTimeout(_fileSaveTimer)
     _fileSaveTimer = setTimeout(() => {
       _fileSaveTimer = null

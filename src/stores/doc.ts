@@ -544,7 +544,7 @@ export const useDocStore = defineStore('doc', () => {
     // Force-flush any pending file save so the current document is written
     // to disk before we reset state and load the new one.
     await sync.flushPendingSave()
-    if (!isFileSystemMode()) {
+    if (!isFileSystemMode() || docId === '__inbox__') {
       await flushOpBuffer()
       setCurrentDocId(docId)
     }
@@ -588,6 +588,11 @@ export const useDocStore = defineStore('doc', () => {
   }
 
   async function init() {
+    // Scratch Pad always uses IDB, even in filesystem mode
+    if (currentDocId.value === '__inbox__') {
+      await initFromIdb()
+      return
+    }
     if (isFileSystemMode() && currentDocId.value) {
       await initFromFile()
       return

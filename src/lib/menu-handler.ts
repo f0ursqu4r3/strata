@@ -30,12 +30,9 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
         break
       }
       case 'scratch-pad': {
-        import('@/lib/idb').then(({ setCurrentDocId }) => {
-          const INBOX_DOC_ID = '__inbox__'
-          setCurrentDocId(INBOX_DOC_ID)
-          docs.activeId = INBOX_DOC_ID
-          store.loadDocument(INBOX_DOC_ID)
-        })
+        const INBOX_DOC_ID = '__inbox__'
+        docs.activeId = INBOX_DOC_ID
+        store.loadDocument(INBOX_DOC_ID)
         break
       }
       case 'open-file':
