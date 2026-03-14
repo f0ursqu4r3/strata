@@ -319,6 +319,7 @@ function onZoomRoot() {
       <!-- Left: branding + doc context -->
       <div class="flex items-center gap-2 min-w-0">
         <button
+          v-if="!isSingleFileMode()"
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer shrink-0"
           title="Toggle sidebar"
           @click="settings.setSidebarOpen(!settings.sidebarOpen)"
