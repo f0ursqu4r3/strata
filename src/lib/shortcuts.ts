@@ -14,6 +14,7 @@ export type ShortcutAction =
   | 'redo'
   | 'globalSearch'
   | 'commandPalette'
+  | 'quickCapture'
 
 export interface KeyCombo {
   key: string
@@ -60,6 +61,13 @@ export const DEFAULT_SHORTCUTS: ShortcutDef[] = [
     action: 'commandPalette',
     combo: { key: 'k', ctrl: true },
     label: 'Command palette',
+    category: 'General',
+    context: 'global',
+  },
+  {
+    action: 'quickCapture',
+    combo: { key: ' ', ctrl: true, shift: true },
+    label: 'Quick Capture',
     category: 'General',
     context: 'global',
   },

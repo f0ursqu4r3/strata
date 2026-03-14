@@ -8,6 +8,7 @@ import {
   type KeyCombo,
   type ShortcutDef,
 } from '@/lib/shortcuts'
+import { isTauri } from '@/lib/platform'
 
 const STORAGE_KEY = 'strata-settings'
 
@@ -189,12 +190,31 @@ export const useSettingsStore = defineStore('settings', () => {
   function updateShortcut(action: ShortcutAction, combo: KeyCombo) {
     shortcutOverrides.value = { ...shortcutOverrides.value, [action]: combo }
     persist()
+    if (action === 'quickCapture' && isTauri()) {
+      syncCaptureShortcut(combo)
+    }
   }
 
   function resetShortcut(action: ShortcutAction) {
     const { [action]: _, ...rest } = shortcutOverrides.value
     shortcutOverrides.value = rest
     persist()
+    if (action === 'quickCapture' && isTauri()) {
+      // Reset to default
+      const def = DEFAULT_SHORTCUTS.find((s) => s.action === 'quickCapture')
+      if (def) syncCaptureShortcut(def.combo)
+    }
+  }
+
+  async function syncCaptureShortcut(combo: KeyCombo) {
+    const { invoke } = await import('@tauri-apps/api/core')
+    const parts: string[] = []
+    if (combo.ctrl) parts.push('CmdOrCtrl')
+    if (combo.shift) parts.push('Shift')
+    if (combo.alt) parts.push('Alt')
+    const keyMap: Record<string, string> = { ' ': 'Space' }
+    parts.push(keyMap[combo.key] ?? combo.key.toUpperCase())
+    await invoke('set_capture_shortcut', { shortcutStr: parts.join('+') })
   }
 
   function resetAllShortcuts() {
