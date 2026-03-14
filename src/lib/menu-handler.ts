@@ -71,21 +71,19 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
         settings.setShowTags(!settings.showTags)
         break
       case 'close-document': {
-        // Delete the active document (with confirmation) and switch to the next one
         const activeId = docs.activeId
-        if (activeId) {
-          // If it's the scratch pad, just close the window
-          if (activeId === '__inbox__') {
-            import('@tauri-apps/api/window').then(({ getCurrentWindow }) =>
-              getCurrentWindow().close(),
-            )
-          } else {
-            // Switch to next doc, removing current
-            const remaining = docs.documents.filter((d) => d.id !== activeId)
-            if (remaining.length > 0) {
-              const nextId = remaining[0]!.id
-              docs.switchDocument(nextId).then(() => store.loadDocument(nextId))
-            }
+        if (!activeId) break
+        // Scratch pad or single-file mode: close the window
+        if (activeId === '__inbox__' || settings.openMode === 'single-file') {
+          import('@tauri-apps/api/window').then(({ getCurrentWindow }) =>
+            getCurrentWindow().close(),
+          )
+        } else {
+          // Switch to next doc
+          const remaining = docs.documents.filter((d) => d.id !== activeId)
+          if (remaining.length > 0) {
+            const nextId = remaining[0]!.id
+            docs.switchDocument(nextId).then(() => store.loadDocument(nextId))
           }
         }
         break
