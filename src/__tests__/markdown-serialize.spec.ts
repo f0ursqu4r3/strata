@@ -113,13 +113,13 @@ describe('serializeToMarkdown', () => {
     expect(md).toContain('@due(2026-03-15)')
   })
 
-  it('serializes collapsed marker', () => {
+  it('does not serialize collapsed state', () => {
     const rootId = 'root'
     const nodes = buildTree([{ text: 'Collapsed', parentId: rootId, collapsed: true }], rootId)
 
     const md = serializeToMarkdown({ nodes, rootId, statusConfig: [...DEFAULT_STATUSES] })
 
-    expect(md).toContain('!collapsed')
+    expect(md).not.toContain('!collapsed')
   })
 
   it('skips deleted nodes', () => {
@@ -340,7 +340,7 @@ doc-type: strata
     expect(items[0]!.dueDate).toBe(new Date('2026-03-15T00:00:00').getTime())
   })
 
-  it('parses collapsed marker', () => {
+  it('strips legacy !collapsed marker without setting collapsed', () => {
     const md = `---
 doc-type: strata
 ---
@@ -350,7 +350,8 @@ doc-type: strata
     const result = parseMarkdown(md)
 
     const items = [...result.nodes.values()].filter((n) => n.parentId === result.rootId)
-    expect(items[0]!.collapsed).toBe(true)
+    expect(items[0]!.collapsed).toBe(false)
+    expect(items[0]!.text).toBe('Collapsed item')
   })
 
   it('parses custom status config with final flag from frontmatter', () => {
@@ -413,7 +414,7 @@ statuses:
     expect(item.status).toBe('in_progress')
     expect(item.tags).toEqual(['urgent', 'frontend'])
     expect(item.dueDate).toBe(new Date('2026-06-01T00:00:00').getTime())
-    expect(item.collapsed).toBe(true)
+    expect(item.collapsed).toBe(false)
   })
 })
 

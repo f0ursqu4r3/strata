@@ -94,11 +94,6 @@ export function serializeToMarkdown(opts: SerializeOptions): string {
         meta.push(`@due(${dateStr})`)
       }
 
-      // Collapsed
-      if (child.collapsed) {
-        meta.push('!collapsed')
-      }
-
       const suffix = meta.length > 0 ? '  ' + meta.join(' ') : ''
       lines.push(`${indent}- ${checkbox}${firstLine}${suffix}`)
 
