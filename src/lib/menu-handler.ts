@@ -26,11 +26,21 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
         break
       }
       case 'new-window': {
-        import('@tauri-apps/api/core').then(({ invoke }) => invoke('create_window'))
+        // Always create a new window — use a unique title so it won't match existing ones
+        import('@tauri-apps/api/core').then(({ invoke }) =>
+          invoke('open_window', { title: `Strata — New ${Date.now()}`, query: 'new=1' }),
+        )
         break
       }
       case 'scratch-pad': {
-        import('@tauri-apps/api/core').then(({ invoke }) => invoke('open_scratch_pad'))
+        import('@tauri-apps/api/core').then(({ invoke }) =>
+          invoke('open_window', {
+            title: 'Scratch Pad',
+            query: 'doc=__inbox__',
+            width: 800,
+            height: 600,
+          }),
+        )
         break
       }
       case 'open-file':

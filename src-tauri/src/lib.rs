@@ -393,34 +393,34 @@ fn set_capture_shortcut(app: tauri::AppHandle, shortcut_str: String) -> Result<(
     Ok(())
 }
 
+/// Open a window by title. If a window with that title already exists, focus it.
+/// Otherwise create a new window with the given URL query string.
 #[tauri::command]
-fn open_scratch_pad(app: tauri::AppHandle) -> Result<(), String> {
-    if let Some(win) = app.get_webview_window("scratch-pad") {
-        let _ = win.show();
-        let _ = win.set_focus();
-    } else {
-        tauri::WebviewWindowBuilder::new(
-            &app,
-            "scratch-pad",
-            tauri::WebviewUrl::App("index.html?doc=__inbox__".into()),
-        )
-        .title("Scratch Pad")
-        .inner_size(800.0, 600.0)
-        .build()
-        .map_err(|e| e.to_string())?;
+fn open_window(app: tauri::AppHandle, title: String, query: String, width: Option<f64>, height: Option<f64>) -> Result<(), String> {
+    // Check if any existing window has this title
+    for (_label, win) in app.webview_windows() {
+        if let Ok(t) = win.title() {
+            if t == title {
+                let _ = win.show();
+                let _ = win.set_focus();
+                return Ok(());
+            }
+        }
     }
-    Ok(())
-}
 
-#[tauri::command]
-fn create_window(app: tauri::AppHandle) -> Result<(), String> {
+    // Create a new window
     let label = format!("strata-{}", std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_nanos());
-    tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App("index.html?new=1".into()))
-        .title("Strata")
-        .inner_size(1200.0, 800.0)
+    let url = if query.is_empty() {
+        "index.html".to_string()
+    } else {
+        format!("index.html?{}", query)
+    };
+    tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App(url.into()))
+        .title(&title)
+        .inner_size(width.unwrap_or(1200.0), height.unwrap_or(800.0))
         .build()
         .map_err(|e| e.to_string())?;
     Ok(())
@@ -556,8 +556,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            create_window,
-            open_scratch_pad,
+            open_window,
             set_capture_shortcut,
             list_workspace_files,
             list_subdirs,
