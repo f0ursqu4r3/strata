@@ -459,6 +459,9 @@ fn build_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .separator()
         .item(&MenuItem::with_id(handle, "scratch-pad", "Scratch Pad", true, Some("CmdOrCtrl+Shift+S"))?)
         .separator()
+        .item(&MenuItem::with_id(handle, "close-document", "Close Document", true, Some("CmdOrCtrl+W"))?)
+        .item(&MenuItem::with_id(handle, "close-window", "Close Window", true, Some("CmdOrCtrl+Shift+W"))?)
+        .separator()
         .item(&MenuItem::with_id(handle, "settings", "Settings...", true, Some("CmdOrCtrl+,"))?);
 
     if !cfg!(target_os = "macos") {
