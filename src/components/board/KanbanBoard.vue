@@ -190,7 +190,7 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
                 />
               <div
                 :data-card-id="node.id"
-                class="group/card bg-(--bg-secondary) border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color] hover:border-(--border-hover) hover:shadow-sm active:cursor-grabbing select-none"
+                class="group/card bg-(--bg-secondary) border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color,opacity] hover:border-(--border-hover) hover:shadow-sm active:cursor-grabbing select-none"
                 :class="{
                   'border-(--accent-500) shadow-[0_0_0_1px_var(--accent-500)]':
                     store.selection.current === node.id && dragNodeId !== node.id,

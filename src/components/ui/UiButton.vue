@@ -27,7 +27,7 @@ const sizeClasses: Record<string, string> = {
 
 <template>
   <button
-    class="flex gap-1 items-center rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    class="flex gap-1 items-center rounded-md font-medium transition-[colors,transform] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97]"
     :class="[
       variantClasses[variant],
       sizeClasses[size],

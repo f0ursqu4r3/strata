@@ -155,7 +155,7 @@ function onRowPointerDown(e: PointerEvent) {
 
 <template>
   <div
-    class="group flex items-start min-h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-(--bg-hover)"
+    class="group flex items-start min-h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-(--bg-hover) transition-shadow"
     :class="{
       'bg-(--bg-active) ring-1 ring-(--accent-200)': isSelected && !isEditing && store.selection.ids.size <= 1,
       'bg-(--bg-active) ring-1 ring-(--accent-300)': isSelected && !isEditing && store.selection.ids.size > 1,
@@ -308,7 +308,7 @@ function onRowPointerDown(e: PointerEvent) {
         v-for="tag in node.tags"
         :key="tag"
         type="button"
-        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:opacity-80"
+        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:opacity-80 transition-opacity"
         :class="
           tagStyle(tag, store.tagColors, settings.dark)
             ? ''

@@ -25,7 +25,7 @@ const sizeClasses: Record<string, string> = {
 
 <template>
   <button
-    class="rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+    class="rounded transition-[colors,transform] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
     :class="[
       variantClasses[variant],
       sizeClasses[size],

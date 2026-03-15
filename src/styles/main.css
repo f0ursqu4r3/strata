@@ -110,6 +110,14 @@ body,
   box-shadow:
     0 10px 15px -3px rgb(0 0 0 / 0.1),
     0 4px 6px -4px rgb(0 0 0 / 0.1);
+  animation: popup-in 100ms ease-out;
+}
+
+@keyframes popup-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-2px);
+  }
 }
 
 /* ── Inline markdown styles ── */
