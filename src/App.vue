@@ -328,8 +328,8 @@ function onZoomRoot() {
           <PanelLeft class="w-4 h-4" />
         </button>
         <Layers class="w-4 h-4 shrink-0" style="color: var(--accent-500)" />
-        <span class="font-semibold text-sm text-(--text-primary) tracking-tight shrink-0"
-          >Strata</span
+        <h1 class="font-semibold text-sm text-(--text-primary) tracking-tight shrink-0 m-0"
+          >Strata</h1
         >
         <template v-if="isGitWorkspace || activeDocName">
           <span class="text-(--text-faint) text-xs shrink-0">/</span>
@@ -410,18 +410,21 @@ function onZoomRoot() {
           <div
             v-if="showTagFilter"
             class="strata-popup absolute right-0 top-full z-50 mt-1 w-52 overflow-hidden"
+            role="menu"
+            aria-label="Filter by tag"
           >
             <div class="px-2 pt-2 pb-1">
               <input
                 ref="tagFilterInputRef"
                 v-model="tagFilterQuery"
-                class="w-full bg-(--bg-tertiary) border border-(--border-primary) rounded px-2 py-1 text-[12px] text-(--text-secondary) placeholder:text-(--text-faint) outline-none focus:border-(--accent-400)"
+                class="w-full bg-(--bg-tertiary) border border-(--border-primary) rounded px-2 py-1 text-[12px] text-(--text-secondary) placeholder:text-(--text-faint) outline-none focus-visible:border-(--accent-400) focus-visible:ring-1 focus-visible:ring-(--accent-400)"
                 placeholder="Filter or type tag..."
                 @keydown="onTagFilterKeydown"
               />
             </div>
             <div class="max-h-52 overflow-y-auto py-1">
               <button
+                role="menuitem"
                 class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
                 :class="
                   !store.filters.tag ? 'text-(--accent-600) font-medium' : 'text-(--text-secondary)'
@@ -433,6 +436,7 @@ function onZoomRoot() {
               <button
                 v-for="tag in filteredTags"
                 :key="tag"
+                role="menuitem"
                 class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer flex items-center gap-2"
                 :class="
                   store.filters.tag === tag
@@ -458,6 +462,7 @@ function onZoomRoot() {
               </button>
               <button
                 v-if="tagFilterQuery.trim() && !filteredTags.includes(tagFilterQuery.trim())"
+                role="menuitem"
                 class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer text-(--text-muted) italic"
                 @click="applyTagFilter(tagFilterQuery.trim())"
               >
@@ -496,6 +501,8 @@ function onZoomRoot() {
           <div
             v-if="showDueDateFilter"
             class="strata-popup absolute right-0 top-full z-50 mt-1 w-40 py-1"
+            role="menu"
+            aria-label="Filter by due date"
           >
             <button
               v-for="opt in [
@@ -505,6 +512,7 @@ function onZoomRoot() {
                 { key: 'week', label: 'This Week' },
               ]"
               :key="opt.key"
+              role="menuitem"
               class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
               :class="
                 store.filters.dueDate === opt.key
@@ -582,7 +590,7 @@ function onZoomRoot() {
       <template v-for="crumb in store.zoomBreadcrumbs" :key="crumb.id">
         <ChevronRight class="w-3 h-3 text-(--text-faint) shrink-0" />
         <button
-          class="text-(--text-muted) hover:text-(--accent-500) hover:underline truncate max-w-32"
+          class="text-(--text-muted) hover:text-(--accent-500) hover:underline truncate max-w-24 sm:max-w-48"
           :class="{ 'font-medium text-(--text-secondary)': crumb.id === store.zoomId }"
           @click="onZoomCrumb(crumb.id)"
         >

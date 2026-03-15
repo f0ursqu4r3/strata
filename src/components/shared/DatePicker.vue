@@ -81,7 +81,7 @@ function onClear() {
         type="date"
         :value="dateString"
         aria-label="Due date"
-        class="flex-1 text-xs bg-transparent border border-(--border-primary) rounded px-2 py-1 text-(--text-secondary) outline-none focus:border-(--accent-400)"
+        class="flex-1 text-xs bg-transparent border border-(--border-primary) rounded px-2 py-1 text-(--text-secondary) outline-none focus-visible:border-(--accent-400) focus-visible:ring-1 focus-visible:ring-(--accent-400)"
         @input="dateString = ($event.target as HTMLInputElement).value"
       />
       <button

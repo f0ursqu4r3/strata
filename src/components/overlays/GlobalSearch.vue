@@ -1,12 +1,17 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Search, X, FileText } from 'lucide-vue-next'
 import { useGlobalSearch } from '@/composables/overlays/useGlobalSearch'
+import { useFocusTrap } from '@/composables/useFocusTrap'
 import { UiKbd } from '@/components/ui'
 
 const emit = defineEmits<{
   close: []
   navigate: [docId: string, nodeId: string]
 }>()
+
+const dialogRef = ref<HTMLElement | null>(null)
+useFocusTrap(dialogRef)
 
 const {
   query,
@@ -25,6 +30,7 @@ const {
 
 <template>
   <div
+    ref="dialogRef"
     class="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-(--bg-overlay)"
     role="dialog"
     aria-modal="true"

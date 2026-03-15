@@ -18,8 +18,8 @@ const variantClasses: Record<string, string> = {
 }
 
 const sizeClasses: Record<string, string> = {
-  sm: 'p-0.5',
-  md: 'p-1',
+  sm: 'p-0.5 min-w-6 min-h-6 flex items-center justify-center',
+  md: 'p-1 min-w-7 min-h-7 flex items-center justify-center',
 }
 </script>
 

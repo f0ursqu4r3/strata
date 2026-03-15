@@ -206,7 +206,7 @@ async function onDelete(docId: string, e?: MouseEvent) {
       transition: 'margin-left 120ms ease-out, opacity 100ms ease-out',
     }"
   >
-    <div class="flex flex-col h-full bg-(--bg-secondary) border-r border-(--border-primary) w-56">
+    <nav class="flex flex-col h-full bg-(--bg-secondary) border-r border-(--border-primary) w-56" aria-label="Documents">
     <!-- Header -->
     <div class="flex items-center justify-between px-3 py-3 border-b border-(--border-primary)">
       <span class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide"
@@ -315,6 +315,6 @@ async function onDelete(docId: string, e?: MouseEvent) {
       @create-doc="onCreateNew"
       @create-folder="onCreateFolder"
     />
-    </div>
+    </nav>
   </div>
 </template>

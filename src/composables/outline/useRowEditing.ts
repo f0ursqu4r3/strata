@@ -47,7 +47,7 @@ export function useRowEditing(props: { node: Node; depth: number }, isEditing: (
     () => store.statusMap.get(props.node.status) ?? store.statusDefs[0],
   )
 
-  function onStatusClick(e: MouseEvent) {
+  function onStatusClick(e: Event) {
     e.stopPropagation()
     showStatusPicker.value = !showStatusPicker.value
   }

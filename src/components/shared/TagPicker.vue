@@ -190,6 +190,7 @@ onUnmounted(() => {
                 : 'border-transparent hover:border-(--border-hover)'
             "
             title="Default"
+            aria-label="Default color"
             @click="pickColor(colorPickerTag!, null)"
           />
           <button
@@ -232,11 +233,15 @@ onUnmounted(() => {
       <div
         v-if="showDropdown"
         class="strata-popup fixed z-50 overflow-hidden"
+        role="listbox"
+        aria-label="Tag suggestions"
         :style="dropdownStyle"
       >
         <button
           v-for="(s, i) in suggestions"
           :key="s"
+          role="option"
+          :aria-selected="i === highlightIdx"
           class="w-full text-left px-3 py-1.5 text-[12px] text-(--text-secondary) cursor-pointer flex items-center gap-2"
           :class="i === highlightIdx ? 'bg-(--bg-hover)' : 'hover:bg-(--bg-hover)'"
           @mousedown.prevent="addTag(s)"

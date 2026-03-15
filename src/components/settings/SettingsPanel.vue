@@ -47,6 +47,7 @@ const settings = useSettingsStore()
         </h3>
         <div class="flex items-center gap-3">
           <button
+            type="button"
             class="p-1.5 rounded-md border border-(--border-primary) hover:bg-(--bg-hover) text-(--text-muted) cursor-pointer"
             aria-label="Decrease font size"
             @click="settings.setFontSize(settings.fontSize - 1)"
@@ -69,6 +70,7 @@ const settings = useSettingsStore()
             </span>
           </div>
           <button
+            type="button"
             class="p-1.5 rounded-md border border-(--border-primary) hover:bg-(--bg-hover) text-(--text-muted) cursor-pointer"
             aria-label="Increase font size"
             @click="settings.setFontSize(settings.fontSize + 1)"

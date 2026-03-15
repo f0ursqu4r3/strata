@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useEscapeKey } from '@/composables/useEscapeKey'
+import { useFocusTrap } from '@/composables/useFocusTrap'
 
 interface Props {
   title?: string
@@ -17,7 +19,9 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const dialogRef = ref<HTMLElement | null>(null)
 useEscapeKey(() => emit('close'))
+useFocusTrap(dialogRef)
 
 const maxWidthClasses: Record<string, string> = {
   xs: 'max-w-xs',
@@ -32,6 +36,7 @@ const maxWidthClasses: Record<string, string> = {
   <Teleport to="body">
     <Transition name="overlay-center" appear>
       <div
+        ref="dialogRef"
         class="fixed inset-0 z-50 flex items-center justify-center bg-(--bg-overlay)"
         role="dialog"
         aria-modal="true"

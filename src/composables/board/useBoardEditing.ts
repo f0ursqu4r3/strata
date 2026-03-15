@@ -76,7 +76,7 @@ export function useBoardEditing(isDragging: Ref<boolean>, editingCardId: Ref<str
   const tagPickerPos = useDropdownPosition({ dropHeight: 120, dropWidth: 220 })
   const datePickerPos = useDropdownPosition({ dropHeight: 120, dropWidth: 220 })
 
-  function onTagsClick(e: MouseEvent, nodeId: string) {
+  function onTagsClick(e: Event, nodeId: string) {
     e.stopPropagation()
     editingTagsCardId.value = nodeId
     const card = (e.currentTarget as HTMLElement).closest('[data-card-id]') as HTMLElement | null

@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Command, X } from 'lucide-vue-next'
 import { useCommandPalette } from '@/composables/overlays/useCommandPalette'
+import { useFocusTrap } from '@/composables/useFocusTrap'
 import { UiKbd } from '@/components/ui'
 
 const emit = defineEmits<{
@@ -12,12 +14,16 @@ const emit = defineEmits<{
   openSearch: []
 }>()
 
+const dialogRef = ref<HTMLElement | null>(null)
+useFocusTrap(dialogRef)
+
 const { query, selectedIdx, inputRef, resultsRef, filteredCommands, onExecute } =
   useCommandPalette(emit)
 </script>
 
 <template>
   <div
+    ref="dialogRef"
     class="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-(--bg-overlay)"
     role="dialog"
     aria-modal="true"

@@ -128,7 +128,7 @@ function onContextMenu(e: MouseEvent) {
   emit('contextmenu', props.node.id, e.clientX, e.clientY)
 }
 
-function onBulletClick(e: MouseEvent) {
+function onBulletClick(e: Event) {
   e.stopPropagation()
   if (hasChildren.value) {
     store.toggleCollapsed(props.node.id)
@@ -174,9 +174,12 @@ function onRowPointerDown(e: PointerEvent) {
       class="w-4 shrink-0 text-center text-(--text-muted) cursor-pointer flex items-center justify-center h-8"
       :class="{ 'hover:text-(--text-primary)': hasChildren }"
       role="button"
+      tabindex="0"
       :aria-label="hasChildren ? (node.collapsed ? 'Expand' : 'Collapse') : 'Zoom into node'"
       @click="onBulletClick"
       @dblclick.stop="onBulletDblClick"
+      @keydown.enter.stop="onBulletClick"
+      @keydown.space.prevent.stop="onBulletClick"
     >
       <template v-if="hasChildren">
         <ChevronRight
@@ -194,8 +197,11 @@ function onRowPointerDown(e: PointerEvent) {
     <div
       class="relative shrink-0 h-8 flex items-center"
       role="button"
-      :aria-label="'Status: ' + node.status.replace('_', ' ')"
+      tabindex="0"
+      :aria-label="'Status: ' + (currentStatusDef?.label ?? node.status.replace('_', ' '))"
       @click="onStatusClick"
+      @keydown.enter.stop="onStatusClick"
+      @keydown.space.prevent.stop="onStatusClick"
     >
       <component
         v-if="currentStatusDef"
@@ -216,6 +222,8 @@ function onRowPointerDown(e: PointerEvent) {
         <button
           v-for="s in store.statusDefs"
           :key="s.id"
+          role="option"
+          :aria-selected="node.status === s.id"
           class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary) text-xs"
           :class="{ 'bg-(--bg-tertiary) font-medium': node.status === s.id }"
           @click.stop="onPickStatus(s.id)"
@@ -256,7 +264,7 @@ function onRowPointerDown(e: PointerEvent) {
         <input
           ref="titleInputRef"
           type="text"
-          class="w-full border-none outline-none bg-transparent font-[inherit] text-(--text-secondary) p-0 strata-text leading-5 placeholder:text-(--text-faint) placeholder:italic select-text"
+          class="w-full border-none outline-none bg-transparent font-[inherit] text-(--text-secondary) p-0 strata-text leading-5 placeholder:text-(--text-faint) placeholder:italic select-text focus-visible:ring-1 focus-visible:ring-(--accent-400) focus-visible:rounded"
           :value="localTitle"
           placeholder="(empty)"
           tabindex="-1"
@@ -269,7 +277,7 @@ function onRowPointerDown(e: PointerEvent) {
         <textarea
           v-if="localText.includes('\n')"
           ref="bodyInputRef"
-          class="w-full border-none outline-none bg-transparent font-[inherit] text-(--text-muted) p-0 mt-1.5 strata-text resize-none overflow-hidden leading-5 placeholder:text-(--text-faint) placeholder:italic select-text"
+          class="w-full border-none outline-none bg-transparent font-[inherit] text-(--text-muted) p-0 mt-1.5 strata-text resize-none overflow-hidden leading-5 placeholder:text-(--text-faint) placeholder:italic select-text focus-visible:ring-1 focus-visible:ring-(--accent-400) focus-visible:rounded"
           :value="localBody"
           placeholder=""
           rows="1"
@@ -291,9 +299,10 @@ function onRowPointerDown(e: PointerEvent) {
       @mousedown.prevent
       @click.stop
     >
-      <span
+      <button
         v-for="tag in node.tags"
         :key="tag"
+        type="button"
         class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:opacity-80"
         :class="
           tagStyle(tag, store.tagColors, settings.dark)
@@ -301,10 +310,11 @@ function onRowPointerDown(e: PointerEvent) {
             : 'bg-(--accent-100) text-(--accent-700) hover:bg-(--accent-200)'
         "
         :style="tagStyle(tag, store.tagColors, settings.dark) ?? {}"
+        :aria-label="'Tag: ' + tag"
         @click.stop="showTagPicker = !showTagPicker"
       >
         {{ tag }}
-      </span>
+      </button>
       <div
         v-if="showTagPicker"
         class="strata-popup absolute right-0 top-full z-40 mt-1 p-2 min-w-48"
@@ -320,8 +330,9 @@ function onRowPointerDown(e: PointerEvent) {
       class="relative shrink-0 self-start pt-1.5"
       @click.stop
     >
-      <span
+      <button
         v-if="nodeDueLabel && !showDatePicker"
+        type="button"
         class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer"
         :class="{
           'bg-(--color-danger-bg) text-(--color-danger)': nodeDueUrgency === 'overdue',
@@ -329,11 +340,12 @@ function onRowPointerDown(e: PointerEvent) {
           'bg-(--color-info-bg) text-(--color-info)': nodeDueUrgency === 'soon',
           'bg-(--bg-active) text-(--text-muted)': nodeDueUrgency === 'normal',
         }"
+        :aria-label="'Due date: ' + nodeDueLabel"
         @click="showDatePicker = true"
       >
         <Calendar class="w-2.5 h-2.5" />
         {{ nodeDueLabel }}
-      </span>
+      </button>
       <div v-if="showDatePicker" class="absolute right-0 top-full z-40 mt-1">
         <DatePicker :model-value="node.dueDate ?? null" @update:model-value="onDatePickerUpdate" />
       </div>

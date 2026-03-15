@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useClickOutside } from '@/composables/useClickOutside'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 
 interface Props {
   align?: 'left' | 'right'
@@ -17,6 +18,10 @@ const dropdownRef = ref<HTMLElement | null>(null)
 
 useClickOutside(dropdownRef, () => {
   open.value = false
+})
+
+useEscapeKey(() => {
+  if (open.value) open.value = false
 })
 
 function toggle() {
@@ -39,6 +44,7 @@ defineExpose({ open, toggle, close })
     <div
       v-if="open"
       class="strata-popup absolute top-full z-50 mt-1 py-1"
+      role="menu"
       :class="[width, align === 'right' ? 'right-0' : 'left-0']"
       @click="close"
     >
