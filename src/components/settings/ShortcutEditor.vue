@@ -50,13 +50,13 @@ const {
                     class="px-1.5 py-0.5 text-xs font-mono rounded border"
                     :class="
                       conflicts.length > 0
-                        ? 'bg-red-50 text-red-700 border-red-200'
+                        ? 'bg-(--color-danger-bg) text-(--color-danger) border-(--color-danger)'
                         : 'bg-(--bg-kbd) text-(--text-tertiary) border-(--border-primary)'
                     "
                   >
                     {{ comboToString(capturedCombo) }}
                   </kbd>
-                  <span v-if="conflicts.length > 0" class="text-[10px] text-red-600">
+                  <span v-if="conflicts.length > 0" class="text-[10px] text-(--color-danger)">
                     Conflicts with "{{ conflicts[0]!.label }}"
                   </span>
                 </template>

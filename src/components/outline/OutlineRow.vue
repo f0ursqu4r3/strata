@@ -324,9 +324,9 @@ function onRowPointerDown(e: PointerEvent) {
         v-if="nodeDueLabel && !showDatePicker"
         class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer"
         :class="{
-          'bg-red-100 text-red-700': nodeDueUrgency === 'overdue',
-          'bg-amber-100 text-amber-700': nodeDueUrgency === 'today',
-          'bg-blue-100 text-blue-700': nodeDueUrgency === 'soon',
+          'bg-(--color-danger-bg) text-(--color-danger)': nodeDueUrgency === 'overdue',
+          'bg-(--color-warning-bg) text-(--color-warning)': nodeDueUrgency === 'today',
+          'bg-(--color-info-bg) text-(--color-info)': nodeDueUrgency === 'soon',
           'bg-(--bg-active) text-(--text-muted)': nodeDueUrgency === 'normal',
         }"
         @click="showDatePicker = true"

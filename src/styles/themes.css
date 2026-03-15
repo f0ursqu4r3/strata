@@ -34,6 +34,10 @@ html[data-theme='github-light'] {
 
   --color-danger: #d1242f;
   --color-danger-bg: #ffebe9;
+  --color-warning: #9a6700;
+  --color-warning-bg: #fff8c5;
+  --color-info: #0969da;
+  --color-info-bg: #ddf4ff;
   --highlight-search-bg: #fff8c5;
   --highlight-search-ring: #d4a72c;
   --highlight-drag-bg: #ddf4ff;
@@ -80,6 +84,10 @@ html[data-theme='github-dark'] {
 
   --color-danger: #f85149;
   --color-danger-bg: rgba(248, 81, 73, 0.15);
+  --color-warning: #d29922;
+  --color-warning-bg: rgba(210, 153, 34, 0.15);
+  --color-info: #58a6ff;
+  --color-info-bg: rgba(56, 139, 253, 0.15);
   --highlight-search-bg: rgba(210, 153, 34, 0.2);
   --highlight-search-ring: #d29922;
   --highlight-drag-bg: rgba(56, 139, 253, 0.15);
@@ -126,6 +134,10 @@ html[data-theme='monokai'] {
 
   --color-danger: #f92672;
   --color-danger-bg: rgba(249, 38, 114, 0.15);
+  --color-warning: #e6db74;
+  --color-warning-bg: rgba(230, 219, 116, 0.15);
+  --color-info: #66d9ef;
+  --color-info-bg: rgba(102, 217, 239, 0.15);
   --highlight-search-bg: rgba(230, 219, 116, 0.2);
   --highlight-search-ring: #e6db74;
   --highlight-drag-bg: rgba(102, 217, 239, 0.15);
@@ -172,6 +184,10 @@ html[data-theme='nord'] {
 
   --color-danger: #bf616a;
   --color-danger-bg: rgba(191, 97, 106, 0.15);
+  --color-warning: #ebcb8b;
+  --color-warning-bg: rgba(235, 203, 139, 0.15);
+  --color-info: #81a1c1;
+  --color-info-bg: rgba(129, 161, 193, 0.15);
   --highlight-search-bg: rgba(235, 203, 139, 0.2);
   --highlight-search-ring: #ebcb8b;
   --highlight-drag-bg: rgba(136, 192, 208, 0.15);
@@ -218,6 +234,10 @@ html[data-theme='dracula'] {
 
   --color-danger: #ff5555;
   --color-danger-bg: rgba(255, 85, 85, 0.15);
+  --color-warning: #f1fa8c;
+  --color-warning-bg: rgba(241, 250, 140, 0.15);
+  --color-info: #8be9fd;
+  --color-info-bg: rgba(139, 233, 253, 0.15);
   --highlight-search-bg: rgba(241, 250, 140, 0.15);
   --highlight-search-ring: #f1fa8c;
   --highlight-drag-bg: rgba(189, 147, 249, 0.15);
@@ -264,6 +284,10 @@ html[data-theme='solarized-light'] {
 
   --color-danger: #dc322f;
   --color-danger-bg: #fce4e3;
+  --color-warning: #b58900;
+  --color-warning-bg: #f8e8a0;
+  --color-info: #268bd2;
+  --color-info-bg: #d5edf8;
   --highlight-search-bg: #f8e8a0;
   --highlight-search-ring: #b58900;
   --highlight-drag-bg: #d5edf8;
@@ -310,6 +334,10 @@ html[data-theme='solarized-dark'] {
 
   --color-danger: #dc322f;
   --color-danger-bg: rgba(220, 50, 47, 0.15);
+  --color-warning: #b58900;
+  --color-warning-bg: rgba(181, 137, 0, 0.15);
+  --color-info: #268bd2;
+  --color-info-bg: rgba(38, 139, 210, 0.15);
   --highlight-search-bg: rgba(181, 137, 0, 0.2);
   --highlight-search-ring: #b58900;
   --highlight-drag-bg: rgba(38, 139, 210, 0.15);
@@ -356,6 +384,10 @@ html[data-theme='one-dark'] {
 
   --color-danger: #e06c75;
   --color-danger-bg: rgba(224, 108, 117, 0.15);
+  --color-warning: #d19a66;
+  --color-warning-bg: rgba(209, 154, 102, 0.15);
+  --color-info: #61afef;
+  --color-info-bg: rgba(97, 175, 239, 0.15);
   --highlight-search-bg: rgba(209, 154, 102, 0.2);
   --highlight-search-ring: #d19a66;
   --highlight-drag-bg: rgba(97, 175, 239, 0.15);
@@ -402,6 +434,10 @@ html[data-theme='catppuccin-mocha'] {
 
   --color-danger: #f38ba8;
   --color-danger-bg: rgba(243, 139, 168, 0.15);
+  --color-warning: #f9e2af;
+  --color-warning-bg: rgba(249, 226, 175, 0.15);
+  --color-info: #89b4fa;
+  --color-info-bg: rgba(137, 180, 250, 0.15);
   --highlight-search-bg: rgba(249, 226, 175, 0.15);
   --highlight-search-ring: #f9e2af;
   --highlight-drag-bg: rgba(203, 166, 247, 0.15);
@@ -448,6 +484,10 @@ html[data-theme='gruvbox-dark'] {
 
   --color-danger: #fb4934;
   --color-danger-bg: rgba(251, 73, 52, 0.15);
+  --color-warning: #fabd2f;
+  --color-warning-bg: rgba(250, 189, 47, 0.15);
+  --color-info: #83a598;
+  --color-info-bg: rgba(131, 165, 152, 0.15);
   --highlight-search-bg: rgba(250, 189, 47, 0.2);
   --highlight-search-ring: #fabd2f;
   --highlight-drag-bg: rgba(131, 165, 152, 0.15);
@@ -494,6 +534,10 @@ html[data-theme='tokyo-night'] {
 
   --color-danger: #f7768e;
   --color-danger-bg: rgba(247, 118, 142, 0.15);
+  --color-warning: #e0af68;
+  --color-warning-bg: rgba(224, 175, 104, 0.15);
+  --color-info: #7aa2f7;
+  --color-info-bg: rgba(122, 162, 247, 0.15);
   --highlight-search-bg: rgba(224, 175, 104, 0.2);
   --highlight-search-ring: #e0af68;
   --highlight-drag-bg: rgba(122, 162, 247, 0.15);

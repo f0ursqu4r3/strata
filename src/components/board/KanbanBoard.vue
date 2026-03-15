@@ -218,9 +218,9 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
                     v-if="node.dueDate && editingDateCardId !== node.id"
                     class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:opacity-80"
                     :class="{
-                      'bg-red-100 text-red-700': dueDateUrgency(node.dueDate) === 'overdue',
-                      'bg-amber-100 text-amber-700': dueDateUrgency(node.dueDate) === 'today',
-                      'bg-blue-100 text-blue-700': dueDateUrgency(node.dueDate) === 'soon',
+                      'bg-(--color-danger-bg) text-(--color-danger)': dueDateUrgency(node.dueDate) === 'overdue',
+                      'bg-(--color-warning-bg) text-(--color-warning)': dueDateUrgency(node.dueDate) === 'today',
+                      'bg-(--color-info-bg) text-(--color-info)': dueDateUrgency(node.dueDate) === 'soon',
                       'bg-(--bg-active) text-(--text-muted)':
                         dueDateUrgency(node.dueDate) === 'normal',
                     }"

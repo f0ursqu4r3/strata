@@ -42,6 +42,10 @@ body,
   /* Semantic */
   --color-danger: #dc2626;
   --color-danger-bg: #fef2f2;
+  --color-warning: #a16207;
+  --color-warning-bg: #fefce8;
+  --color-info: #2563eb;
+  --color-info-bg: #eff6ff;
   --highlight-search-bg: #fffbeb;
   --highlight-search-ring: #fcd34d;
   --highlight-drag-bg: #eff6ff;
@@ -83,6 +87,10 @@ body,
 
   --color-danger: #f87171;
   --color-danger-bg: rgba(127, 29, 29, 0.3);
+  --color-warning: #fbbf24;
+  --color-warning-bg: rgba(120, 53, 15, 0.2);
+  --color-info: #60a5fa;
+  --color-info-bg: rgba(30, 58, 138, 0.2);
   --highlight-search-bg: rgba(120, 53, 15, 0.3);
   --highlight-search-ring: #f59e0b;
   --highlight-drag-bg: rgba(30, 58, 138, 0.2);

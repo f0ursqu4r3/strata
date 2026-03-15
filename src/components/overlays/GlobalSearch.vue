@@ -25,7 +25,7 @@ const {
 
 <template>
   <div
-    class="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/30"
+    class="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-(--bg-overlay)"
     role="dialog"
     aria-modal="true"
     aria-label="Search"

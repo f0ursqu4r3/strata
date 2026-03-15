@@ -32,7 +32,7 @@ const maxWidthClasses: Record<string, string> = {
   <Teleport to="body">
     <Transition name="overlay-center" appear>
       <div
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-(--bg-overlay)"
         role="dialog"
         aria-modal="true"
         :aria-label="title"
