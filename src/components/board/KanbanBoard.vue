@@ -98,7 +98,7 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
   <div class="flex flex-col h-full bg-(--bg-primary)">
     <!-- Kanban header with gear button -->
     <div class="flex items-center justify-end gap-1 px-3 pt-2 pb-0 shrink-0">
-      <button
+      <button type="button"
         class="p-1 rounded hover:bg-(--bg-hover) cursor-pointer"
         :class="
           settings.showBoardTags
@@ -112,7 +112,7 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
       >
         <Tag class="w-3.5 h-3.5" />
       </button>
-      <button
+      <button type="button"
         class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
         title="Manage statuses"
         aria-label="Manage statuses"
@@ -307,14 +307,14 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
                   "
                   class="flex gap-1 mt-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity"
                 >
-                  <button
+                  <button type="button"
                     class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
                     title="Set due date"
                     @click.stop="onDateClick($event, node.id)"
                   >
                     <Calendar class="w-3 h-3" />
                   </button>
-                  <button
+                  <button type="button"
                     v-if="settings.showBoardTags"
                     class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
                     title="Add tag"
@@ -332,7 +332,7 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
                   "
                   class="flex gap-1 mt-1 opacity-0 group-hover/card:opacity-100 transition-opacity"
                 >
-                  <button
+                  <button type="button"
                     v-if="!node.dueDate && editingDateCardId !== node.id"
                     class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
                     title="Set due date"
@@ -340,7 +340,7 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
                   >
                     <Calendar class="w-3 h-3" />
                   </button>
-                  <button
+                  <button type="button"
                     v-if="
                       settings.showBoardTags && !node.tags?.length && editingTagsCardId !== node.id
                     "

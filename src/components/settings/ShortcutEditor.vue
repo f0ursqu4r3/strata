@@ -72,7 +72,7 @@ const {
               </template>
               <template v-else>
                 <UiKbd>{{ comboToString(def.combo) }}</UiKbd>
-                <button
+                <button type="button"
                   v-if="isCustomized(def.action)"
                   class="p-0.5 rounded hover:bg-(--bg-hover) text-(--text-faint) cursor-pointer"
                   title="Reset to default"

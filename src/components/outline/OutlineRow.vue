@@ -219,7 +219,7 @@ function onRowPointerDown(e: PointerEvent) {
         role="listbox"
         aria-label="Select status"
       >
-        <button
+        <button type="button"
           v-for="s in store.statusDefs"
           :key="s.id"
           role="option"
@@ -358,7 +358,7 @@ function onRowPointerDown(e: PointerEvent) {
       @click.stop
     >
       <div v-if="settings.showTags && !(node.tags?.length > 0)" class="relative" data-tag-picker>
-        <button
+        <button type="button"
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
           title="Add tag"
           @click="showTagPicker = !showTagPicker"
@@ -372,7 +372,7 @@ function onRowPointerDown(e: PointerEvent) {
           <TagPicker :node-id="node.id" :tags="node.tags ?? []" />
         </div>
       </div>
-      <button
+      <button type="button"
         v-if="!showDatePicker"
         class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
         title="Set due date"

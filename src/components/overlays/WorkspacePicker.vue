@@ -163,7 +163,7 @@ async function finishFolderSelection(workspace: string) {
         v-if="isTauri() || hasFileSystemAccess()"
         class="flex flex-col items-center gap-3 w-full"
       >
-        <button
+        <button type="button"
           class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer transition-colors w-56 justify-center"
           style="background: var(--accent-500)"
           :disabled="picking || migrating"
@@ -173,7 +173,7 @@ async function finishFolderSelection(workspace: string) {
           <template v-if="picking">Opening...</template>
           <template v-else>Open File</template>
         </button>
-        <button
+        <button type="button"
           class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors w-56 justify-center border border-(--border-secondary) text-(--text-secondary) hover:bg-(--bg-hover)"
           :disabled="picking || migrating"
           @click="pickFolder"

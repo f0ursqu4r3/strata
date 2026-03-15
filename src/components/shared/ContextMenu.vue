@@ -117,7 +117,7 @@ function onHistory() {
 
     <!-- Status submenu -->
     <div class="relative" @mouseenter="showStatusSub = true" @mouseleave="showStatusSub = false">
-      <button
+      <button type="button"
         class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary) cursor-pointer"
         role="menuitem"
         aria-haspopup="true"
@@ -134,7 +134,7 @@ function onHistory() {
         role="menu"
         aria-label="Status options"
       >
-        <button
+        <button type="button"
           v-for="s in store.statusDefs"
           :key="s.id"
           class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary) cursor-pointer"
@@ -155,7 +155,7 @@ function onHistory() {
 
     <!-- Due date -->
     <div v-if="!isMultiSelect" class="relative">
-      <button
+      <button type="button"
         class="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-(--bg-hover) text-left text-(--text-secondary) cursor-pointer"
         role="menuitem"
         @click="showDatePicker = !showDatePicker"

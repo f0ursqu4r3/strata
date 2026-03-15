@@ -17,7 +17,7 @@ const settings = useSettingsStore()
           Theme
         </h3>
         <div class="grid grid-cols-3 gap-2">
-          <button
+          <button type="button"
             v-for="t in themeRegistry"
             :key="t.key"
             class="flex flex-col items-center gap-1.5 p-2 rounded-lg border-2 transition-colors cursor-pointer"

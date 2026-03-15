@@ -50,7 +50,7 @@ const {
           placeholder="Search..."
           spellcheck="false"
         />
-        <button
+        <button type="button"
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) cursor-pointer"
           aria-label="Close"
           @click="emit('close')"
@@ -79,7 +79,7 @@ const {
             >
               Current Document
             </div>
-            <button
+            <button type="button"
               v-for="item in currentDocResults"
               :key="'cur-' + item.nodeId"
               class="w-full text-left px-4 py-2 text-sm cursor-pointer transition-colors"
@@ -121,7 +121,7 @@ const {
                 <FileText class="w-3 h-3" />
                 {{ group.docName }}
               </div>
-              <button
+              <button type="button"
                 v-for="item in group.items"
                 :key="item.nodeId"
                 class="w-full text-left px-4 py-2 text-sm cursor-pointer transition-colors"

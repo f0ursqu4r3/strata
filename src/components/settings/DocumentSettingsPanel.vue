@@ -52,7 +52,7 @@ function pickColor(tag: string, colorKey: string | null) {
         <h3 class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide mb-3">
           Statuses
         </h3>
-        <button
+        <button type="button"
           class="flex items-center gap-2 text-sm text-(--accent-600) hover:text-(--accent-700) cursor-pointer"
           @click="emit('openStatusEditor')"
         >
@@ -66,7 +66,7 @@ function pickColor(tag: string, colorKey: string | null) {
         <h3 class="text-xs font-semibold text-(--text-faint) uppercase tracking-wide mb-3">Tags</h3>
         <div v-if="store.allTags.length > 0" class="flex flex-wrap gap-2">
           <div v-for="tag in store.allTags" :key="tag">
-            <button
+            <button type="button"
               class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[12px] font-medium cursor-pointer border transition-colors"
               :class="
                 tagStyle(tag, store.tagColors, settings.dark)
@@ -100,7 +100,7 @@ function pickColor(tag: string, colorKey: string | null) {
       :style="colorPickerStyle"
     >
       <div class="flex gap-1">
-        <button
+        <button type="button"
           class="w-5 h-5 rounded-full border-2 cursor-pointer bg-(--accent-100)"
           :class="
             !store.tagColors[colorPickerTag]
@@ -110,7 +110,7 @@ function pickColor(tag: string, colorKey: string | null) {
           title="Default"
           @click="pickColor(colorPickerTag!, null)"
         />
-        <button
+        <button type="button"
           v-for="key in TAG_COLOR_KEYS"
           :key="key"
           class="w-5 h-5 rounded-full border-2 cursor-pointer"

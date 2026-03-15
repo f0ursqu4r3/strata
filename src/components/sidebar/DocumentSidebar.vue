@@ -213,7 +213,7 @@ async function onDelete(docId: string, e?: MouseEvent) {
         >Documents</span
       >
       <div class="flex items-center gap-1">
-        <button
+        <button type="button"
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New folder"
           aria-label="New folder"
@@ -221,7 +221,7 @@ async function onDelete(docId: string, e?: MouseEvent) {
         >
           <FolderPlus class="w-3.5 h-3.5" />
         </button>
-        <button
+        <button type="button"
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New document"
           aria-label="New document"
@@ -229,7 +229,7 @@ async function onDelete(docId: string, e?: MouseEvent) {
         >
           <Plus class="w-3.5 h-3.5" />
         </button>
-        <button
+        <button type="button"
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer sm:hidden"
           title="Close sidebar"
           aria-label="Close sidebar"
@@ -277,14 +277,14 @@ async function onDelete(docId: string, e?: MouseEvent) {
         >
           {{ settings.workspacePath || '(not set)' }}
         </span>
-        <button
+        <button type="button"
           class="text-[11px] text-(--accent-600) hover:text-(--accent-700) cursor-pointer shrink-0"
           @click="changeWorkspace"
         >
           Change
         </button>
       </div>
-      <button
+      <button type="button"
         v-else
         class="flex items-center gap-1.5 text-[11px] text-(--accent-600) hover:text-(--accent-700) cursor-pointer w-full"
         @click="changeWorkspace"

@@ -43,7 +43,7 @@ const { query, selectedIdx, inputRef, resultsRef, filteredCommands, onExecute } 
           placeholder="Type a command..."
           spellcheck="false"
         />
-        <button
+        <button type="button"
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) cursor-pointer"
           aria-label="Close"
           @click="emit('close')"
@@ -60,7 +60,7 @@ const { query, selectedIdx, inputRef, resultsRef, filteredCommands, onExecute } 
         >
           No matching commands
         </div>
-        <button
+        <button type="button"
           v-for="(cmd, idx) in filteredCommands"
           :key="cmd.id"
           class="w-full text-left px-4 py-2 text-sm cursor-pointer transition-colors flex items-center justify-between gap-2"

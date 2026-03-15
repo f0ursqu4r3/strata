@@ -55,19 +55,19 @@ function onClear() {
   <div class="strata-popup p-2 min-w-48" @click.stop>
     <!-- Quick presets -->
     <div class="flex gap-1 mb-2">
-      <button
+      <button type="button"
         class="flex-1 px-2 py-1 text-[11px] rounded hover:bg-(--bg-hover) text-(--text-secondary) cursor-pointer transition-colors"
         @click="setToday"
       >
         Today
       </button>
-      <button
+      <button type="button"
         class="flex-1 px-2 py-1 text-[11px] rounded hover:bg-(--bg-hover) text-(--text-secondary) cursor-pointer transition-colors"
         @click="setTomorrow"
       >
         Tomorrow
       </button>
-      <button
+      <button type="button"
         class="flex-1 px-2 py-1 text-[11px] rounded hover:bg-(--bg-hover) text-(--text-secondary) cursor-pointer transition-colors"
         @click="setNextWeek"
       >
@@ -84,7 +84,7 @@ function onClear() {
         class="flex-1 text-xs bg-transparent border border-(--border-primary) rounded px-2 py-1 text-(--text-secondary) outline-none focus-visible:border-(--accent-400) focus-visible:ring-1 focus-visible:ring-(--accent-400)"
         @input="dateString = ($event.target as HTMLInputElement).value"
       />
-      <button
+      <button type="button"
         v-if="modelValue"
         class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--color-danger) cursor-pointer"
         title="Clear due date"

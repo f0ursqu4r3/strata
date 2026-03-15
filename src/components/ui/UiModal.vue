@@ -59,7 +59,7 @@ const maxWidthClasses: Record<string, string> = {
             </slot>
             <div class="flex items-center gap-2">
               <slot name="header-actions" />
-              <button
+              <button type="button"
                 v-if="showClose"
                 class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) cursor-pointer"
                 aria-label="Close"

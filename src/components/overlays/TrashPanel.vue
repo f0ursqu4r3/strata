@@ -68,7 +68,7 @@ function formatDate(ts: number | undefined): string {
                 Deleted {{ formatDate(node.deletedAt) }}
               </div>
             </div>
-            <button
+            <button type="button"
               class="shrink-0 p-1.5 rounded hover:bg-(--accent-100) text-(--text-faint) hover:text-(--accent-600) cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
               title="Restore"
               aria-label="Restore"

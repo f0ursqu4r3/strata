@@ -318,7 +318,7 @@ function onZoomRoot() {
     >
       <!-- Left: branding + doc context -->
       <div class="flex items-center gap-2 min-w-0">
-        <button
+        <button type="button"
           v-if="!isSingleFileMode()"
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer shrink-0"
           title="Toggle sidebar"
@@ -355,7 +355,7 @@ function onZoomRoot() {
       <!-- Center: view mode selector -->
       <div class="flex items-center justify-center">
         <div class="flex bg-(--bg-hover) rounded-md p-0.5">
-          <button
+          <button type="button"
             v-for="m in modes"
             :key="m.key"
             class="border-none px-3 sm:px-3.5 py-1 text-[13px] font-medium cursor-pointer rounded transition-all"
@@ -374,7 +374,7 @@ function onZoomRoot() {
       <!-- Right: actions -->
       <div class="flex items-center gap-1 justify-end">
         <!-- Search -->
-        <button
+        <button type="button"
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="Search (Ctrl+Shift+F)"
           aria-label="Search"
@@ -385,7 +385,7 @@ function onZoomRoot() {
 
         <!-- Tag filter -->
         <div v-if="store.allTags.length > 0" ref="tagFilterRef" class="relative hidden sm:block">
-          <button
+          <button type="button"
             class="flex items-center gap-1 px-1.5 py-1 rounded-md border text-[12px] cursor-pointer"
             :class="
               store.filters.tag
@@ -398,7 +398,7 @@ function onZoomRoot() {
             <Tag class="w-3 h-3" />
             <span v-if="store.filters.tag">{{ store.filters.tag }}</span>
             <span v-else>Tags</span>
-            <button
+            <button type="button"
               v-if="store.filters.tag"
               class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
               aria-label="Clear tag filter"
@@ -423,7 +423,7 @@ function onZoomRoot() {
               />
             </div>
             <div class="max-h-52 overflow-y-auto py-1">
-              <button
+              <button type="button"
                 role="menuitem"
                 class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer"
                 :class="
@@ -433,7 +433,7 @@ function onZoomRoot() {
               >
                 All
               </button>
-              <button
+              <button type="button"
                 v-for="tag in filteredTags"
                 :key="tag"
                 role="menuitem"
@@ -460,7 +460,7 @@ function onZoomRoot() {
                 />
                 {{ tag }}
               </button>
-              <button
+              <button type="button"
                 v-if="tagFilterQuery.trim() && !filteredTags.includes(tagFilterQuery.trim())"
                 role="menuitem"
                 class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-(--bg-hover) cursor-pointer text-(--text-muted) italic"
@@ -474,7 +474,7 @@ function onZoomRoot() {
 
         <!-- Due date filter -->
         <div ref="dueDateFilterRef" class="relative hidden sm:block">
-          <button
+          <button type="button"
             class="flex items-center gap-1 px-1.5 py-1 rounded-md border text-[12px] cursor-pointer"
             :class="
               store.filters.dueDate !== 'all'
@@ -489,7 +489,7 @@ function onZoomRoot() {
               { overdue: 'Overdue', today: 'Today', week: 'Week' }[store.filters.dueDate]
             }}</span>
             <span v-else>Due</span>
-            <button
+            <button type="button"
               v-if="store.filters.dueDate !== 'all'"
               class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
               aria-label="Clear due date filter"
@@ -504,7 +504,7 @@ function onZoomRoot() {
             role="menu"
             aria-label="Filter by due date"
           >
-            <button
+            <button type="button"
               v-for="opt in [
                 { key: 'all', label: 'All' },
                 { key: 'overdue', label: 'Overdue' },
@@ -529,7 +529,7 @@ function onZoomRoot() {
         <div class="hidden sm:block">
           <ExportMenu />
         </div>
-        <button
+        <button type="button"
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer hidden sm:block"
           title="Import"
           aria-label="Import"
@@ -537,7 +537,7 @@ function onZoomRoot() {
         >
           <Upload class="w-4 h-4" />
         </button>
-        <button
+        <button type="button"
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="Trash"
           aria-label="Trash"
@@ -545,7 +545,7 @@ function onZoomRoot() {
         >
           <Trash2 class="w-4 h-4" />
         </button>
-        <button
+        <button type="button"
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer hidden sm:block"
           title="Keyboard shortcuts (?)"
           aria-label="Keyboard shortcuts"
@@ -553,7 +553,7 @@ function onZoomRoot() {
         >
           <Keyboard class="w-4 h-4" />
         </button>
-        <button
+        <button type="button"
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="Document settings"
           aria-label="Document settings"
@@ -561,7 +561,7 @@ function onZoomRoot() {
         >
           <FileText class="w-4 h-4" />
         </button>
-        <button
+        <button type="button"
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="Settings"
           aria-label="Settings"
@@ -584,12 +584,12 @@ function onZoomRoot() {
       v-if="store.zoomId"
       class="flex items-center gap-1 px-4 py-1.5 text-xs border-b border-(--border-primary) bg-(--bg-tertiary)"
     >
-      <button class="hover:underline" style="color: var(--accent-500)" @click="onZoomRoot">
+      <button type="button" class="hover:underline" style="color: var(--accent-500)" @click="onZoomRoot">
         Root
       </button>
       <template v-for="crumb in store.zoomBreadcrumbs" :key="crumb.id">
         <ChevronRight class="w-3 h-3 text-(--text-faint) shrink-0" />
-        <button
+        <button type="button"
           class="text-(--text-muted) hover:text-(--accent-500) hover:underline truncate max-w-24 sm:max-w-48"
           :class="{ 'font-medium text-(--text-secondary)': crumb.id === store.zoomId }"
           @click="onZoomCrumb(crumb.id)"

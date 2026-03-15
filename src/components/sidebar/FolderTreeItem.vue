@@ -72,7 +72,7 @@ function toggleExpand() {
       />
       <span class="flex-1 truncate">{{ node.name }}</span>
       <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 pr-2">
-        <button
+        <button type="button"
           class="p-0.5 rounded hover:bg-(--bg-active) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New document"
           aria-label="New document"
@@ -80,7 +80,7 @@ function toggleExpand() {
         >
           <Plus class="w-3 h-3" />
         </button>
-        <button
+        <button type="button"
           class="p-0.5 rounded hover:bg-(--bg-active) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New sub-folder"
           aria-label="New sub-folder"
@@ -161,7 +161,7 @@ function toggleExpand() {
       <span v-else class="flex-1 truncate">{{ node.name }}</span>
 
       <!-- Delete button -->
-      <button
+      <button type="button"
         v-if="renamingId !== node.docId"
         class="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:text-(--color-danger) text-(--text-faint) cursor-pointer pr-2"
         title="Delete document"

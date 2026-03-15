@@ -81,7 +81,7 @@ const {
         />
 
         <!-- Complete toggle -->
-        <button
+        <button type="button"
           class="p-1.5 rounded-md cursor-pointer transition-colors"
           :class="
             s.final
@@ -109,7 +109,7 @@ const {
     </div>
 
     <template #footer>
-      <button
+      <button type="button"
         class="flex items-center gap-2 text-sm text-(--accent-600) hover:text-(--accent-700) cursor-pointer"
         @click="onAddStatus"
       >
