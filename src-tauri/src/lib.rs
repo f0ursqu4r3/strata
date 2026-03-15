@@ -102,6 +102,43 @@ fn rename_file(old_path: String, new_path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn reveal_path(path: String) -> Result<(), String> {
+    let p = PathBuf::from(&path);
+    if !p.exists() {
+        return Err(format!("Path does not exist: {}", path));
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("-R")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(format!("/select,{}", path))
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // Open the parent directory — most Linux file managers don't support selecting a file
+        let dir = if p.is_dir() { &path } else { p.parent().map(|p| p.to_str().unwrap_or(&path)).unwrap_or(&path) };
+        std::process::Command::new("xdg-open")
+            .arg(dir)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 fn is_git_repo(workspace: String) -> bool {
     PathBuf::from(&workspace).join(".git").exists()
 }
@@ -567,6 +604,7 @@ pub fn run() {
             write_file,
             delete_file,
             rename_file,
+            reveal_path,
             is_git_repo,
             find_git_root,
             git_branch_name,

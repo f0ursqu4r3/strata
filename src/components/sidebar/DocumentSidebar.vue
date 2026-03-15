@@ -98,6 +98,19 @@ async function onCtxDelete(docId: string) {
   await onDelete(docId)
 }
 
+async function onRevealDoc(docId: string) {
+  if (!isTauri() || !settings.workspacePath) return
+  const { revealPath } = await import('@/lib/tauri-fs')
+  await revealPath(`${settings.workspacePath}/${docId}`)
+}
+
+async function onRevealFolder(folderPath: string) {
+  if (!isTauri() || !settings.workspacePath) return
+  const { revealPath } = await import('@/lib/tauri-fs')
+  const fullPath = folderPath ? `${settings.workspacePath}/${folderPath}` : settings.workspacePath
+  await revealPath(fullPath)
+}
+
 async function onCreateNew(folder?: string) {
   docStore.flushTextDebounce()
   const name = docsStore.nextUntitledName()
@@ -309,6 +322,7 @@ async function onDelete(docId: string, e?: MouseEvent) {
       @close="docCtxMenu = null"
       @rename="onCtxRename"
       @delete="onCtxDelete"
+      @reveal="onRevealDoc"
     />
 
     <!-- Folder context menu -->
@@ -320,6 +334,7 @@ async function onDelete(docId: string, e?: MouseEvent) {
       @close="folderCtxMenu = null"
       @create-doc="onCreateNew"
       @create-folder="onCreateFolder"
+      @reveal="onRevealFolder"
     />
     </nav>
   </div>
