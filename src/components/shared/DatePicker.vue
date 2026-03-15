@@ -20,8 +20,10 @@ const dateString = computed({
       emit('update:modelValue', null)
     } else {
       // Parse as local date (noon to avoid timezone issues)
-      const [y, m, d] = val.split('-').map(Number)
-      const date = new Date(y!, m! - 1, d!, 12, 0, 0)
+      const parts = val.split('-').map(Number)
+      if (parts.length < 3 || parts.some(isNaN)) return
+      const date = new Date(parts[0]!, parts[1]! - 1, parts[2]!, 12, 0, 0)
+      if (isNaN(date.getTime())) return
       emit('update:modelValue', date.getTime())
     }
   },

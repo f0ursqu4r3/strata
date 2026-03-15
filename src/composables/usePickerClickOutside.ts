@@ -9,6 +9,7 @@ export function usePickerClickOutside(
   handler: (e: MouseEvent) => void,
 ) {
   let bound = false
+  let pendingTimer: ReturnType<typeof setTimeout> | null = null
 
   function add() {
     if (bound) return
@@ -17,6 +18,10 @@ export function usePickerClickOutside(
   }
 
   function remove() {
+    if (pendingTimer) {
+      clearTimeout(pendingTimer)
+      pendingTimer = null
+    }
     if (!bound) return
     bound = false
     document.removeEventListener('mousedown', handler, true)
@@ -24,7 +29,7 @@ export function usePickerClickOutside(
 
   watch(isOpen, (open) => {
     if (open) {
-      setTimeout(add, 0)
+      pendingTimer = setTimeout(add, 0)
     } else {
       remove()
     }

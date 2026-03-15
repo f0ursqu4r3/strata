@@ -5,6 +5,7 @@ import {
   updateIndexForDoc,
   removeDocFromIndex,
   searchAllDocs,
+  clearSearchIndexCache,
 } from '@/lib/search-index'
 import type { Node } from '@/types'
 
@@ -27,6 +28,7 @@ const STORAGE_KEY = 'strata-search-index'
 describe('search-index', () => {
   beforeEach(() => {
     localStorage.clear()
+    clearSearchIndexCache()
   })
 
   describe('loadSearchIndex', () => {

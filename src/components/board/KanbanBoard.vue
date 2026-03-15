@@ -56,6 +56,15 @@ watch(statusSnapshot, (current) => {
       }
     }
   }
+  // Clean up flash timeouts for removed nodes
+  for (const id of prevStatuses.keys()) {
+    if (!current.has(id) && flashTimeouts.has(id)) {
+      clearTimeout(flashTimeouts.get(id))
+      flashTimeouts.delete(id)
+      const updated = new Set(flashingCards.value)
+      if (updated.delete(id)) flashingCards.value = updated
+    }
+  }
   // Update prev map
   prevStatuses.clear()
   for (const [id, status] of current) {

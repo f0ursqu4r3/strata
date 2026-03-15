@@ -31,7 +31,7 @@ const { query, selectedIdx, inputRef, resultsRef, filteredCommands, onExecute } 
     @mousedown.self="emit('close')"
   >
     <div
-      class="overlay-panel bg-(--bg-secondary) rounded-xl shadow-2xl w-full max-w-xl flex flex-col max-h-[60vh]"
+      class="overlay-panel bg-(--bg-secondary) rounded-xl shadow-xl w-full max-w-xl flex flex-col max-h-[60vh]"
     >
       <!-- Input -->
       <div class="flex items-center gap-2 px-4 py-3 border-b border-(--border-primary)">
@@ -63,11 +63,11 @@ const { query, selectedIdx, inputRef, resultsRef, filteredCommands, onExecute } 
         <button type="button"
           v-for="(cmd, idx) in filteredCommands"
           :key="cmd.id"
-          class="w-full text-left px-4 py-2 text-sm cursor-pointer transition-colors flex items-center justify-between gap-2"
+          class="w-full text-left px-4 py-2 text-sm cursor-pointer transition-colors flex items-center justify-between gap-2 border-l-2"
           :class="
             idx === selectedIdx
-              ? 'bg-(--bg-hover) text-(--text-primary)'
-              : 'text-(--text-secondary) hover:bg-(--bg-hover)'
+              ? 'bg-(--bg-hover) text-(--text-primary) border-(--accent-500)'
+              : 'text-(--text-secondary) hover:bg-(--bg-hover) border-transparent'
           "
           :data-selected="idx === selectedIdx"
           @click="onExecute(cmd)"

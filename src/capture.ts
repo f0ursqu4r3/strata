@@ -50,28 +50,33 @@ function render() {
 }
 
 async function onKeydown(e: KeyboardEvent) {
-  const input = document.getElementById('capture-input') as HTMLInputElement
+  const input = document.getElementById('capture-input') as HTMLInputElement | null
+  if (!input) return
 
-  if (e.key === 'Enter' && input.value.trim()) {
-    e.preventDefault()
-    await addToInbox(input.value.trim(), selectedStatus)
-    input.value = ''
-    selectedStatus = 'todo'
-    expanded = false
-    const { getCurrentWindow } = await import('@tauri-apps/api/window')
-    await getCurrentWindow().hide()
-  } else if (e.key === 'Escape') {
-    e.preventDefault()
-    const { getCurrentWindow } = await import('@tauri-apps/api/window')
-    await getCurrentWindow().hide()
-  } else if (e.key === 'Tab') {
-    e.preventDefault()
-    expanded = !expanded
-    render()
-    const { getCurrentWindow } = await import('@tauri-apps/api/window')
-    const { LogicalSize } = await import('@tauri-apps/api/dpi')
-    const win = getCurrentWindow()
-    await win.setSize(new LogicalSize(480, expanded ? 120 : 72))
+  try {
+    if (e.key === 'Enter' && input.value.trim()) {
+      e.preventDefault()
+      await addToInbox(input.value.trim(), selectedStatus)
+      input.value = ''
+      selectedStatus = 'todo'
+      expanded = false
+      const { getCurrentWindow } = await import('@tauri-apps/api/window')
+      await getCurrentWindow().hide()
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      const { getCurrentWindow } = await import('@tauri-apps/api/window')
+      await getCurrentWindow().hide()
+    } else if (e.key === 'Tab') {
+      e.preventDefault()
+      expanded = !expanded
+      render()
+      const { getCurrentWindow } = await import('@tauri-apps/api/window')
+      const { LogicalSize } = await import('@tauri-apps/api/dpi')
+      const win = getCurrentWindow()
+      await win.setSize(new LogicalSize(480, expanded ? 120 : 72))
+    }
+  } catch {
+    // Silently handle — capture window should never crash
   }
 }
 

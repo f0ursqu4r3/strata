@@ -268,7 +268,7 @@ watch(
         <template v-for="row in virtualRows" :key="row.node.id">
           <div
             v-if="dropTargetIdx === row.globalIdx"
-            class="h-0.5 bg-(--accent-500) rounded mx-2 my-px"
+            class="h-1 bg-(--accent-500) rounded mx-2 my-px"
           />
           <div
             :data-row-idx="row.globalIdx"

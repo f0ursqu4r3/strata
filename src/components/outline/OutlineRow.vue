@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { OUTLINE_DEPTH_INDENT, OUTLINE_BASE_PADDING, TRANSITION_STATUS_FLASH, TRANSITION_BASE } from '@/lib/constants'
 import { ChevronRight, Calendar, Tag } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
@@ -93,6 +93,11 @@ watch(
   },
 )
 
+onBeforeUnmount(() => {
+  if (pulseTimeout) clearTimeout(pulseTimeout)
+  if (flashTimeout) clearTimeout(flashTimeout)
+})
+
 function onDatePickerUpdate(value: number | null) {
   store.setDueDate(props.node.id, value)
   showDatePicker.value = false
@@ -152,9 +157,9 @@ function onRowPointerDown(e: PointerEvent) {
   <div
     class="group flex items-start min-h-8 cursor-pointer select-none rounded gap-1.5 hover:bg-(--bg-hover)"
     :class="{
-      'bg-(--bg-active)': isSelected && !isEditing,
+      'bg-(--bg-active) ring-1 ring-(--accent-200)': isSelected && !isEditing && store.selection.ids.size <= 1,
+      'bg-(--bg-active) ring-1 ring-(--accent-300)': isSelected && !isEditing && store.selection.ids.size > 1,
       'bg-(--bg-editing)': isEditing,
-      'ring-1 ring-(--accent-300)': isSelected && store.selection.ids.size > 1 && !isEditing,
       'ring-1 ring-(--highlight-search-ring) bg-(--highlight-search-bg)':
         isSearchMatch && !isSelected && !isEditing,
       'bg-[color-mix(in_srgb,var(--status-done)_12%,transparent)]': statusFlash,
@@ -206,8 +211,8 @@ function onRowPointerDown(e: PointerEvent) {
       <component
         v-if="currentStatusDef"
         :is="resolveStatusIcon(currentStatusDef.icon)"
-        class="w-3.5 h-3.5 cursor-pointer hover:scale-125 transition-transform"
-        :class="{ 'scale-125': statusPulse }"
+        class="w-3.5 h-3.5 cursor-pointer hover:scale-110 transition-transform"
+        :class="{ 'scale-110': statusPulse }"
         :style="{ color: currentStatusDef.color }"
       />
 

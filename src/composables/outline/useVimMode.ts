@@ -101,11 +101,12 @@ export function useVimMode(
       if (store.selection.current) {
         const node = store.nodes.get(store.selection.current)
         if (node) {
-          const siblings = store.getChildren(node.parentId!)
+          if (!node.parentId) return true
+          const siblings = store.getChildren(node.parentId)
           const idx = siblings.findIndex((s) => s.id === node.id)
           const next = siblings[idx + 1]
           const pos = next ? rankBetween(node.pos, next.pos) : rankAfter(node.pos)
-          const op = store.createNode(node.parentId!, pos)
+          const op = store.createNode(node.parentId, pos)
           const newId = (op.payload as { id: string }).id
           store.selectNode(newId)
           store.startEditing(newId, 'keyboard')

@@ -30,6 +30,11 @@ function defaultIndex(): SearchIndex {
 // In-memory cache — avoids JSON.parse on every search keystroke
 let cachedIndex: SearchIndex | null = null
 
+/** Clear the in-memory cache (used by tests). */
+export function clearSearchIndexCache(): void {
+  cachedIndex = null
+}
+
 export function loadSearchIndex(): SearchIndex {
   if (cachedIndex) return cachedIndex
   try {

@@ -38,7 +38,7 @@ const {
     @mousedown.self="emit('close')"
   >
     <div
-      class="overlay-panel bg-(--bg-secondary) rounded-xl shadow-2xl w-full max-w-xl flex flex-col max-h-[60vh]"
+      class="overlay-panel bg-(--bg-secondary) rounded-xl shadow-xl w-full max-w-xl flex flex-col max-h-[60vh]"
     >
       <!-- Search input -->
       <div class="flex items-center gap-2 px-4 py-3 border-b border-(--border-primary)">
@@ -75,18 +75,18 @@ const {
           <!-- Current document section -->
           <template v-if="currentDocResults.length > 0">
             <div
-              class="px-4 py-1.5 text-[11px] font-semibold text-(--text-faint) uppercase tracking-wide"
+              class="px-4 py-1.5 text-[11px] font-medium text-(--text-faint) uppercase tracking-wide"
             >
               Current Document
             </div>
             <button type="button"
               v-for="item in currentDocResults"
               :key="'cur-' + item.nodeId"
-              class="w-full text-left px-4 py-2 text-sm cursor-pointer transition-colors"
+              class="w-full text-left px-4 py-2 text-sm cursor-pointer transition-colors border-l-2"
               :class="
                 flatIndexOf(item) === selectedIdx
-                  ? 'bg-(--bg-hover) text-(--text-primary)'
-                  : 'text-(--text-secondary) hover:bg-(--bg-hover)'
+                  ? 'bg-(--bg-hover) text-(--text-primary) border-(--accent-500)'
+                  : 'text-(--text-secondary) hover:bg-(--bg-hover) border-transparent'
               "
               :data-selected="flatIndexOf(item) === selectedIdx"
               @click="onSelect(item)"
@@ -109,7 +109,7 @@ const {
           <!-- All documents section -->
           <template v-if="groupedAllDocs.length > 0">
             <div
-              class="px-4 py-1.5 text-[11px] font-semibold text-(--text-faint) uppercase tracking-wide"
+              class="px-4 py-1.5 text-[11px] font-medium text-(--text-faint) uppercase tracking-wide"
               :class="
                 currentDocResults.length > 0 ? 'mt-2 border-t border-(--border-primary) pt-2' : ''
               "
@@ -124,11 +124,11 @@ const {
               <button type="button"
                 v-for="item in group.items"
                 :key="item.nodeId"
-                class="w-full text-left px-4 py-2 text-sm cursor-pointer transition-colors"
+                class="w-full text-left px-4 py-2 text-sm cursor-pointer transition-colors border-l-2"
                 :class="
                   flatIndexOf(item) === selectedIdx
-                    ? 'bg-(--bg-hover) text-(--text-primary)'
-                    : 'text-(--text-secondary) hover:bg-(--bg-hover)'
+                    ? 'bg-(--bg-hover) text-(--text-primary) border-(--accent-500)'
+                    : 'text-(--text-secondary) hover:bg-(--bg-hover) border-transparent'
                 "
                 :data-selected="flatIndexOf(item) === selectedIdx"
                 @click="onSelect(item)"

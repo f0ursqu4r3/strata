@@ -44,7 +44,7 @@ const maxWidthClasses: Record<string, string> = {
         @mousedown.self="emit('close')"
       >
         <div
-          class="modal-panel bg-(--bg-secondary) rounded-xl shadow-2xl w-full max-h-[80vh] flex flex-col"
+          class="modal-panel bg-(--bg-secondary) rounded-xl shadow-xl w-full max-h-[80vh] flex flex-col"
           :class="maxWidthClasses[maxWidth]"
         >
           <!-- Header -->
