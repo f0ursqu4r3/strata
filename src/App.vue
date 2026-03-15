@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, defineAsyncComponent } from 'vue'
 import {
   Layers,
   Search,
@@ -22,16 +22,18 @@ import { useSettingsStore } from '@/stores/settings'
 import { useDocumentsStore } from '@/stores/documents'
 import OutlineView from '@/components/outline/OutlineView.vue'
 import KanbanBoard from '@/components/board/KanbanBoard.vue'
-import ShortcutsModal from '@/components/settings/ShortcutsModal.vue'
-import SettingsPanel from '@/components/settings/SettingsPanel.vue'
 import DocumentSidebar from '@/components/sidebar/DocumentSidebar.vue'
-import TrashPanel from '@/components/overlays/TrashPanel.vue'
-import ExportMenu from '@/components/overlays/ExportMenu.vue'
-import StatusEditor from '@/components/settings/StatusEditor.vue'
-import DocumentSettingsPanel from '@/components/settings/DocumentSettingsPanel.vue'
-import GlobalSearch from '@/components/overlays/GlobalSearch.vue'
-import CommandPalette from '@/components/overlays/CommandPalette.vue'
-import ShortcutEditor from '@/components/settings/ShortcutEditor.vue'
+
+// Lazy-load overlay modals — only loaded when opened
+const ShortcutsModal = defineAsyncComponent(() => import('@/components/settings/ShortcutsModal.vue'))
+const SettingsPanel = defineAsyncComponent(() => import('@/components/settings/SettingsPanel.vue'))
+const TrashPanel = defineAsyncComponent(() => import('@/components/overlays/TrashPanel.vue'))
+const ExportMenu = defineAsyncComponent(() => import('@/components/overlays/ExportMenu.vue'))
+const StatusEditor = defineAsyncComponent(() => import('@/components/settings/StatusEditor.vue'))
+const DocumentSettingsPanel = defineAsyncComponent(() => import('@/components/settings/DocumentSettingsPanel.vue'))
+const GlobalSearch = defineAsyncComponent(() => import('@/components/overlays/GlobalSearch.vue'))
+const CommandPalette = defineAsyncComponent(() => import('@/components/overlays/CommandPalette.vue'))
+const ShortcutEditor = defineAsyncComponent(() => import('@/components/settings/ShortcutEditor.vue'))
 import {
   isTauri,
   isSingleFileMode,

@@ -27,17 +27,26 @@ function defaultIndex(): SearchIndex {
   return { version: 1, entries: [], updatedAt: {} }
 }
 
+// In-memory cache — avoids JSON.parse on every search keystroke
+let cachedIndex: SearchIndex | null = null
+
 export function loadSearchIndex(): SearchIndex {
+  if (cachedIndex) return cachedIndex
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      cachedIndex = JSON.parse(raw)
+      return cachedIndex!
+    }
   } catch {
     // ignore
   }
-  return defaultIndex()
+  cachedIndex = defaultIndex()
+  return cachedIndex
 }
 
 export function saveSearchIndex(index: SearchIndex): void {
+  cachedIndex = index
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(index))
   } catch {

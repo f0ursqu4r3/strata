@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Settings2, Calendar, Tag } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
@@ -22,37 +22,46 @@ const flashingCards = ref(new Set<string>())
 const flashTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 const prevStatuses = new Map<string, string>()
 
-watch(
-  () => store.kanbanColumns,
-  (columns) => {
-    for (const col of columns) {
-      for (const node of col.nodes) {
-        const prev = prevStatuses.get(node.id)
-        if (prev !== undefined && prev !== node.status) {
-          const statusDef = store.statusDefs.find((s) => s.id === node.status)
-          if (statusDef?.final) {
-            const prevTimeout = flashTimeouts.get(node.id)
-            if (prevTimeout) clearTimeout(prevTimeout)
-            const next = new Set(flashingCards.value)
-            next.add(node.id)
-            flashingCards.value = next
-            flashTimeouts.set(
-              node.id,
-              setTimeout(() => {
-                const updated = new Set(flashingCards.value)
-                updated.delete(node.id)
-                flashingCards.value = updated
-                flashTimeouts.delete(node.id)
-              }, TRANSITION_STATUS_FLASH + 100),
-            )
-          }
-        }
-        prevStatuses.set(node.id, node.status)
+// Lightweight status snapshot — only recalculates when kanbanColumns change (shallow)
+const statusSnapshot = computed(() => {
+  const map = new Map<string, string>()
+  for (const col of store.kanbanColumns) {
+    for (const node of col.nodes) {
+      map.set(node.id, node.status)
+    }
+  }
+  return map
+})
+
+watch(statusSnapshot, (current) => {
+  for (const [id, status] of current) {
+    const prev = prevStatuses.get(id)
+    if (prev !== undefined && prev !== status) {
+      const statusDef = store.statusDefs.find((s) => s.id === status)
+      if (statusDef?.final) {
+        const prevTimeout = flashTimeouts.get(id)
+        if (prevTimeout) clearTimeout(prevTimeout)
+        const next = new Set(flashingCards.value)
+        next.add(id)
+        flashingCards.value = next
+        flashTimeouts.set(
+          id,
+          setTimeout(() => {
+            const updated = new Set(flashingCards.value)
+            updated.delete(id)
+            flashingCards.value = updated
+            flashTimeouts.delete(id)
+          }, TRANSITION_STATUS_FLASH + 100),
+        )
       }
     }
-  },
-  { deep: true },
-)
+  }
+  // Update prev map
+  prevStatuses.clear()
+  for (const [id, status] of current) {
+    prevStatuses.set(id, status)
+  }
+})
 
 const settings = useSettingsStore()
 const emit = defineEmits<{ openStatusEditor: [] }>()
