@@ -38,8 +38,9 @@ __screenshots__/
 # Vite
 *.timestamp-*-*.mjs
 
-# Tauri
+# Tauri / Rust
 src-tauri/target/
+target/
 
 # Claude
 .claude/
