@@ -155,6 +155,16 @@ async function onKeydown(e: KeyboardEvent) {
       e.preventDefault()
       scrollSelectedIntoView()
       break
+    case 'moveNodeUp':
+      store.moveNodeUp()
+      e.preventDefault()
+      scrollSelectedIntoView()
+      break
+    case 'moveNodeDown':
+      store.moveNodeDown()
+      e.preventDefault()
+      scrollSelectedIntoView()
+      break
     case 'delete':
       if (store.selection.ids.size > 1) {
         store.bulkTombstone()

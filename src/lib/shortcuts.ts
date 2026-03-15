@@ -10,6 +10,8 @@ export type ShortcutAction =
   | 'newSibling'
   | 'zoomIn'
   | 'zoomOut'
+  | 'moveNodeUp'
+  | 'moveNodeDown'
   | 'undo'
   | 'redo'
   | 'globalSearch'
@@ -132,6 +134,20 @@ export const DEFAULT_SHORTCUTS: ShortcutDef[] = [
     action: 'delete',
     combo: { key: 'Delete' },
     label: 'Delete node',
+    category: 'Editing',
+    context: 'outline',
+  },
+  {
+    action: 'moveNodeUp',
+    combo: { key: 'ArrowUp', alt: true },
+    label: 'Move node up',
+    category: 'Editing',
+    context: 'outline',
+  },
+  {
+    action: 'moveNodeDown',
+    combo: { key: 'ArrowDown', alt: true },
+    label: 'Move node down',
     category: 'Editing',
     context: 'outline',
   },

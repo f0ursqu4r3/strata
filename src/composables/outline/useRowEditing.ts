@@ -210,6 +210,12 @@ export function useRowEditing(props: { node: Node; depth: number }, isEditing: (
       if (def.context !== 'editing') continue
       if (matchesCombo(e, def.combo)) return def.action
     }
+    // Also check outline-context move shortcuts (Alt+Up/Down work while editing)
+    for (const def of settings.resolvedShortcuts) {
+      if (def.context !== 'outline') continue
+      if (def.action !== 'moveNodeUp' && def.action !== 'moveNodeDown') continue
+      if (matchesCombo(e, def.combo)) return def.action
+    }
     return null
   }
 
@@ -244,6 +250,16 @@ export function useRowEditing(props: { node: Node; depth: number }, isEditing: (
     if (action === 'outdent') {
       e.preventDefault()
       store.outdentAndKeepEditing(props.node.id)
+      return true
+    }
+    if (action === 'moveNodeUp') {
+      e.preventDefault()
+      store.moveNodeUp()
+      return true
+    }
+    if (action === 'moveNodeDown') {
+      e.preventDefault()
+      store.moveNodeDown()
       return true
     }
     return false

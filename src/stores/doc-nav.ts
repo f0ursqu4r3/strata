@@ -1,6 +1,6 @@
 import { type Ref, type ShallowRef, type ComputedRef } from 'vue'
 import type { Node, Op, Status, ViewMode } from '@/types'
-import { rankBetween, rankAfter, initialRank } from '@/lib/rank'
+import { rankBefore, rankBetween, rankAfter, initialRank } from '@/lib/rank'
 import { makeOp } from '@/lib/ops'
 
 interface DocNavDeps {
@@ -120,6 +120,36 @@ export function useDocNav(deps: DocNavDeps) {
     } else {
       selection.ids = new Set()
     }
+  }
+
+  // ── Move node up/down among siblings ──
+
+  function moveNodeUp() {
+    const node = nodes.value.get(selection.current)
+    if (!node || !node.parentId) return
+
+    const siblings = getChildren(node.parentId)
+    const idx = siblings.findIndex((s) => s.id === node.id)
+    if (idx <= 0) return
+
+    const prev = siblings[idx - 1]!
+    const prevPrev = siblings[idx - 2]
+    const newPos = prevPrev ? rankBetween(prevPrev.pos, prev.pos) : rankBefore(prev.pos)
+    deps.moveNode(node.id, node.parentId, newPos)
+  }
+
+  function moveNodeDown() {
+    const node = nodes.value.get(selection.current)
+    if (!node || !node.parentId) return
+
+    const siblings = getChildren(node.parentId)
+    const idx = siblings.findIndex((s) => s.id === node.id)
+    if (idx < 0 || idx >= siblings.length - 1) return
+
+    const next = siblings[idx + 1]!
+    const nextNext = siblings[idx + 2]
+    const newPos = nextNext ? rankBetween(next.pos, nextNext.pos) : rankAfter(next.pos)
+    deps.moveNode(node.id, node.parentId, newPos)
   }
 
   // ── Edit state ──
@@ -363,6 +393,8 @@ export function useDocNav(deps: DocNavDeps) {
     selectedIndex,
     moveSelectionUp,
     moveSelectionDown,
+    moveNodeUp,
+    moveNodeDown,
     createSiblingBelow,
     indentNode,
     outdentNode,
