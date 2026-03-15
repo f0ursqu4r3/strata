@@ -339,6 +339,20 @@ export function useDocNav(deps: DocNavDeps) {
     editing.trigger = 'keyboard'
   }
 
+  function moveNodeUpAndKeepEditing(id: string) {
+    selection.current = id
+    moveNodeUp()
+    editing.id = id
+    editing.trigger = 'keyboard'
+  }
+
+  function moveNodeDownAndKeepEditing(id: string) {
+    selection.current = id
+    moveNodeDown()
+    editing.id = id
+    editing.trigger = 'keyboard'
+  }
+
   function createSiblingBelowAndEdit() {
     const node = nodes.value.get(selection.current)
     if (!node) return
@@ -395,6 +409,8 @@ export function useDocNav(deps: DocNavDeps) {
     moveSelectionDown,
     moveNodeUp,
     moveNodeDown,
+    moveNodeUpAndKeepEditing,
+    moveNodeDownAndKeepEditing,
     createSiblingBelow,
     indentNode,
     outdentNode,

@@ -7,6 +7,7 @@ import { renderInlineMarkdown } from '@/lib/inline-markdown'
 import { getTitle, getBody, combineText } from '@/lib/text-utils'
 import type { Node, Status } from '@/types'
 
+
 export function useRowEditing(props: { node: Node; depth: number }, isEditing: () => boolean) {
   const store = useDocStore()
   const settings = useSettingsStore()
@@ -198,6 +199,9 @@ export function useRowEditing(props: { node: Node; depth: number }, isEditing: (
     if (relatedTarget === titleInputRef.value || relatedTarget === bodyInputRef.value) {
       return
     }
+    // If the input was removed from the DOM (virtual scroll reflow), don't stop
+    const target = e.target as HTMLElement | null
+    if (target && !target.isConnected) return
     cleanupEmptyBody()
     if (store.editing.id === props.node.id) {
       store.stopEditing()
@@ -254,12 +258,14 @@ export function useRowEditing(props: { node: Node; depth: number }, isEditing: (
     }
     if (action === 'moveNodeUp') {
       e.preventDefault()
-      store.moveNodeUp()
+      store.flushTextDebounce()
+      store.moveNodeUpAndKeepEditing(props.node.id)
       return true
     }
     if (action === 'moveNodeDown') {
       e.preventDefault()
-      store.moveNodeDown()
+      store.flushTextDebounce()
+      store.moveNodeDownAndKeepEditing(props.node.id)
       return true
     }
     return false
@@ -298,12 +304,12 @@ export function useRowEditing(props: { node: Node; depth: number }, isEditing: (
     } else if (e.key === 'Backspace' && input && input.value === '' && !localBody.value) {
       e.preventDefault()
       store.deleteNodeAndEditPrevious(props.node.id)
-    } else if (e.key === 'ArrowUp' && !e.shiftKey && input) {
+    } else if (e.key === 'ArrowUp' && !e.shiftKey && !e.altKey && input) {
       e.preventDefault()
       cleanupEmptyBody()
       store.flushTextDebounce()
       store.editPreviousNode(props.node.id, true, -1)
-    } else if (e.key === 'ArrowDown' && !e.shiftKey && input) {
+    } else if (e.key === 'ArrowDown' && !e.shiftKey && !e.altKey && input) {
       e.preventDefault()
       const column = input.selectionStart ?? 0
       if (localBody.value) {
@@ -352,7 +358,7 @@ export function useRowEditing(props: { node: Node; depth: number }, isEditing: (
         const len = titleInputRef.value?.value.length ?? 0
         titleInputRef.value?.setSelectionRange(len, len)
       })
-    } else if (e.key === 'ArrowUp' && !e.shiftKey && input) {
+    } else if (e.key === 'ArrowUp' && !e.shiftKey && !e.altKey && input) {
       const posBefore = input.selectionStart ?? 0
       const columnBefore = getColumnInLine(input)
       requestAnimationFrame(() => {
@@ -367,7 +373,7 @@ export function useRowEditing(props: { node: Node; depth: number }, isEditing: (
           }
         }
       })
-    } else if (e.key === 'ArrowDown' && !e.shiftKey && input) {
+    } else if (e.key === 'ArrowDown' && !e.shiftKey && !e.altKey && input) {
       const posBefore = input.selectionStart ?? 0
       const columnBefore = getColumnInLine(input)
       const textLen = input.value.length

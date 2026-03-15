@@ -1086,6 +1086,8 @@ export const useDocStore = defineStore('doc', () => {
     outdentNode: nav.outdentNode,
     moveNodeUp: nav.moveNodeUp,
     moveNodeDown: nav.moveNodeDown,
+    moveNodeUpAndKeepEditing: nav.moveNodeUpAndKeepEditing,
+    moveNodeDownAndKeepEditing: nav.moveNodeDownAndKeepEditing,
     editPreviousNode: nav.editPreviousNode,
     editNextNode: nav.editNextNode,
     deleteNodeAndEditPrevious: nav.deleteNodeAndEditPrevious,
