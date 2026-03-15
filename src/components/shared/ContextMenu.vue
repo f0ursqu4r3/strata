@@ -5,6 +5,8 @@ import {
   Pencil,
   Trash2,
   Copy,
+  Scissors,
+  ClipboardPaste,
   ZoomIn,
   Tag,
   ChevronRight,
@@ -98,6 +100,24 @@ function onSetStatus(status: Status) {
   emit('close')
 }
 
+function onCopy() {
+  store.selectNode(props.nodeId)
+  store.copyNodes()
+  emit('close')
+}
+
+function onCut() {
+  store.selectNode(props.nodeId)
+  store.cutNodes()
+  emit('close')
+}
+
+function onPaste() {
+  store.selectNode(props.nodeId)
+  store.pasteNodes()
+  emit('close')
+}
+
 function onHistory() {
   emit('history', props.nodeId)
   emit('close')
@@ -178,6 +198,14 @@ function onHistory() {
     <UiMenuItem v-if="!isMultiSelect" :icon="ZoomIn" @click="onZoomIn"> Zoom in </UiMenuItem>
 
     <UiMenuItem v-if="!isMultiSelect" :icon="Copy" @click="onDuplicate"> Duplicate </UiMenuItem>
+
+    <UiMenuDivider />
+
+    <UiMenuItem :icon="Copy" shortcut="Ctrl+C" @click="onCopy"> Copy </UiMenuItem>
+    <UiMenuItem :icon="Scissors" shortcut="Ctrl+X" @click="onCut"> Cut </UiMenuItem>
+    <UiMenuItem :icon="ClipboardPaste" shortcut="Ctrl+V" :disabled="!store.hasClipboard()" @click="onPaste"> Paste </UiMenuItem>
+
+    <UiMenuDivider />
 
     <UiMenuItem v-if="!isMultiSelect" :icon="Clock" @click="onHistory"> History </UiMenuItem>
 

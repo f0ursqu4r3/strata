@@ -92,6 +92,28 @@ async function onKeydown(e: KeyboardEvent) {
 
   if (store.editing.id) return
 
+  // Cut/Copy/Paste (only when not editing — don't interfere with text selection)
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+    if (e.key === 'c' && store.selection.current) {
+      e.preventDefault()
+      store.copyNodes()
+      return
+    }
+    if (e.key === 'x' && store.selection.current) {
+      e.preventDefault()
+      store.flushTextDebounce()
+      store.cutNodes()
+      return
+    }
+    if (e.key === 'v' && store.hasClipboard()) {
+      e.preventDefault()
+      store.flushTextDebounce()
+      store.pasteNodes()
+      scrollSelectedIntoView()
+      return
+    }
+  }
+
   if (e.key === 'Escape') {
     if (store.selection.ids.size > 1) {
       store.selectNode(store.selection.current)

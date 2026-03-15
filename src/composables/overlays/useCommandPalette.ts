@@ -155,6 +155,33 @@ export function useCommandPalette(emit: {
           execute: () => store.duplicateNode(store.selection.current),
         },
         {
+          id: 'copy',
+          label: 'Copy Node',
+          category: 'Node',
+          shortcut: 'Ctrl+C',
+          execute: () => store.copyNodes(),
+        },
+        {
+          id: 'cut',
+          label: 'Cut Node',
+          category: 'Node',
+          shortcut: 'Ctrl+X',
+          execute: () => {
+            store.flushTextDebounce()
+            store.cutNodes()
+          },
+        },
+        {
+          id: 'paste',
+          label: 'Paste Node',
+          category: 'Node',
+          shortcut: 'Ctrl+V',
+          execute: () => {
+            store.flushTextDebounce()
+            store.pasteNodes()
+          },
+        },
+        {
           id: 'delete',
           label: 'Delete Node',
           category: 'Node',

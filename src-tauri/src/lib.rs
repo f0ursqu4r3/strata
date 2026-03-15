@@ -545,9 +545,21 @@ fn build_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     app.set_menu(menu)?;
 
-    // Forward menu events to the frontend
+    // Forward menu events to ONE window only (not broadcast).
+    // On macOS, the menu bar is shared across all windows, so broadcasting
+    // would cause actions like "New Document" to fire in every window.
+    // We prefer the focused window; if none is focused (menu stole focus),
+    // pick any window — the stores are shared so it doesn't matter which.
     app.on_menu_event(move |app_handle, event| {
-        let _ = app_handle.emit("menu-action", event.id().0.as_str());
+        let payload = event.id().0.as_str();
+        let windows = app_handle.webview_windows();
+        let target = windows
+            .values()
+            .find(|w| w.is_focused().unwrap_or(false))
+            .or_else(|| windows.values().next());
+        if let Some(win) = target {
+            let _ = win.emit("menu-action", payload);
+        }
     });
 
     Ok(())

@@ -3,7 +3,7 @@ import { ref, shallowReactive, computed, shallowRef, triggerRef, nextTick, watch
 import type { Node, Op, Status, ViewMode, Snapshot, StatusDef } from '@/types'
 import { DEFAULT_STATUSES } from '@/types'
 import { makeOp, applyOp, rebuildState, setSeq } from '@/lib/ops'
-import { rankBetween, rankAfter, initialRank } from '@/lib/rank'
+import { rankBetween, rankAfter, initialRank, generateRanks } from '@/lib/rank'
 import { useDocNav } from './doc-nav'
 import {
   buildExportJSON,
@@ -420,6 +420,109 @@ export const useDocStore = defineStore('doc', () => {
       dispatch(op)
     }
     deleteTree(id)
+  }
+
+  // ── Clipboard (cut/copy/paste) ──
+
+  interface ClipboardNode {
+    text: string
+    status: Status
+    tags: string[]
+    dueDate?: number | null
+    children: ClipboardNode[]
+  }
+
+  let clipboard: ClipboardNode[] | null = null
+
+  function serializeSubtree(id: string): ClipboardNode {
+    const node = nodes.value.get(id)!
+    const children = getChildren(id)
+    return {
+      text: node.text,
+      status: node.status,
+      tags: [...node.tags],
+      dueDate: node.dueDate,
+      children: children.map((c) => serializeSubtree(c.id)),
+    }
+  }
+
+  function copyNodes() {
+    const ids = selection.ids.size > 1 ? [...selection.ids] : selection.current ? [selection.current] : []
+    if (ids.length === 0) return
+    clipboard = ids.map((id) => serializeSubtree(id))
+  }
+
+  function cutNodes() {
+    copyNodes()
+    if (!clipboard || clipboard.length === 0) return
+    if (selection.ids.size > 1) {
+      nav.bulkTombstone()
+    } else if (selection.current) {
+      const rows = visibleRows.value
+      const idx = rows.findIndex((r) => r.node.id === selection.current)
+      const nextId = rows[idx + 1]?.node.id ?? rows[idx - 1]?.node.id ?? null
+      tombstone(selection.current)
+      if (nextId) nav.selectNode(nextId)
+    }
+  }
+
+  function pasteNodes() {
+    if (!clipboard || clipboard.length === 0) return
+
+    // Determine insertion point: after the selected node as siblings
+    const selected = nodes.value.get(selection.current)
+    let parentId: string | null
+    let afterPos: string | undefined
+
+    if (selected && selected.parentId) {
+      parentId = selected.parentId
+      const siblings = getChildren(parentId)
+      const myIdx = siblings.findIndex((s) => s.id === selected.id)
+      const nextSibling = siblings[myIdx + 1]
+      afterPos = nextSibling ? selected.pos : undefined
+    } else {
+      // Paste at root level
+      parentId = rootId.value
+      const rootChildren = getChildren(rootId.value)
+      afterPos = rootChildren.length > 0 ? rootChildren[rootChildren.length - 1]!.pos : undefined
+    }
+
+    const ranks = generateRanks(clipboard.length, afterPos)
+    let firstPastedId: string | null = null
+
+    function insertTree(clip: ClipboardNode, pId: string | null, pos: string) {
+      const op = createNode(pId, pos, clip.text, clip.status)
+      const newId = (op.payload as { id: string }).id
+      if (!firstPastedId) firstPastedId = newId
+
+      // Apply tags and due date
+      for (const tag of clip.tags) {
+        const tagOp = makeOp('addTag', { type: 'addTag', id: newId, tag })
+        dispatch(tagOp)
+      }
+      if (clip.dueDate) {
+        const dateOp = makeOp('setDueDate', { type: 'setDueDate', id: newId, dueDate: clip.dueDate })
+        dispatch(dateOp)
+      }
+
+      // Recursively insert children
+      if (clip.children.length > 0) {
+        const childRanks = generateRanks(clip.children.length)
+        for (let i = 0; i < clip.children.length; i++) {
+          insertTree(clip.children[i]!, newId, childRanks[i]!)
+        }
+      }
+    }
+
+    for (let i = 0; i < clipboard.length; i++) {
+      insertTree(clipboard[i]!, parentId, ranks[i]!)
+    }
+
+    if (firstPastedId) nav.selectNode(firstPastedId)
+  }
+
+  function hasClipboard(): boolean {
+    return clipboard !== null && clipboard.length > 0
   }
 
   function addTag(nodeId: string, tag: string) {
@@ -1079,6 +1182,10 @@ export const useDocStore = defineStore('doc', () => {
     reorderStatuses,
     setTagColor,
     duplicateNode,
+    copyNodes,
+    cutNodes,
+    pasteNodes,
+    hasClipboard,
     moveSelectionUp: nav.moveSelectionUp,
     moveSelectionDown: nav.moveSelectionDown,
     createSiblingBelow: nav.createSiblingBelow,
