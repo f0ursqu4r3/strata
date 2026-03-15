@@ -71,6 +71,7 @@ function formatDate(ts: number | undefined): string {
             <button
               class="shrink-0 p-1.5 rounded hover:bg-(--accent-100) text-(--text-faint) hover:text-(--accent-600) cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
               title="Restore"
+              aria-label="Restore"
               @click="onRestore(node.id)"
             >
               <RotateCcw class="w-3.5 h-3.5" />

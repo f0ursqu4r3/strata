@@ -106,6 +106,8 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
             : 'text-(--text-faint) hover:text-(--text-tertiary)'
         "
         title="Toggle tags on cards"
+        aria-label="Toggle tags on cards"
+        :aria-pressed="settings.showBoardTags"
         @click="settings.setShowBoardTags(!settings.showBoardTags)"
       >
         <Tag class="w-3.5 h-3.5" />
@@ -113,6 +115,7 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
       <button
         class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
         title="Manage statuses"
+        aria-label="Manage statuses"
         @click="emit('openStatusEditor')"
       >
         <Settings2 class="w-3.5 h-3.5" />

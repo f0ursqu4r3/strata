@@ -37,11 +37,12 @@ const {
       >
         <!-- Reorder buttons -->
         <div class="flex flex-col gap-0.5 shrink-0">
-          <UiIconButton size="sm" :disabled="idx === 0" @click="onMoveUp(idx)">
+          <UiIconButton size="sm" title="Move up" :disabled="idx === 0" @click="onMoveUp(idx)">
             <ChevronUp class="w-3 h-3" />
           </UiIconButton>
           <UiIconButton
             size="sm"
+            title="Move down"
             :disabled="idx === store.statusDefs.length - 1"
             @click="onMoveDown(idx)"
           >
@@ -66,6 +67,7 @@ const {
             }
           "
           :value="s.label"
+          aria-label="Status label"
           class="flex-1 min-w-0 text-sm bg-transparent border-b border-transparent focus:border-(--border-hover) text-(--text-primary) outline-none px-1 py-0.5"
           @change="onLabelChange(s.id, ($event.target as HTMLInputElement).value)"
           @keydown="onLabelKeydown($event, idx)"
@@ -87,6 +89,8 @@ const {
               : 'text-(--text-faint) hover:bg-(--bg-hover) hover:text-(--text-muted)'
           "
           :title="s.final ? 'Marks items as complete' : 'Click to mark as completion status'"
+          :aria-label="s.final ? 'Marks items as complete' : 'Mark as completion status'"
+          :aria-pressed="s.final"
           @click="onToggleFinal(s.id, s.final)"
         >
           <CircleCheck class="w-4 h-4" />
@@ -95,6 +99,7 @@ const {
         <!-- Delete -->
         <UiIconButton
           variant="danger"
+          title="Delete status"
           :disabled="store.statusDefs.length <= 1"
           @click="onStartDelete(s.id)"
         >
@@ -121,6 +126,7 @@ const {
       <p class="text-sm text-(--text-secondary) mb-3">Move existing items to:</p>
       <select
         v-model="replacementId"
+        aria-label="Replacement status"
         class="w-full text-sm p-2 rounded-md border border-(--border-primary) bg-(--bg-primary) text-(--text-primary) mb-4"
       >
         <option

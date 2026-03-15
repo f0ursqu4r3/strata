@@ -159,11 +159,13 @@ onUnmounted(() => {
       <button
         class="w-2 h-2 rounded-full border border-current opacity-50 hover:opacity-100 cursor-pointer shrink-0"
         title="Change tag color"
+        aria-label="Change tag color"
         @click="toggleColorPicker(tag, $event)"
       />
       {{ tag }}
       <button
         class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
+        :aria-label="'Remove tag ' + tag"
         @click.stop="removeTag(tag)"
       >
         <X class="w-3 h-3" />
@@ -216,6 +218,7 @@ onUnmounted(() => {
       <input
         ref="inputRef"
         v-model="query"
+        aria-label="Add tag"
         class="w-full bg-transparent border-none outline-none text-[12px] text-(--text-secondary) placeholder:text-(--text-faint) py-0.5"
         placeholder="Add tag..."
         @keydown="onKeydown"

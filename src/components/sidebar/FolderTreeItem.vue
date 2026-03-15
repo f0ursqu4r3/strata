@@ -75,6 +75,7 @@ function toggleExpand() {
         <button
           class="p-0.5 rounded hover:bg-(--bg-active) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New document"
+          aria-label="New document"
           @click.stop="emit('create-doc', node.path)"
         >
           <Plus class="w-3 h-3" />
@@ -82,6 +83,7 @@ function toggleExpand() {
         <button
           class="p-0.5 rounded hover:bg-(--bg-active) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New sub-folder"
+          aria-label="New sub-folder"
           @click.stop="emit('create-folder', node.path)"
         >
           <FolderPlus class="w-3 h-3" />
@@ -135,6 +137,7 @@ function toggleExpand() {
         <input
           ref="renameInputRef"
           :value="renameText"
+          aria-label="Document name"
           class="w-full bg-transparent border rounded px-1 py-0.5 text-sm text-(--text-primary) outline-none focus:ring-1"
           :class="
             renameConflict
@@ -162,6 +165,7 @@ function toggleExpand() {
         v-if="renamingId !== node.docId"
         class="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:text-(--color-danger) text-(--text-faint) cursor-pointer pr-2"
         title="Delete document"
+        aria-label="Delete document"
         @click.stop="emit('delete-doc', node.docId!, $event)"
       >
         <Trash2 class="w-3 h-3" />

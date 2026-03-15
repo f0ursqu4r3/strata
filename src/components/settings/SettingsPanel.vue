@@ -48,6 +48,7 @@ const settings = useSettingsStore()
         <div class="flex items-center gap-3">
           <button
             class="p-1.5 rounded-md border border-(--border-primary) hover:bg-(--bg-hover) text-(--text-muted) cursor-pointer"
+            aria-label="Decrease font size"
             @click="settings.setFontSize(settings.fontSize - 1)"
           >
             <Minus class="w-3.5 h-3.5" />
@@ -58,6 +59,7 @@ const settings = useSettingsStore()
               :min="11"
               :max="20"
               :value="settings.fontSize"
+              aria-label="Font size"
               class="flex-1"
               style="accent-color: var(--accent-500)"
               @input="settings.setFontSize(Number(($event.target as HTMLInputElement).value))"
@@ -68,6 +70,7 @@ const settings = useSettingsStore()
           </div>
           <button
             class="p-1.5 rounded-md border border-(--border-primary) hover:bg-(--bg-hover) text-(--text-muted) cursor-pointer"
+            aria-label="Increase font size"
             @click="settings.setFontSize(settings.fontSize + 1)"
           >
             <Plus class="w-3.5 h-3.5" />

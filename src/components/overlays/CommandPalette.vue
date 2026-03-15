@@ -39,6 +39,7 @@ const { query, selectedIdx, inputRef, resultsRef, filteredCommands, onExecute } 
         />
         <button
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) cursor-pointer"
+          aria-label="Close"
           @click="emit('close')"
         >
           <X class="w-3.5 h-3.5" />

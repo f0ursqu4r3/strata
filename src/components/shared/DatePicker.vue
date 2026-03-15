@@ -80,6 +80,7 @@ function onClear() {
       <input
         type="date"
         :value="dateString"
+        aria-label="Due date"
         class="flex-1 text-xs bg-transparent border border-(--border-primary) rounded px-2 py-1 text-(--text-secondary) outline-none focus:border-(--accent-400)"
         @input="dateString = ($event.target as HTMLInputElement).value"
       />
@@ -87,6 +88,7 @@ function onClear() {
         v-if="modelValue"
         class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--color-danger) cursor-pointer"
         title="Clear due date"
+        aria-label="Clear due date"
         @click="onClear"
       >
         <X class="w-3.5 h-3.5" />

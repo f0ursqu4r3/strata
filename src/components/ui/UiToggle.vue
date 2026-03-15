@@ -2,6 +2,7 @@
 interface Props {
   modelValue: boolean
   disabled?: boolean
+  label?: string
 }
 
 withDefaults(defineProps<Props>(), {
@@ -23,6 +24,7 @@ const emit = defineEmits<{
     type="button"
     role="switch"
     :aria-checked="modelValue"
+    :aria-label="label"
     :disabled="disabled"
     @click="!disabled && emit('update:modelValue', !modelValue)"
   >

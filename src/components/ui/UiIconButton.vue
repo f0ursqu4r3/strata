@@ -33,6 +33,7 @@ const sizeClasses: Record<string, string> = {
     ]"
     type="button"
     :title="title"
+    :aria-label="title"
     :disabled="disabled"
   >
     <slot />

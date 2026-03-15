@@ -39,6 +39,7 @@ function select(color: string) {
       type="button"
       class="w-5 h-5 rounded-full border-2 border-(--border-primary) cursor-pointer"
       :style="{ backgroundColor: modelValue }"
+      aria-label="Pick color"
       @click="toggle"
     />
     <div
@@ -53,6 +54,7 @@ function select(color: string) {
         class="w-6 h-6 rounded-full cursor-pointer border-2 transition-transform hover:scale-110"
         :class="modelValue === color ? 'border-(--text-primary)' : 'border-transparent'"
         :style="{ backgroundColor: color }"
+        :aria-label="color"
         @click="select(color)"
       />
     </div>

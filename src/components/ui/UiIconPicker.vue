@@ -41,6 +41,7 @@ function select(icon: string) {
     <button
       type="button"
       class="p-1.5 rounded-md hover:bg-(--bg-hover) cursor-pointer"
+      aria-label="Pick icon"
       @click="toggle"
     >
       <component :is="resolveIcon(modelValue)" class="w-4 h-4" :style="{ color }" />
@@ -56,6 +57,7 @@ function select(icon: string) {
         type="button"
         class="p-1.5 rounded-md hover:bg-(--bg-hover) cursor-pointer"
         :class="{ 'bg-(--bg-active)': modelValue === icon }"
+        :aria-label="icon"
         @click="select(icon)"
       >
         <component :is="resolveIcon(icon)" class="w-4 h-4" :style="{ color }" />

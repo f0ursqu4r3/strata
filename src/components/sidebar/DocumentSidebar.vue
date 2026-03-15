@@ -216,6 +216,7 @@ async function onDelete(docId: string, e?: MouseEvent) {
         <button
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New folder"
+          aria-label="New folder"
           @click="onCreateFolder('')"
         >
           <FolderPlus class="w-3.5 h-3.5" />
@@ -223,6 +224,7 @@ async function onDelete(docId: string, e?: MouseEvent) {
         <button
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New document"
+          aria-label="New document"
           @click="onCreateNew()"
         >
           <Plus class="w-3.5 h-3.5" />
@@ -230,6 +232,7 @@ async function onDelete(docId: string, e?: MouseEvent) {
         <button
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer sm:hidden"
           title="Close sidebar"
+          aria-label="Close sidebar"
           @click="emit('close')"
         >
           <X class="w-3.5 h-3.5" />

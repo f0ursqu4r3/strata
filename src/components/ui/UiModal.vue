@@ -35,6 +35,7 @@ const maxWidthClasses: Record<string, string> = {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
         role="dialog"
         aria-modal="true"
+        :aria-label="title"
         @mousedown.self="emit('close')"
       >
         <div
@@ -56,6 +57,7 @@ const maxWidthClasses: Record<string, string> = {
               <button
                 v-if="showClose"
                 class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) cursor-pointer"
+                aria-label="Close"
                 @click="emit('close')"
               >
                 <X class="w-4 h-4" />

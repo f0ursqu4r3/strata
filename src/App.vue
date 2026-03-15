@@ -322,6 +322,7 @@ function onZoomRoot() {
           v-if="!isSingleFileMode()"
           class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer shrink-0"
           title="Toggle sidebar"
+          aria-label="Toggle sidebar"
           @click="settings.setSidebarOpen(!settings.sidebarOpen)"
         >
           <PanelLeft class="w-4 h-4" />
@@ -376,6 +377,7 @@ function onZoomRoot() {
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="Search (Ctrl+Shift+F)"
+          aria-label="Search"
           @click="showGlobalSearch = true"
         >
           <Search class="w-4 h-4" />
@@ -390,6 +392,7 @@ function onZoomRoot() {
                 ? 'border-(--accent-500) bg-(--accent-50) text-(--accent-700)'
                 : 'border-(--border-secondary) text-(--text-muted) hover:text-(--text-secondary) bg-(--bg-tertiary)'
             "
+            aria-label="Filter by tag"
             @click="openTagFilter"
           >
             <Tag class="w-3 h-3" />
@@ -398,6 +401,7 @@ function onZoomRoot() {
             <button
               v-if="store.filters.tag"
               class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
+              aria-label="Clear tag filter"
               @click.stop="applyTagFilter(null)"
             >
               <X class="w-3 h-3" />
@@ -472,6 +476,7 @@ function onZoomRoot() {
                 ? 'border-(--accent-500) bg-(--accent-50) text-(--accent-700)'
                 : 'border-(--border-secondary) text-(--text-muted) hover:text-(--text-secondary) bg-(--bg-tertiary)'
             "
+            aria-label="Filter by due date"
             @click="showDueDateFilter = !showDueDateFilter"
           >
             <Calendar class="w-3 h-3" />
@@ -482,6 +487,7 @@ function onZoomRoot() {
             <button
               v-if="store.filters.dueDate !== 'all'"
               class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
+              aria-label="Clear due date filter"
               @click.stop="clearDueDateFilter"
             >
               <X class="w-3 h-3" />
@@ -517,7 +523,8 @@ function onZoomRoot() {
         </div>
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer hidden sm:block"
-          title="Import JSON"
+          title="Import"
+          aria-label="Import"
           @click="onImportClick"
         >
           <Upload class="w-4 h-4" />
@@ -525,6 +532,7 @@ function onZoomRoot() {
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="Trash"
+          aria-label="Trash"
           @click="showTrash = true"
         >
           <Trash2 class="w-4 h-4" />
@@ -532,6 +540,7 @@ function onZoomRoot() {
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer hidden sm:block"
           title="Keyboard shortcuts (?)"
+          aria-label="Keyboard shortcuts"
           @click="showShortcuts = true"
         >
           <Keyboard class="w-4 h-4" />
@@ -539,6 +548,7 @@ function onZoomRoot() {
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="Document settings"
+          aria-label="Document settings"
           @click="showDocSettings = true"
         >
           <FileText class="w-4 h-4" />
@@ -546,6 +556,7 @@ function onZoomRoot() {
         <button
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="Settings"
+          aria-label="Settings"
           @click="showSettings = true"
         >
           <Settings class="w-4 h-4" />
