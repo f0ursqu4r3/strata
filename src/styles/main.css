@@ -138,3 +138,11 @@ body,
   vertical-align: text-bottom;
   border-radius: 2px;
 }
+
+/* ── Touch device adaptations ── */
+@media (hover: none) {
+  /* Show hover-only action buttons on touch devices */
+  .touch-show {
+    opacity: 1 !important;
+  }
+}

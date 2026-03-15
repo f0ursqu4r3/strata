@@ -88,8 +88,8 @@ const {
               ? 'bg-(--accent-100) text-(--accent-600)'
               : 'text-(--text-faint) hover:bg-(--bg-hover) hover:text-(--text-muted)'
           "
-          :title="s.final ? 'Marks items as complete' : 'Click to mark as completion status'"
-          :aria-label="s.final ? 'Marks items as complete' : 'Mark as completion status'"
+          :title="s.final ? 'Completion status (click to unset)' : 'Mark as completion status'"
+          :aria-label="s.final ? 'Completion status (click to unset)' : 'Mark as completion status'"
           :aria-pressed="s.final"
           @click="onToggleFinal(s.id, s.final)"
         >

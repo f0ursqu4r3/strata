@@ -69,7 +69,7 @@ function formatDate(ts: number | undefined): string {
               </div>
             </div>
             <button type="button"
-              class="shrink-0 p-1.5 rounded hover:bg-(--accent-100) text-(--text-faint) hover:text-(--accent-600) cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+              class="shrink-0 p-1.5 rounded hover:bg-(--accent-100) text-(--text-faint) hover:text-(--accent-600) cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity touch-show"
               title="Restore"
               aria-label="Restore"
               @click="onRestore(node.id)"

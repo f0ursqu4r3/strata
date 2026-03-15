@@ -486,7 +486,7 @@ function onZoomRoot() {
           >
             <Calendar class="w-3 h-3" />
             <span v-if="store.filters.dueDate !== 'all'">{{
-              { overdue: 'Overdue', today: 'Today', week: 'Week' }[store.filters.dueDate]
+              { overdue: 'Overdue', today: 'Today', week: 'This Week' }[store.filters.dueDate]
             }}</span>
             <span v-else>Due</span>
             <button type="button"
@@ -547,7 +547,7 @@ function onZoomRoot() {
         </button>
         <button type="button"
           class="p-1.5 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer hidden sm:block"
-          title="Keyboard shortcuts (?)"
+          title="Keyboard shortcuts"
           aria-label="Keyboard shortcuts"
           @click="showShortcuts = true"
         >
@@ -645,7 +645,7 @@ function onZoomRoot() {
   </div>
 
   <div v-else class="flex items-center justify-center h-full text-(--text-faint) text-sm">
-    Loading...
+    Loading workspace...
   </div>
 
   <!-- Shortcuts modal -->

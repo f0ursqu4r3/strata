@@ -197,8 +197,14 @@ async function onDelete(docId: string, e?: MouseEvent) {
 </script>
 
 <template>
+  <!-- Desktop: slide sidebar with margin; Mobile: overlay with backdrop -->
   <div
-    class="shrink-0 overflow-hidden"
+    v-if="open"
+    class="fixed inset-0 z-30 bg-(--bg-overlay) sm:hidden"
+    @click="emit('close')"
+  />
+  <div
+    class="shrink-0 overflow-hidden sm:relative fixed z-40 sm:z-auto inset-y-0 left-0"
     :style="{
       width: '14rem',
       marginLeft: open ? '0' : '-14rem',

@@ -305,7 +305,7 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
                     !node.tags?.length &&
                     editingTagsCardId !== node.id
                   "
-                  class="flex gap-1 mt-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                  class="flex gap-1 mt-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity touch-show"
                 >
                   <button type="button"
                     class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
@@ -330,7 +330,7 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
                     (node.dueDate && !node.tags?.length && settings.showBoardTags) ||
                     (!node.dueDate && node.tags?.length)
                   "
-                  class="flex gap-1 mt-1 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                  class="flex gap-1 mt-1 opacity-0 group-hover/card:opacity-100 transition-opacity touch-show"
                 >
                   <button type="button"
                     v-if="!node.dueDate && editingDateCardId !== node.id"
@@ -369,7 +369,7 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
               "
               class="text-center text-(--text-faint) text-xs py-6"
             >
-              No items
+              No items yet
             </div>
           </div>
         </div>

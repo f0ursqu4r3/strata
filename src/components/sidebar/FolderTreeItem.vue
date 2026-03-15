@@ -71,9 +71,9 @@ function toggleExpand() {
         class="w-3.5 h-3.5 shrink-0 text-(--text-faint)"
       />
       <span class="flex-1 truncate">{{ node.name }}</span>
-      <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 pr-2">
+      <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 pr-2 touch-show">
         <button type="button"
-          class="p-0.5 rounded hover:bg-(--bg-active) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
+          class="p-1 rounded hover:bg-(--bg-active) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New document"
           aria-label="New document"
           @click.stop="emit('create-doc', node.path)"
@@ -81,9 +81,9 @@ function toggleExpand() {
           <Plus class="w-3 h-3" />
         </button>
         <button type="button"
-          class="p-0.5 rounded hover:bg-(--bg-active) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
-          title="New sub-folder"
-          aria-label="New sub-folder"
+          class="p-1 rounded hover:bg-(--bg-active) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
+          title="New folder"
+          aria-label="New folder"
           @click.stop="emit('create-folder', node.path)"
         >
           <FolderPlus class="w-3 h-3" />
@@ -163,7 +163,7 @@ function toggleExpand() {
       <!-- Delete button -->
       <button type="button"
         v-if="renamingId !== node.docId"
-        class="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:text-(--color-danger) text-(--text-faint) cursor-pointer pr-2"
+        class="p-1 rounded opacity-0 group-hover:opacity-100 hover:text-(--color-danger) text-(--text-faint) cursor-pointer pr-2 touch-show"
         title="Delete document"
         aria-label="Delete document"
         @click.stop="emit('delete-doc', node.docId!, $event)"

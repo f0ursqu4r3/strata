@@ -83,7 +83,7 @@ const { query, selectedIdx, inputRef, resultsRef, filteredCommands, onExecute } 
         class="px-4 py-2 border-t border-(--border-primary) text-[11px] text-(--text-faint) flex gap-3"
       >
         <span><UiKbd size="xs">↑↓</UiKbd> navigate</span>
-        <span><UiKbd size="xs">Enter</UiKbd> run</span>
+        <span><UiKbd size="xs">Enter</UiKbd> select</span>
         <span><UiKbd size="xs">Esc</UiKbd> close</span>
       </div>
     </div>

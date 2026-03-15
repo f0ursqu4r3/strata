@@ -63,7 +63,7 @@ const {
       <div ref="resultsRef" class="overflow-y-auto flex-1">
         <!-- Empty state -->
         <div v-if="!hasQuery" class="px-4 py-8 text-center text-sm text-(--text-faint)">
-          Search current document and all documents
+          Type to search across all documents
         </div>
 
         <!-- No results -->

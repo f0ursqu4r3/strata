@@ -27,7 +27,7 @@ function opLabel(op: Op): string {
     updateText: 'Text edited',
     move: 'Moved',
     setStatus: 'Status changed',
-    toggleCollapsed: 'Toggled collapse',
+    toggleCollapsed: 'Collapse toggled',
     tombstone: 'Deleted',
     addTag: 'Tag added',
     removeTag: 'Tag removed',

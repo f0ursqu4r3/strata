@@ -159,7 +159,7 @@ function onRowPointerDown(e: PointerEvent) {
         isSearchMatch && !isSelected && !isEditing,
       'bg-[color-mix(in_srgb,var(--status-done)_12%,transparent)]': statusFlash,
     }"
-    :style="{ paddingLeft: depth * OUTLINE_DEPTH_INDENT + OUTLINE_BASE_PADDING + 'px', transition: 'background-color 300ms ease-out' }"
+    :style="{ paddingLeft: Math.min(depth * OUTLINE_DEPTH_INDENT, 144) + OUTLINE_BASE_PADDING + 'px', transition: 'background-color 300ms ease-out' }"
     role="treeitem"
     :aria-selected="isSelected"
     :aria-expanded="hasChildren ? !node.collapsed : undefined"
@@ -353,7 +353,7 @@ function onRowPointerDown(e: PointerEvent) {
 
     <!-- Hover action icons -->
     <div
-      class="flex items-center gap-0.5 shrink-0 self-start pt-1.5 pr-2 opacity-0 group-hover:opacity-100 transition-opacity"
+      class="flex items-center gap-0.5 shrink-0 self-start pt-1.5 pr-2 opacity-0 group-hover:opacity-100 transition-opacity touch-show"
       @mousedown.prevent
       @click.stop
     >

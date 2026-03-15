@@ -92,7 +92,7 @@ const settings = useSettingsStore()
           <div>
             <span class="text-sm text-(--text-secondary)">Vim keyboard mode</span>
             <p class="text-[11px] text-(--text-faint) mt-0.5">
-              j/k navigate, i edit, dd delete, o new sibling
+              j/k to navigate, i to edit, dd to delete, o to add sibling
             </p>
           </div>
           <UiToggle
