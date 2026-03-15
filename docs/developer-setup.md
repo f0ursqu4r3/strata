@@ -7,18 +7,19 @@
 
 ## Tech Stack
 
-| Tool | Version |
-|---|---|
-| Vue | 3.5 |
-| TypeScript | 5.9 |
-| Vite | 7.3 |
-| Tailwind CSS | 4.1 |
-| Pinia | 3.0 |
-| Dexie (IndexedDB) | 4.3 |
-| Vitest | 4.0 |
-| Lucide Icons | 0.563 |
-| markdown-it | 14.1 |
-| Splitpanes | 4.0 |
+| Tool              | Version |
+| ----------------- | ------- |
+| Vue               | 3.5     |
+| TypeScript        | 5.9     |
+| Vite              | 7.3     |
+| Tailwind CSS      | 4.1     |
+| Pinia             | 3.0     |
+| Dexie (IndexedDB) | 4.3     |
+| Vitest            | 4.0     |
+| Lucide Icons      | 0.563   |
+| markdown-it       | 14.1    |
+| Splitpanes        | 4.0     |
+| Tauri             | 2.10    |
 
 ## Getting Started
 
@@ -28,30 +29,45 @@ bun install
 
 # Start dev server (http://localhost:5173)
 bun run dev
+
+# Start Tauri desktop app
+bun run tauri:dev
 ```
 
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `bun run dev` | Start development server |
-| `bun run build` | Type-check and production build |
-| `bun run build-only` | Production build (skip type-check) |
-| `bun run preview` | Preview production build |
-| `bun run type-check` | Run `vue-tsc --build` |
-| `bun run test:unit` | Run unit tests (Vitest) |
-| `bun run lint` | Run all linters (oxlint + eslint) |
-| `bun run format` | Format source with oxfmt |
+| Command               | Description                        |
+| --------------------- | ---------------------------------- |
+| `bun run dev`         | Start development server           |
+| `bun run build`       | Type-check and production build    |
+| `bun run build-only`  | Production build (skip type-check) |
+| `bun run build:web`   | Web build with base path           |
+| `bun run preview`     | Preview production build           |
+| `bun run type-check`  | Run `vue-tsc --build`              |
+| `bun run test:unit`   | Run unit tests (Vitest)            |
+| `bun run lint`        | Run all linters (oxlint + eslint)  |
+| `bun run format`      | Format source with oxfmt           |
+| `bun run tauri:dev`   | Start Tauri desktop dev            |
+| `bun run tauri:build` | Build Tauri desktop app            |
 
 All scripts work with `npm run` as well.
 
 ## Project Structure
 
-```
+```text
 src/
 ├── __tests__/              # Unit tests (Vitest + jsdom)
+│   ├── due-date.spec.ts
+│   ├── export-formats.spec.ts
+│   ├── inbox.spec.ts
+│   ├── inline-markdown.spec.ts
+│   ├── markdown-parse.spec.ts
+│   ├── markdown-serialize.spec.ts
 │   ├── ops.spec.ts
-│   └── rank.spec.ts
+│   ├── rank.spec.ts
+│   ├── search-index.spec.ts
+│   ├── shortcuts.spec.ts
+│   └── view-state.spec.ts
 ├── components/
 │   ├── board/              # Kanban board
 │   │   ├── KanbanBoard.vue
@@ -73,14 +89,17 @@ src/
 │   │   ├── ShortcutEditor.vue
 │   │   └── StatusEditor.vue
 │   ├── shared/             # Reusable components
+│   │   ├── BaseContextMenu.vue
 │   │   ├── ContextMenu.vue
 │   │   ├── TagPicker.vue
 │   │   └── DatePicker.vue
 │   ├── sidebar/            # Document browser
 │   │   ├── DocumentSidebar.vue
-│   │   └── DocumentContextMenu.vue
+│   │   ├── DocumentContextMenu.vue
+│   │   ├── FolderContextMenu.vue
+│   │   └── FolderTreeItem.vue
 │   └── ui/                 # Generic UI primitives
-│       ├── UiButton.vue, UiToggle.vue, UiModal.vue, ...
+│       ├── UiButton.vue, UiIconButton.vue, UiToggle.vue, UiModal.vue, ...
 │       └── index.ts
 ├── composables/
 │   ├── board/              # Board-specific logic
@@ -100,38 +119,61 @@ src/
 │   │   └── useStatusCrud.ts
 │   ├── sidebar/
 │   │   └── useDocumentRename.ts
+│   ├── useAppInit.ts       # App initialization
 │   ├── useClickOutside.ts
+│   ├── useDropdownPosition.ts
 │   ├── useEscapeKey.ts
-│   └── useMenuPosition.ts  # Viewport-aware context menu positioning
+│   ├── useGlobalKeyboard.ts  # Global keyboard handler (Cmd+W, Cmd+N, etc.)
+│   ├── useMenuPosition.ts    # Viewport-aware context menu positioning
+│   ├── usePickerClickOutside.ts
+│   └── useReducedMotion.ts
 ├── data/
 │   └── theme-registry.ts   # Theme definitions (11 themes)
 ├── lib/
-│   ├── ops.ts              # Op-log: create, apply, rebuild
-│   ├── rank.ts             # LexoRank-style ordering
-│   ├── shortcuts.ts        # Keyboard shortcut definitions
-│   ├── search-index.ts     # Cross-document search index
-│   ├── due-date.ts         # Due date helpers
-│   ├── inline-markdown.ts  # Markdown rendering
+│   ├── constants.ts         # App-wide constants
+│   ├── doc-export.ts        # Document export helpers
+│   ├── doc-registry.ts      # Document registry helpers
+│   ├── due-date.ts          # Due date helpers
 │   ├── export-formats.ts   # Export to MD/OPML/TXT
-│   ├── import-formats.ts   # Import from MD/OPML/TXT/JSON
-│   ├── markdown-serialize.ts # .md file read/write with frontmatter
-│   ├── tag-colors.ts       # Per-tag color presets and helpers
-│   ├── text-utils.ts       # Title/body text helpers
-│   ├── status-icons.ts     # Status icon resolver
-│   ├── doc-registry.ts     # Document registry helpers
-│   ├── platform.ts         # Platform detection (Tauri/web/FS)
+│   ├── folder-tree.ts      # Folder tree for sidebar
 │   ├── fs.ts               # Unified filesystem adapter
-│   ├── tauri-fs.ts         # Tauri filesystem operations
-│   ├── web-fs.ts           # File System Access API adapter
 │   ├── idb.ts              # IndexedDB persistence (Dexie)
+│   ├── import-formats.ts   # Import from MD/OPML/TXT
+│   ├── inbox.ts            # Scratch Pad (quick capture) utilities
+│   ├── inline-markdown.ts  # Markdown rendering
+│   ├── markdown-parse.ts   # Parse .md files into nodes
+│   ├── markdown-serialize.ts # Serialize nodes to .md with frontmatter
 │   ├── menu-handler.ts     # Tauri native menu handler
-│   └── migrate-to-files.ts # IDB → filesystem migration
+│   ├── migrate-to-files.ts # IDB → filesystem migration
+│   ├── ops.ts              # Op-log: create, apply, rebuild
+│   ├── platform.ts         # Platform detection (Tauri/web/FS)
+│   ├── rank.ts             # LexoRank-style ordering
+│   ├── reconcile.ts        # External file change reconciliation
+│   ├── search-index.ts     # Cross-document search index
+│   ├── shortcuts.ts        # Keyboard shortcut definitions
+│   ├── status-icons.ts     # Status icon resolver
+│   ├── tag-colors.ts       # Per-tag color presets and helpers
+│   ├── tauri-fs.ts         # Tauri filesystem operations
+│   ├── text-utils.ts       # Title/body text helpers
+│   ├── tree-utils.ts       # Tree traversal utilities
+│   ├── undo-ops.ts         # Undo/redo operation helpers
+│   ├── view-state.ts       # Per-document view state (collapsed, zoom)
+│   └── web-fs.ts           # File System Access API adapter
 ├── stores/
 │   ├── doc.ts              # Main document store (nodes, ops, undo)
+│   ├── doc-nav.ts          # Document navigation state
+│   ├── doc-sync.ts         # Document synchronization
+│   ├── doc-view.ts         # View state management
 │   ├── documents.ts        # Multi-document management
 │   └── settings.ts         # User preferences (localStorage)
+├── styles/
+│   ├── main.css            # Global styles
+│   ├── themes.css          # Theme CSS variables
+│   └── transitions.css     # FLIP animations and transitions
 ├── types/
 │   └── index.ts            # TypeScript interfaces
+├── capture.ts              # Quick capture window entry point (Tauri)
+├── capture.css             # Quick capture window styles
 ├── App.vue                 # Root component
 └── main.ts                 # Entry point
 ```
@@ -151,11 +193,11 @@ Strata uses an **op-log** (event sourcing) architecture:
 
 Strata supports three storage modes:
 
-- **Tauri (desktop)**: Documents are `.md` files on disk with YAML frontmatter. Strata watches the workspace folder for external changes via the `notify` crate.
+- **Tauri (desktop)**: Documents are `.md` files on disk with YAML frontmatter. Strata watches the workspace folder for external changes via the `notify` crate. Supports single-file mode (open one `.md` file directly) and folder mode (open a workspace directory).
 - **Web FS (Chromium)**: Uses the File System Access API to read/write `.md` files in a user-selected folder. Same file format as Tauri.
 - **Web IDB (fallback)**: Each document is stored in its own **IndexedDB** database via Dexie. Three tables per database: `ops` (operation log), `meta` (snapshots, custom statuses, tag colors), `nodes` (latest state).
 
-In all modes, user settings and the document list are stored in **localStorage**. A cross-document search index is also maintained in localStorage.
+In all modes, user settings and the document list are stored in **localStorage**. A cross-document search index is also maintained in localStorage. Per-document view state (collapsed nodes, zoom level) is stored in localStorage via `view-state.ts`, not in the document files.
 
 ### Reactivity
 
@@ -166,6 +208,14 @@ In all modes, user settings and the document list are stored in **localStorage**
 ### Ordering
 
 Sibling order uses a **LexoRank-lite** string scheme (`rankBefore`, `rankBetween`, `rankAfter`). This allows inserting between any two items without renumbering.
+
+### Window Management (Tauri)
+
+The desktop app supports multi-window operation:
+
+- **New Window** opens a separate window to the same workspace.
+- **Scratch Pad** (Cmd+Shift+S) opens a dedicated quick-capture window backed by IndexedDB, even in filesystem mode.
+- **Quick Capture** (Ctrl+Shift+Space) opens a minimal capture overlay for rapid item entry with status selection.
 
 ## Configuration
 
@@ -202,7 +252,7 @@ bun run test:unit
 bunx vitest
 ```
 
-Current test coverage: op-log operations and ranking utilities.
+Test coverage includes: op-log operations, ranking utilities, due-date helpers, export formats, inline markdown rendering, markdown parse/serialize round-tripping, search indexing, keyboard shortcuts, view state persistence, and Scratch Pad (inbox) utilities.
 
 ## Building
 
@@ -214,3 +264,9 @@ bun run build
 ```
 
 The build produces a static site (single `index.html` + JS/CSS bundles). No server required — open `dist/index.html` directly or serve with any static file server.
+
+For the Tauri desktop app:
+
+```bash
+bun run tauri:build
+```

@@ -72,6 +72,8 @@ Markdown syntax is shown as-is while editing, and rendered when you're not.
 
 - **Double-click** a bullet to zoom into that node's subtree.
 - **Single-click** a leaf bullet to zoom in.
+- **Alt+Right** to zoom into the selected node.
+- **Alt+Left** to zoom out to the parent level.
 - Right-click → **Zoom in** from the context menu.
 - When zoomed, a breadcrumb bar appears below the toolbar. Click any breadcrumb to zoom to that level, or click **Root** to zoom all the way out.
 - Exports respect the current zoom level.
@@ -229,6 +231,12 @@ Type to search. Results update as you type (200ms debounce). Matching text is hi
 
 ---
 
+## Command Palette
+
+Press **Ctrl+K** (or **Cmd+K** on Mac) to open the command palette. This gives you quick access to actions like switching views, toggling settings, managing documents, and more.
+
+---
+
 ## Documents
 
 ### Document Sidebar
@@ -246,6 +254,24 @@ When you delete the active document, Strata switches to the most recently modifi
 ### Workspace
 
 In filesystem mode (Tauri desktop or Chrome File System Access), the workspace path is shown at the bottom of the document sidebar. Click **Change** to switch to a different folder.
+
+### Single-File Mode (Tauri)
+
+In the Tauri desktop app, you can open a single `.md` file directly instead of a workspace folder. This is useful for quickly editing one file without loading an entire workspace.
+
+---
+
+## Scratch Pad
+
+The Scratch Pad is a special document for quick notes and captures. Access it from the **File** menu or press **Cmd+Shift+S**.
+
+- The Scratch Pad opens in its own window.
+- It is stored in IndexedDB, even in filesystem mode, so it persists across workspaces.
+- Use it as a universal inbox for quick thoughts before organizing them into proper documents.
+
+### Quick Capture (Tauri)
+
+Press **Ctrl+Shift+Space** to open the quick capture overlay — a minimal window for rapid item entry. Type your item, optionally set a status, and press **Enter** to add it to the Scratch Pad. Press **Tab** to expand the capture window for more space, or **Escape** to dismiss.
 
 ---
 
@@ -280,7 +306,13 @@ All exports respect the current zoom level — if you're zoomed into a subtree, 
 
 ### Import
 
-Click the **Import** button (upload icon) to import a JSON file previously exported from Strata.
+Click the **Import** button (upload icon) to import from the following formats:
+
+| Format         | Description                                    |
+| -------------- | ---------------------------------------------- |
+| **Markdown**   | Bullet lists with indentation-based hierarchy. |
+| **OPML**       | XML outline format from other outliner apps.   |
+| **Plain Text** | Indentation-based hierarchy (tabs or spaces).  |
 
 ---
 
@@ -288,24 +320,36 @@ Click the **Import** button (upload icon) to import a JSON file previously expor
 
 ### Default Shortcuts
 
-| Shortcut         | Action                 | Context                      |
-| ---------------- | ---------------------- | ---------------------------- |
-| **↑**            | Move selection up      | Outline navigation           |
-| **↓**            | Move selection down    | Outline navigation           |
-| **Enter**        | Start editing          | Outline navigation           |
-| **Space**        | Toggle collapse/expand | Outline navigation           |
-| **Tab**          | Indent node            | Outline navigation / Editing |
-| **Shift+Tab**    | Outdent node           | Outline navigation / Editing |
-| **Delete**       | Delete node            | Outline navigation           |
-| **Escape**       | Stop editing           | Editing                      |
-| **Shift+Enter**  | New sibling below      | Editing                      |
-| **Ctrl+Z**       | Undo                   | Global                       |
-| **Ctrl+Shift+Z** | Redo                   | Global                       |
-| **Ctrl+Shift+F** | Search                 | Global                       |
-| **Ctrl+1–9**     | Set status             | Global                       |
-| **?**            | Keyboard shortcuts     | Global                       |
+| Shortcut             | Action                 | Context                      |
+| -------------------- | ---------------------- | ---------------------------- |
+| **↑**                | Move selection up      | Outline navigation           |
+| **↓**                | Move selection down    | Outline navigation           |
+| **Enter**            | Start editing          | Outline navigation           |
+| **Space**            | Toggle collapse/expand | Outline navigation           |
+| **Tab**              | Indent node            | Outline navigation / Editing |
+| **Shift+Tab**        | Outdent node           | Outline navigation / Editing |
+| **Delete**           | Delete node            | Outline navigation           |
+| **Escape**           | Stop editing           | Editing                      |
+| **Shift+Enter**      | New sibling below      | Editing                      |
+| **Alt+Right**        | Zoom into node         | Outline navigation           |
+| **Alt+Left**         | Zoom out to parent     | Outline navigation           |
+| **Ctrl+Z**           | Undo                   | Global                       |
+| **Ctrl+Shift+Z**     | Redo                   | Global                       |
+| **Ctrl+Shift+F**     | Search all documents   | Global                       |
+| **Ctrl+K**           | Command palette        | Global                       |
+| **Ctrl+Shift+Space** | Quick Capture          | Global                       |
+| **Ctrl+1–9**         | Set status             | Global                       |
+| **?**                | Keyboard shortcuts     | Global                       |
 
 On Mac, **Ctrl** maps to **Cmd** automatically.
+
+Additional Tauri desktop shortcuts:
+
+| Shortcut        | Action                                           |
+| --------------- | ------------------------------------------------ |
+| **Cmd+W**       | Close document / Close window (single-file mode) |
+| **Cmd+Shift+W** | Close window                                     |
+| **Cmd+Shift+S** | Open Scratch Pad                                 |
 
 ### Customizing Shortcuts
 
@@ -378,3 +422,4 @@ All tags used in the current document are listed here. Click any tag to open a c
 - **Zoom for focus.** Double-click a bullet to zoom into a subtree. Great for focusing on one part of a large outline.
 - **Keyboard-first.** Almost everything can be done without a mouse — navigation, editing, status changes, search.
 - **Command palette.** Press **Ctrl+K** (or **Cmd+K** on Mac) to quickly access any action.
+- **Scratch Pad for quick capture.** Use Cmd+Shift+S or Ctrl+Shift+Space to quickly jot down ideas without interrupting your workflow.

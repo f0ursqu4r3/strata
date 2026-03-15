@@ -147,22 +147,12 @@ Sets a due date in ISO 8601 format.
 - [ ] Submit report  @due(2025-03-15)
 ```
 
-### `!collapsed`
-
-Marks the node as collapsed in the outline view. No arguments.
-
-```markdown
-- [ ] Archived tasks  !collapsed
-  - [ ] Old task 1
-  - [x] Old task 2
-```
-
 ## Marker order
 
 Markers can appear in any order. The conventional order is:
 
 ```text
-- [ ] Text  !status(Label)  #tag1 #tag2  @due(YYYY-MM-DD)  !collapsed
+- [ ] Text  !status(Label)  #tag1 #tag2  @due(YYYY-MM-DD)
 ```
 
 ## Complete example
@@ -182,7 +172,7 @@ tag-colors:
   - [ ] Write migration guide  !status(In Progress)  @due(2025-02-14)
   - [ ] Update changelog
   - [ ] Tag release on GitHub  !status(Blocked)
-- [ ] Backlog  !collapsed
+- [ ] Backlog
   - [ ] Dark mode improvements  #ui
   - [ ] Search performance  #perf
 ```
