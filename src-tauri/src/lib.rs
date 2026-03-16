@@ -82,6 +82,26 @@ fn list_workspace_files(workspace: String) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
+fn list_draft_files(workspace: String) -> Result<Vec<String>, String> {
+    let drafts_dir = PathBuf::from(&workspace).join(".strata").join("drafts");
+    if !drafts_dir.exists() {
+        return Ok(Vec::new());
+    }
+    let mut files = Vec::new();
+    let entries = fs::read_dir(&drafts_dir).map_err(|e| e.to_string())?;
+    for entry in entries {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name.ends_with(".md") && is_strata_file(&path) {
+            files.push(format!(".strata/drafts/{}", name));
+        }
+    }
+    files.sort();
+    Ok(files)
+}
+
+#[tauri::command]
 fn read_file(path: String) -> Result<String, String> {
     fs::read_to_string(&path).map_err(|e| e.to_string())
 }
@@ -494,6 +514,8 @@ fn build_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     file_builder = file_builder
         .separator()
+        .item(&MenuItem::with_id(handle, "save-document", "Save", true, Some("CmdOrCtrl+S"))?)
+        .separator()
         .item(&MenuItem::with_id(handle, "scratch-pad", "Scratch Pad", true, Some("CmdOrCtrl+Shift+S"))?)
         .separator()
         .item(&MenuItem::with_id(handle, "close-document", "Close Document", true, Some("CmdOrCtrl+W"))?)
@@ -611,6 +633,7 @@ pub fn run() {
             open_window,
             set_capture_shortcut,
             list_workspace_files,
+            list_draft_files,
             list_subdirs,
             read_file,
             write_file,

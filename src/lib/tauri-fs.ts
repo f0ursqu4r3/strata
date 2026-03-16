@@ -36,6 +36,10 @@ export async function gitBranchName(workspace: string): Promise<string> {
   return invoke('git_branch_name', { workspace })
 }
 
+export async function listDraftFiles(workspace: string): Promise<string[]> {
+  return invoke('list_draft_files', { workspace })
+}
+
 export async function revealPath(path: string): Promise<void> {
   return invoke('reveal_path', { path })
 }

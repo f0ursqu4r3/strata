@@ -157,6 +157,37 @@ const activeDocName = computed(() => {
   return slash >= 0 ? name.substring(slash + 1) : name
 })
 
+const isActiveDraft = computed(() => docsStore.isDraft(docsStore.activeId))
+
+const sidebarRef = ref<InstanceType<typeof DocumentSidebar> | null>(null)
+
+async function onNewDocument() {
+  // Open sidebar so the user can name the draft
+  if (!settings.sidebarOpen) settings.setSidebarOpen(true)
+  store.flushTextDebounce()
+  const id = docsStore.createDraft()
+  await docsStore.switchDocument(id)
+  await store.loadDocument(id)
+  await nextTick()
+  sidebarRef.value?.startNewDocRename(id, '')
+}
+
+function onSaveDraft() {
+  const activeId = docsStore.activeId
+  if (!docsStore.isDraft(activeId)) return
+  const doc = docsStore.documents.find((d) => d.id === activeId)
+  const defaultName = doc?.name || 'Untitled'
+  const name = window.prompt('Save document as:', defaultName)
+  if (!name || !name.trim()) return
+  if (docsStore.nameConflicts(name.trim(), activeId)) {
+    window.alert(`A document named "${name.trim()}" already exists.`)
+    return
+  }
+  docsStore.saveDraft(activeId, name.trim()).then((newId) => {
+    store.loadDocument(newId)
+  })
+}
+
 useAppInit({
   showShortcuts,
   showSettings,
@@ -166,6 +197,8 @@ useAppInit({
   onGlobalClick,
   openWorkspacePicker,
   openFilePicker,
+  onSaveDraft,
+  onNewDocument,
 })
 
 useGlobalKeyboard({
@@ -348,9 +381,10 @@ function onZoomRoot() {
             class="text-(--text-faint) text-xs shrink-0"
             >/</span
           >
-          <span v-if="activeDocName" class="text-sm text-(--text-secondary) truncate">{{
+          <span v-if="activeDocName" class="text-sm truncate" :class="isActiveDraft ? 'text-(--text-muted) italic' : 'text-(--text-secondary)'">{{
             activeDocName
           }}</span>
+          <span v-if="isActiveDraft" class="text-[10px] text-(--accent-500) shrink-0 ml-1">draft</span>
         </template>
       </div>
 
@@ -606,6 +640,7 @@ function onZoomRoot() {
       <!-- Document sidebar (hidden in single-file mode) -->
       <DocumentSidebar
         v-if="!isSingleFileMode()"
+        ref="sidebarRef"
         :open="settings.sidebarOpen"
         @close="settings.setSidebarOpen(false)"
       />

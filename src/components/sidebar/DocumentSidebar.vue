@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, provide, watch } from 'vue'
-import { Plus, X, FolderOpen, FolderPlus } from 'lucide-vue-next'
+import { Plus, X, FolderOpen, FolderPlus, FileText, Circle } from 'lucide-vue-next'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocStore } from '@/stores/doc'
 import { useSettingsStore } from '@/stores/settings'
@@ -29,7 +29,9 @@ const {
   renameInputRef,
   renameText,
   renameConflict,
+  isNewDoc,
   startRename,
+  startNewDocRename,
   finishRename,
   onRenameKeydown,
 } = useDocumentRename()
@@ -70,8 +72,12 @@ const expandedFolders = ref<Set<string>>(loadExpanded())
 watch(expandedFolders, (v) => saveExpanded(v))
 provide('expandedFolders', expandedFolders)
 
-// Build the folder tree from documents + folders
-const folderTree = computed(() => buildFolderTree(docsStore.sortedDocuments, docsStore.folders))
+// Separate drafts from saved documents
+const savedDocuments = computed(() => docsStore.sortedDocuments.filter((d) => !docsStore.isDraft(d.id)))
+const draftDocuments = computed(() => docsStore.documents.filter((d) => docsStore.isDraft(d.id)))
+
+// Build the folder tree from saved documents + folders (exclude drafts)
+const folderTree = computed(() => buildFolderTree(savedDocuments.value, docsStore.folders))
 
 // Context menus
 const docCtxMenu = ref<{ docId: string; x: number; y: number } | null>(null)
@@ -80,6 +86,12 @@ const folderCtxMenu = ref<{ folderPath: string; x: number; y: number } | null>(n
 function onDocContext(e: MouseEvent, docId: string) {
   folderCtxMenu.value = null
   docCtxMenu.value = { docId, x: e.clientX, y: e.clientY }
+}
+
+function onSidebarContext(e: MouseEvent) {
+  // Skip if a doc/folder context menu was just opened by a child
+  if (docCtxMenu.value || folderCtxMenu.value) return
+  folderCtxMenu.value = { folderPath: '', x: e.clientX, y: e.clientY }
 }
 
 function onFolderContext(e: MouseEvent, folderPath: string) {
@@ -104,6 +116,34 @@ async function onRevealDoc(docId: string) {
   await revealPath(`${settings.workspacePath}/${docId}`)
 }
 
+async function onSaveDraft(draftId: string) {
+  if (!docsStore.isDraft(draftId)) return
+  const doc = docsStore.documents.find((d) => d.id === draftId)
+  const defaultName = doc?.name || 'Untitled'
+
+  // Use Tauri dialog if available, otherwise browser prompt
+  let name: string | null = null
+  if (isTauri()) {
+    const { ask } = await import('@tauri-apps/plugin-dialog')
+    // Tauri's ask() is yes/no only; use a simple prompt approach
+    name = window.prompt('Save document as:', defaultName)
+  } else {
+    name = window.prompt('Save document as:', defaultName)
+  }
+
+  if (!name || !name.trim()) return
+  const trimmed = name.trim()
+
+  // Check for name conflicts
+  if (docsStore.nameConflicts(trimmed, draftId)) {
+    window.alert(`A document named "${trimmed}" already exists.`)
+    return
+  }
+
+  const newId = await docsStore.saveDraft(draftId, trimmed)
+  await docStore.loadDocument(newId)
+}
+
 async function onRevealFolder(folderPath: string) {
   if (!isTauri() || !settings.workspacePath) return
   const { revealPath } = await import('@/lib/tauri-fs')
@@ -111,43 +151,31 @@ async function onRevealFolder(folderPath: string) {
   await revealPath(fullPath)
 }
 
-async function onCreateNew(folder?: string) {
+async function onCreateNew(_folder?: string) {
   docStore.flushTextDebounce()
-  const name = docsStore.nextUntitledName()
-  const id = docsStore.createDocument(name, folder)
+  const id = docsStore.createDraft()
   await docsStore.switchDocument(id)
   await docStore.loadDocument(id)
-  // Expand the target folder so the new doc is visible
-  if (folder) {
-    const newSet = new Set(expandedFolders.value)
-    newSet.add(folder)
-    expandedFolders.value = newSet
-  }
-  renamingId.value = id
-  renameText.value = name
-  await nextTick()
-  renameInputRef.value[0]?.focus()
-  renameInputRef.value[0]?.select()
+  startNewDocRename(id, '')
 }
 
 async function onCreateFolder(parentPath: string) {
-  const baseName = 'New Folder'
-  let folderName = baseName
-  let i = 2
-  const existing = new Set(docsStore.folders)
-  const fullPath = () => (parentPath ? `${parentPath}/${folderName}` : folderName)
-  while (existing.has(fullPath())) {
-    folderName = `${baseName} ${i}`
-    i++
-  }
-  const newPath = fullPath()
-  await docsStore.createFolder(newPath)
+  // Create a temp folder with a placeholder name
+  const tempName = '_new-folder-' + Date.now()
+  const tempPath = parentPath ? `${parentPath}/${tempName}` : tempName
+  await docsStore.createFolder(tempPath)
   // Expand parent so the new folder is visible
   if (parentPath) {
     const newSet = new Set(expandedFolders.value)
     newSet.add(parentPath)
     expandedFolders.value = newSet
   }
+  // Enter rename mode — reuse the doc rename system with the folder path
+  renamingId.value = tempPath
+  renameText.value = ''
+  isNewDoc.value = true
+  await nextTick()
+  renameInputRef.value[0]?.focus()
 }
 
 async function onSwitchDoc(docId: string) {
@@ -207,6 +235,8 @@ async function onDelete(docId: string, e?: MouseEvent) {
     docStore.clearToEmpty()
   }
 }
+
+defineExpose({ startNewDocRename })
 </script>
 
 <template>
@@ -260,7 +290,45 @@ async function onDelete(docId: string, e?: MouseEvent) {
     </div>
 
     <!-- Document tree -->
-    <div class="flex-1 overflow-y-auto py-1 min-h-0">
+    <div class="flex-1 overflow-y-auto py-1 min-h-0" @contextmenu.prevent="onSidebarContext">
+      <!-- Draft documents -->
+      <template v-if="draftDocuments.length > 0">
+        <div
+          v-for="draft in draftDocuments"
+          :key="draft.id"
+          class="flex items-center gap-2 py-1.5 cursor-pointer text-sm transition-colors group"
+          :class="
+            draft.id === docsStore.activeId
+              ? 'bg-(--bg-active) text-(--text-primary) font-medium'
+              : 'text-(--text-secondary) hover:bg-(--bg-hover)'
+          "
+          :style="{ paddingLeft: '12px' }"
+          @click="onSwitchDoc(draft.id)"
+          @contextmenu.prevent="onDocContext($event, draft.id)"
+        >
+          <FileText class="w-3.5 h-3.5 shrink-0 text-(--text-faint)" />
+          <!-- Rename input for new drafts -->
+          <div v-if="renamingId === draft.id" class="flex-1 min-w-0 relative">
+            <input
+              :ref="(el) => { if (el) renameInputRef = [el as HTMLInputElement] }"
+              :value="renameText"
+              aria-label="Document name"
+              class="w-full bg-transparent border rounded px-1 py-0.5 text-sm text-(--text-primary) outline-none focus:ring-1 border-(--border-secondary) focus:ring-(--accent-400)"
+              placeholder="Document name..."
+              @input="renameText = ($event.target as HTMLInputElement).value"
+              @blur="finishRename"
+              @keydown="onRenameKeydown"
+              @click.stop
+            />
+          </div>
+          <template v-else>
+            <span class="flex-1 truncate italic">{{ draft.name }}</span>
+            <Circle class="w-1.5 h-1.5 shrink-0 text-(--accent-500) fill-(--accent-500) mr-2" />
+          </template>
+        </div>
+        <div class="border-b border-(--border-primary) mx-3 my-1" />
+      </template>
+
       <FolderTreeItem
         v-for="child in folderTree.children"
         :key="child.path"
@@ -323,6 +391,7 @@ async function onDelete(docId: string, e?: MouseEvent) {
       @rename="onCtxRename"
       @delete="onCtxDelete"
       @reveal="onRevealDoc"
+      @save="onSaveDraft"
     />
 
     <!-- Folder context menu -->

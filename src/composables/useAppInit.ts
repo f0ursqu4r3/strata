@@ -19,6 +19,8 @@ export interface AppInitOptions {
   onGlobalClick: (e: MouseEvent) => void
   openWorkspacePicker: () => Promise<void>
   openFilePicker: () => Promise<void>
+  onSaveDraft: () => void
+  onNewDocument: () => void
 }
 
 export function useAppInit(options: AppInitOptions) {
@@ -35,6 +37,8 @@ export function useAppInit(options: AppInitOptions) {
     onGlobalClick,
     openWorkspacePicker,
     openFilePicker,
+    onSaveDraft,
+    onNewDocument,
   } = options
 
   onMounted(async () => {
@@ -55,6 +59,8 @@ export function useAppInit(options: AppInitOptions) {
         showSettings,
         onOpenWorkspace: openWorkspacePicker,
         onOpenFile: openFilePicker,
+        onSaveDraft,
+        onNewDocument,
       })
       return
     }
@@ -68,6 +74,8 @@ export function useAppInit(options: AppInitOptions) {
         showSettings,
         onOpenWorkspace: openWorkspacePicker,
         onOpenFile: openFilePicker,
+        onSaveDraft,
+        onNewDocument,
       })
       return
     }
@@ -98,6 +106,8 @@ export function useAppInit(options: AppInitOptions) {
           showSettings,
           onOpenWorkspace: openWorkspacePicker,
           onOpenFile: openFilePicker,
+          onSaveDraft,
+          onNewDocument,
         })
         const fileName = settings.singleFilePath.includes('/')
           ? settings.singleFilePath.substring(settings.singleFilePath.lastIndexOf('/') + 1)
@@ -186,6 +196,8 @@ export function useAppInit(options: AppInitOptions) {
         showSettings,
         onOpenWorkspace: openWorkspacePicker,
         onOpenFile: openFilePicker,
+        onSaveDraft,
+        onNewDocument,
       })
 
       if (settings.workspacePath) {

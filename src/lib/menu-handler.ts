@@ -6,6 +6,8 @@ export interface MenuHandlerRefs {
   showSettings: Ref<boolean>
   onOpenWorkspace: () => void
   onOpenFile: () => void
+  onSaveDraft: () => void
+  onNewDocument: () => void
 }
 
 export async function setupMenuHandler(refs: MenuHandlerRefs) {
@@ -21,8 +23,13 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
 
     switch (action) {
       case 'new-document': {
-        const id = docs.createDocument('Untitled')
-        docs.switchDocument(id).then(() => store.loadDocument(id))
+        refs.onNewDocument()
+        break
+      }
+      case 'save-document': {
+        if (docs.isDraft(docs.activeId)) {
+          refs.onSaveDraft()
+        }
         break
       }
       case 'new-window': {

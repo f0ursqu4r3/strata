@@ -141,13 +141,32 @@ export const useDocumentsStore = defineStore('documents', () => {
       files = []
     }
 
-    documents.value = files.map((relPath) => ({
-      id: relPath,
-      name: relPath.replace(/\.md$/, ''),
-      createdAt: 0,
-      lastModified: 0,
-    }))
-    activeId.value = files[0] ?? ''
+    // Also load draft files from .strata/drafts/
+    let draftFiles: string[] = []
+    if (isTauri()) {
+      try {
+        const { listDraftFiles } = await import('@/lib/tauri-fs')
+        draftFiles = await listDraftFiles(workspace)
+      } catch {
+        // .strata/drafts/ doesn't exist yet — that's fine
+      }
+    }
+
+    documents.value = [
+      ...files.map((relPath) => ({
+        id: relPath,
+        name: relPath.replace(/\.md$/, ''),
+        createdAt: 0,
+        lastModified: 0,
+      })),
+      ...draftFiles.map((relPath) => ({
+        id: relPath,
+        name: draftDisplayName(relPath),
+        createdAt: Date.now(),
+        lastModified: Date.now(),
+      })),
+    ]
+    activeId.value = files[0] ?? draftFiles[0] ?? ''
 
     await loadFolders()
 
@@ -188,6 +207,137 @@ export const useDocumentsStore = defineStore('documents', () => {
       },
     ]
     return relPath
+  }
+
+  // ── Draft documents ──
+
+  const DRAFT_PREFIX = '.strata/drafts/'
+
+  function isDraft(docId: string): boolean {
+    return docId.startsWith(DRAFT_PREFIX)
+  }
+
+  function draftDisplayName(relPath: string): string {
+    // Show "Untitled" style name, not the UUID filename
+    return relPath.replace(DRAFT_PREFIX, '').replace(/\.md$/, '')
+  }
+
+  function createDraft(): string {
+    const uuid = crypto.randomUUID().slice(0, 8)
+    const name = nextUntitledName()
+    const relPath = `${DRAFT_PREFIX}${uuid}.md`
+
+    // Write the draft file asynchronously
+    import('@/lib/fs').then(({ writeFile, ensureDir }) => {
+      import('@/stores/settings').then(({ useSettingsStore }) => {
+        const settings = useSettingsStore()
+        ensureDir(`${settings.workspacePath}/.strata/drafts`).then(() => {
+          writeFile(`${settings.workspacePath}/${relPath}`, emptyStrataDoc())
+        })
+      })
+    })
+
+    documents.value = [
+      ...documents.value,
+      {
+        id: relPath,
+        name,
+        createdAt: Date.now(),
+        lastModified: Date.now(),
+      },
+    ]
+    return relPath
+  }
+
+  async function saveDraft(draftId: string, name: string, folder?: string): Promise<string> {
+    if (!isDraft(draftId)) return draftId
+
+    const { readFile, writeFile, deleteFile, ensureDir } = await import('@/lib/fs')
+    const { useSettingsStore } = await import('@/stores/settings')
+    const settings = useSettingsStore()
+    const workspace = settings.workspacePath
+
+    // Read existing draft content
+    const content = await readFile(`${workspace}/${draftId}`)
+
+    // Build new path in workspace
+    const newRelPath = folder ? `${folder}/${name}.md` : `${name}.md`
+
+    // Ensure target folder exists
+    if (folder) {
+      await ensureDir(`${workspace}/${folder}`)
+    }
+
+    // Write to new location
+    await writeFile(`${workspace}/${newRelPath}`, content)
+
+    // Delete draft file
+    await deleteFile(`${workspace}/${draftId}`)
+
+    // Update documents list
+    documents.value = documents.value.map((d) =>
+      d.id === draftId
+        ? { ...d, id: newRelPath, name: newRelPath.replace(/\.md$/, '') }
+        : d,
+    )
+
+    // Update active ID if this was the active doc
+    if (activeId.value === draftId) {
+      activeId.value = newRelPath
+    }
+
+    return newRelPath
+  }
+
+  async function discardDraft(draftId: string): Promise<void> {
+    if (!isDraft(draftId)) return
+    await deleteDocument(draftId)
+  }
+
+  async function renameFolder(oldPath: string, newPath: string): Promise<void> {
+    if (!isFileSystemMode()) return
+    const { renameFile, ensureDir } = await import('@/lib/fs')
+    const { useSettingsStore } = await import('@/stores/settings')
+    const settings = useSettingsStore()
+    const workspace = settings.workspacePath
+
+    // Ensure parent of new path exists
+    const parentOfNew = newPath.includes('/') ? newPath.substring(0, newPath.lastIndexOf('/')) : ''
+    if (parentOfNew) {
+      await ensureDir(`${workspace}/${parentOfNew}`)
+    }
+
+    await renameFile(`${workspace}/${oldPath}`, `${workspace}/${newPath}`)
+
+    // Update folders list
+    folders.value = folders.value.map((f) =>
+      f === oldPath ? newPath : f.startsWith(oldPath + '/') ? newPath + f.substring(oldPath.length) : f,
+    )
+    if (!folders.value.includes(newPath)) {
+      folders.value = [...folders.value, newPath]
+    }
+
+    // Update any documents that were inside this folder
+    documents.value = documents.value.map((d) => {
+      if (d.id.startsWith(oldPath + '/')) {
+        const newId = newPath + d.id.substring(oldPath.length)
+        return { ...d, id: newId, name: newId.replace(/\.md$/, '') }
+      }
+      return d
+    })
+  }
+
+  async function deleteFolder(folderPath: string): Promise<void> {
+    if (!isFileSystemMode()) return
+    const { deleteFile } = await import('@/lib/fs')
+    const { useSettingsStore } = await import('@/stores/settings')
+    const settings = useSettingsStore()
+    try {
+      await deleteFile(`${settings.workspacePath}/${folderPath}`)
+    } catch {
+      // Folder might not exist on disk if it was just created
+    }
+    folders.value = folders.value.filter((f) => f !== folderPath && !f.startsWith(folderPath + '/'))
   }
 
   async function loadFolders(): Promise<void> {
@@ -398,6 +548,12 @@ export const useDocumentsStore = defineStore('documents', () => {
     sortedDocuments,
     init,
     createDocument,
+    createDraft,
+    saveDraft,
+    discardDraft,
+    isDraft,
+    renameFolder,
+    deleteFolder,
     switchDocument,
     renameDocument,
     nameConflicts,
