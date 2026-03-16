@@ -12,10 +12,14 @@ import { useDragReorder } from '@/composables/outline/useDragReorder'
 import { useFileDrop } from '@/composables/outline/useFileDrop'
 import OutlineRow from './OutlineRow.vue'
 import ContextMenu from '../shared/ContextMenu.vue'
+import BaseContextMenu from '../shared/BaseContextMenu.vue'
+import { UiMenuItem } from '@/components/ui'
+import { ClipboardPaste } from 'lucide-vue-next'
 import NodeHistory from './NodeHistory.vue'
 
 const emit = defineEmits<{
   openSearch: []
+  moveToDoc: []
 }>()
 
 const store = useDocStore()
@@ -27,6 +31,7 @@ const dropAsChildId = ref<string | null>(null)
 
 // Context menu state
 const ctxMenu = ref<{ nodeId: string; x: number; y: number } | null>(null)
+const emptyCtxMenu = ref<{ x: number; y: number } | null>(null)
 const historyNodeId = ref<string | null>(null)
 
 function onRowContextMenu(nodeId: string, x: number, y: number) {
@@ -35,6 +40,19 @@ function onRowContextMenu(nodeId: string, x: number, y: number) {
 
 function closeContextMenu() {
   ctxMenu.value = null
+}
+
+function onEmptyContextMenu(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (target.closest('[data-row-idx]')) return
+  e.preventDefault()
+  emptyCtxMenu.value = { x: e.clientX, y: e.clientY }
+}
+
+function onEmptyPaste() {
+  store.clearSelection()
+  store.pasteNodes()
+  emptyCtxMenu.value = null
 }
 
 /** If no document exists, auto-create one and load it. Returns true if a doc was created. */
@@ -288,6 +306,7 @@ watch(
     @scroll="onScroll"
     @click="onContainerClick"
     @dblclick="onContainerDblClick"
+    @contextmenu="onEmptyContextMenu"
     @dragover="onFileDragOver"
     @dragleave="onFileDragLeave"
     @drop="onFileDrop"
@@ -359,7 +378,22 @@ watch(
       :y="ctxMenu.y"
       @close="closeContextMenu"
       @history="historyNodeId = $event"
+      @moveToDoc="emit('moveToDoc')"
     />
+
+    <!-- Empty-space context menu -->
+    <BaseContextMenu
+      v-if="emptyCtxMenu"
+      :x="emptyCtxMenu.x"
+      :y="emptyCtxMenu.y"
+      aria-label="Outline actions"
+      min-width="min-w-36"
+      @close="emptyCtxMenu = null"
+    >
+      <UiMenuItem :icon="ClipboardPaste" shortcut="Ctrl+V" :disabled="!store.hasClipboard()" @click="onEmptyPaste">
+        Paste
+      </UiMenuItem>
+    </BaseContextMenu>
 
     <!-- Node history -->
     <NodeHistory v-if="historyNodeId" :node-id="historyNodeId" @close="historyNodeId = null" />

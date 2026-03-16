@@ -34,6 +34,16 @@ import {
   saveTagColors,
 } from '@/lib/idb'
 
+// Module-level clipboard so it survives document switches and HMR
+interface ClipboardNode {
+  text: string
+  status: Status
+  tags: string[]
+  dueDate?: number | null
+  children: ClipboardNode[]
+}
+let clipboard: ClipboardNode[] | null = null
+
 export const useDocStore = defineStore('doc', () => {
   // ── Core state ──
   // Using shallowRef + manual trigger for the Map to avoid deep reactivity overhead
@@ -423,16 +433,6 @@ export const useDocStore = defineStore('doc', () => {
   }
 
   // ── Clipboard (cut/copy/paste) ──
-
-  interface ClipboardNode {
-    text: string
-    status: Status
-    tags: string[]
-    dueDate?: number | null
-    children: ClipboardNode[]
-  }
-
-  let clipboard: ClipboardNode[] | null = null
 
   function serializeSubtree(id: string): ClipboardNode {
     const node = nodes.value.get(id)!

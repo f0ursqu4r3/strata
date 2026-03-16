@@ -34,6 +34,7 @@ const DocumentSettingsPanel = defineAsyncComponent(() => import('@/components/se
 const GlobalSearch = defineAsyncComponent(() => import('@/components/overlays/GlobalSearch.vue'))
 const CommandPalette = defineAsyncComponent(() => import('@/components/overlays/CommandPalette.vue'))
 const ShortcutEditor = defineAsyncComponent(() => import('@/components/settings/ShortcutEditor.vue'))
+const DocumentPicker = defineAsyncComponent(() => import('@/components/overlays/DocumentPicker.vue'))
 import {
   isTauri,
   isSingleFileMode,
@@ -58,6 +59,8 @@ const showDocSettings = ref(false)
 const showGlobalSearch = ref(false)
 const showCommandPalette = ref(false)
 const showShortcutEditor = ref(false)
+const showDocumentPicker = ref(false)
+const moveToDocDeleteSource = ref(false)
 const showTagFilter = ref(false)
 const showDueDateFilter = ref(false)
 const tagFilterQuery = ref('')
@@ -288,6 +291,30 @@ async function onGlobalSearchNavigate(docId: string, nodeId: string) {
     await store.loadDocument(docId)
   }
   store.navigateToNode(nodeId)
+}
+
+function onMoveToDoc() {
+  // Nodes are already copied by the context menu handler — open picker to choose target
+  moveToDocDeleteSource.value = true
+  showDocumentPicker.value = true
+}
+
+async function onDocumentPickerSelect(docId: string) {
+  // Tombstone source nodes before switching
+  if (moveToDocDeleteSource.value) {
+    store.flushTextDebounce()
+    if (store.selection.ids.size > 1) {
+      store.bulkTombstone()
+    } else if (store.selection.current) {
+      store.tombstone(store.selection.current)
+    }
+  }
+  moveToDocDeleteSource.value = false
+
+  // Switch to target document and paste
+  await docsStore.switchDocument(docId)
+  await store.loadDocument(docId)
+  store.pasteNodes()
 }
 
 const modes: { key: ViewMode; label: string }[] = [
@@ -664,7 +691,7 @@ function onZoomRoot() {
         </div>
         <Splitpanes v-else-if="store.viewMode === 'split'" class="h-full">
           <Pane :min-size="20" :size="50">
-            <OutlineView ref="outlineRef" @openSearch="showGlobalSearch = true" />
+            <OutlineView ref="outlineRef" @openSearch="showGlobalSearch = true" @moveToDoc="onMoveToDoc" />
           </Pane>
           <Pane :min-size="20" :size="50">
             <KanbanBoard @open-status-editor="showStatusEditor = true" />
@@ -672,7 +699,7 @@ function onZoomRoot() {
         </Splitpanes>
 
         <div v-else-if="store.viewMode === 'outline'" class="h-full">
-          <OutlineView ref="outlineRef" @openSearch="showGlobalSearch = true" />
+          <OutlineView ref="outlineRef" @openSearch="showGlobalSearch = true" @moveToDoc="onMoveToDoc" />
         </div>
         <div v-else class="h-full">
           <KanbanBoard @open-status-editor="showStatusEditor = true" />
@@ -721,6 +748,15 @@ function onZoomRoot() {
       @openShortcuts="openFromPalette('shortcuts')"
       @openTrash="openFromPalette('trash')"
       @openSearch="openFromPalette('search')"
+    />
+  </Transition>
+
+  <!-- Document picker (move to document) -->
+  <Transition name="overlay-top">
+    <DocumentPicker
+      v-if="showDocumentPicker"
+      @close="showDocumentPicker = false; moveToDocDeleteSource = false"
+      @select="onDocumentPickerSelect"
     />
   </Transition>
 

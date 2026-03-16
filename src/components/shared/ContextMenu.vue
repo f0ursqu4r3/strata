@@ -13,6 +13,7 @@ import {
   CircleDot,
   Calendar,
   Clock,
+  ArrowRightLeft,
 } from 'lucide-vue-next'
 import { useDocStore } from '@/stores/doc'
 import { resolveStatusIcon } from '@/lib/status-icons'
@@ -30,6 +31,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   history: [nodeId: string]
+  moveToDoc: []
 }>()
 
 const store = useDocStore()
@@ -115,6 +117,13 @@ function onCut() {
 function onPaste() {
   store.selectNode(props.nodeId)
   store.pasteNodes()
+  emit('close')
+}
+
+function onMoveToDoc() {
+  store.selectNode(props.nodeId)
+  store.copyNodes()
+  emit('moveToDoc')
   emit('close')
 }
 
@@ -204,6 +213,7 @@ function onHistory() {
     <UiMenuItem :icon="Copy" shortcut="Ctrl+C" @click="onCopy"> Copy </UiMenuItem>
     <UiMenuItem :icon="Scissors" shortcut="Ctrl+X" @click="onCut"> Cut </UiMenuItem>
     <UiMenuItem :icon="ClipboardPaste" shortcut="Ctrl+V" :disabled="!store.hasClipboard()" @click="onPaste"> Paste </UiMenuItem>
+    <UiMenuItem :icon="ArrowRightLeft" @click="onMoveToDoc"> Move to document… </UiMenuItem>
 
     <UiMenuDivider />
 

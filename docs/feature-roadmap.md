@@ -361,3 +361,51 @@ Prioritized feature ideas with implementation details. Items are ordered by valu
 - `src/components/settings/DocumentSettingsPanel.vue` — Archive days setting
 - `src/lib/markdown-serialize.ts` — Persist `archiveDays` in frontmatter
 - `src/lib/markdown-parse.ts` — Parse `archiveDays` from frontmatter
+
+---
+
+## 11. Sidebar Drag-and-Drop (Documents & Folders)
+
+**Priority:** High — currently no way to reorganize documents into folders without the filesystem.
+
+**Behavior:**
+
+- Drag a document onto a folder → moves the `.md` file into that folder
+- Drag a document out of a folder onto the root area → moves to workspace root
+- Drag a document between folders → moves to the target folder
+- Drag a folder onto another folder → nests it as a subfolder
+- Drag a folder to root → moves to workspace root level
+- Drop indicator: highlighted folder border when hovering a valid target, insertion line between items for reordering
+- Invalid drops: folder onto itself, folder onto its own descendant (circular), name conflict in target
+
+**Edge cases:**
+
+- Name conflicts: if target folder already has a file with the same name, show error or auto-rename
+- Circular nesting: prevent dropping a folder into its own subtree
+- Active document: if the dragged doc is currently open, update `activeId` to the new path
+- Documents inside dragged folders: all nested docs need their IDs updated
+- File watcher: use write guard to prevent the app from reacting to its own file moves
+
+**Implementation:**
+
+- **Drag source**: Add `draggable` attribute + `@dragstart` to document rows and folder rows in `FolderTreeItem.vue`
+  - Set `dataTransfer` with `{ type: 'doc' | 'folder', id: string, sourcePath: string }`
+  - Apply drag visual: opacity reduction on source element
+- **Drop targets**: Add `@dragover`, `@dragleave`, `@drop` to folder rows and the root document area
+  - Highlight valid drop targets with `border-(--accent-500)` or `bg-(--highlight-drag-bg)`
+  - Validate: no self-drop, no circular folder nesting, no name conflict
+- **Drop handler**: Call `docsStore.moveDocument(docId, targetFolder)` or `docsStore.moveFolder(folderPath, targetFolder)`
+  - `moveDocument(docId, targetFolder)`: `renameFile(old, new)` where new path is `targetFolder/filename.md`
+  - `moveFolder(folderPath, targetFolder)`: `renameFile(old, new)` for the directory, update all nested doc IDs
+  - Update `documents.value` and `folders.value` arrays
+  - If active doc was moved, update `activeId`
+- **Root drop zone**: The scrollable area outside any folder acts as the root drop target (moves items to workspace root)
+- **Drag state**: Module-level refs for `dragType`, `dragId`, `dragOverTarget` to coordinate visual feedback across the tree
+
+**Files to modify:**
+
+- `src/components/sidebar/FolderTreeItem.vue` — Drag source (draggable) + drop target (dragover/drop) on both file and folder rows
+- `src/components/sidebar/DocumentSidebar.vue` — Root-level drop zone, drag state management
+- `src/stores/documents.ts` — `moveDocument(docId, targetFolder)`, `moveFolder(folderPath, targetFolder)` methods
+- `src/lib/folder-tree.ts` — May need helper for circular nesting detection (`isDescendant(folder, target)`)
+- `src/styles/main.css` — Drag-over highlight styles (reuse existing `--highlight-drag-bg` and `--highlight-drag-border` tokens)
