@@ -62,7 +62,13 @@ export function parseMarkdown(content: string): ParseResult {
 
     // Match bullet items: with checkboxes (- [ ] / - [x]) or plain (- text)
     const cbMatch = rawLine.match(/^(\s*)- \[( |x)\] (.*)$/)
-    const plainMatch = !cbMatch ? rawLine.match(/^(\s*)- (.+)$/) : null
+    let plainMatch = !cbMatch ? rawLine.match(/^(\s*)- (.+)$/) : null
+    // A plain bullet indented under the previous node is body text, not a child node,
+    // so multiline text containing "- " lines round-trips through serializeToMarkdown
+    if (plainMatch && stack.length > 1) {
+      const prevDepth = stack[stack.length - 1]!.depth
+      if (plainMatch[1]!.length >= (prevDepth + 1) * 2) plainMatch = null
+    }
     if (!cbMatch && !plainMatch) {
       // Check if this is a continuation line for the previous node
       if (stack.length > 1) {
