@@ -469,4 +469,36 @@ doc-type: strata
     expect(md2).toContain('- [x] Checked item')
     expect(md2).toContain('- [ ] Item with status  !status(In Progress)')
   })
+
+  it('round-trips body text containing bullet lines', () => {
+    const md = `---
+doc-type: strata
+---
+
+- [ ] Parent
+  - body bullet
+    - nested body bullet
+  - [ ] Child
+    - child body bullet
+- plain top-level item
+`
+    const parsed = parseMarkdown(md)
+    const md2 = serializeToMarkdown({
+      nodes: parsed.nodes,
+      rootId: parsed.rootId,
+      statusConfig: parsed.statusConfig,
+    })
+
+    expect(parsed.nodes.get('n-0')!.text).toBe('Parent\n- body bullet\n- nested body bullet')
+    expect(parsed.nodes.get('n-0-0')!.text).toBe('Child\n- child body bullet')
+    expect(parsed.nodes.get('n-1')!.text).toBe('plain top-level item')
+    expect(parseMarkdown(md2).nodes.size).toBe(parsed.nodes.size)
+    expect(
+      serializeToMarkdown({
+        nodes: parseMarkdown(md2).nodes,
+        rootId: parsed.rootId,
+        statusConfig: parsed.statusConfig,
+      }),
+    ).toBe(md2)
+  })
 })
