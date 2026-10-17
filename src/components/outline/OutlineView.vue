@@ -6,7 +6,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { isFileSystemMode } from '@/lib/platform'
 import { matchesCombo, type ShortcutAction } from '@/lib/shortcuts'
 import { rankAfter, initialRank } from '@/lib/rank'
-import { useVirtualScroll, ROW_HEIGHT } from '@/composables/outline/useVirtualScroll'
+import { useVirtualScroll } from '@/composables/outline/useVirtualScroll'
 import { useVimMode } from '@/composables/outline/useVimMode'
 import { useDragReorder } from '@/composables/outline/useDragReorder'
 import { useFileDrop } from '@/composables/outline/useFileDrop'
@@ -69,16 +69,11 @@ async function ensureDocument(): Promise<boolean> {
 // ── Composables ──
 const visibleRows = computed(() => store.visibleRows)
 
-const { useVirtual, virtualRows, topSpacer, bottomSpacer, onScroll } = useVirtualScroll(
-  visibleRows,
-  containerRef,
-)
+const { useVirtual, virtualRows, topSpacer, bottomSpacer, onScroll, scrollToIndex, vMeasure } =
+  useVirtualScroll(visibleRows, containerRef)
 
-const { dragNodeId, isDragging, dragSubtreeIds, shiftedRowIndices, onRowPointerDown } = useDragReorder(
-  containerRef,
-  dropTargetIdx,
-  dropAsChildId,
-)
+const { dragNodeId, isDragging, dragSubtreeIds, shiftedRowIndices, onRowPointerDown } =
+  useDragReorder(containerRef, dropTargetIdx, dropAsChildId)
 
 const { fileDragOver, onFileDragOver, onFileDragLeave, onFileDrop } = useFileDrop(dragNodeId)
 
@@ -266,24 +261,16 @@ async function onContainerDblClick(e: MouseEvent) {
 }
 
 function scrollSelectedIntoView() {
-  nextTick(() => {
-    if (useVirtual.value) {
-      const idx = store.visibleRows.findIndex((r) => r.node.id === store.selection.current)
-      if (idx >= 0 && containerRef.value) {
-        const rowTop = idx * ROW_HEIGHT
-        const rowBottom = rowTop + ROW_HEIGHT
-        const viewTop = containerRef.value.scrollTop
-        const viewBottom = viewTop + containerRef.value.clientHeight
-        if (rowTop < viewTop) {
-          containerRef.value.scrollTop = rowTop
-        } else if (rowBottom > viewBottom) {
-          containerRef.value.scrollTop = rowBottom - containerRef.value.clientHeight
-        }
-      }
-    } else {
-      const el = containerRef.value?.querySelector('[aria-selected="true"]')
-      el?.scrollIntoView({ block: 'nearest' })
+  nextTick(async () => {
+    const idx = store.visibleRows.findIndex((r) => r.node.id === store.selection.current)
+    if (idx < 0) return
+    const rowEl = () => containerRef.value?.querySelector(`[data-row-idx="${idx}"]`)
+    // Row not rendered (virtualized away): scroll by offset first, then align exactly
+    if (!rowEl() && useVirtual.value) {
+      scrollToIndex(idx)
+      await nextTick()
     }
+    rowEl()?.scrollIntoView({ block: 'nearest' })
   })
 }
 
@@ -298,6 +285,7 @@ watch(
 <template>
   <div
     class="h-full overflow-y-auto outline-none py-2 outline-focus-target relative"
+    :class="{ '[overflow-anchor:none]': useVirtual }"
     ref="containerRef"
     tabindex="0"
     role="tree"
@@ -322,6 +310,7 @@ watch(
             class="h-1 bg-(--accent-500) rounded mx-2 my-px"
           />
           <div
+            v-measure="row.node.id"
             :data-row-idx="row.globalIdx"
             :class="{
               'opacity-30': dragSubtreeIds.has(row.node.id),
@@ -390,7 +379,12 @@ watch(
       min-width="min-w-36"
       @close="emptyCtxMenu = null"
     >
-      <UiMenuItem :icon="ClipboardPaste" shortcut="Ctrl+V" :disabled="!store.hasClipboard()" @click="onEmptyPaste">
+      <UiMenuItem
+        :icon="ClipboardPaste"
+        shortcut="Ctrl+V"
+        :disabled="!store.hasClipboard()"
+        @click="onEmptyPaste"
+      >
         Paste
       </UiMenuItem>
     </BaseContextMenu>
