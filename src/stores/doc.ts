@@ -174,6 +174,23 @@ export const useDocStore = defineStore('doc', () => {
     return p.id ? [p.id] : []
   }
 
+  // Replace nodes with new object references so child components
+  // (which receive node as a prop) detect the change and re-render.
+  // shallowRef + triggerRef alone won't help because the Map values are
+  // the same object references after in-place mutation.
+  function replaceNodeRefs(ids: string[]) {
+    for (const id of ids) {
+      const node = nodes.value.get(id)
+      if (node) nodes.value.set(id, { ...node })
+    }
+  }
+
+  // Undo/redo bypass dispatch, so they must schedule persistence themselves
+  function schedulePersist() {
+    sync.scheduleIndexUpdate()
+    sync.scheduleFileSave()
+  }
+
   async function dispatch(op: Op, recordUndo = true) {
     if (recordUndo) {
       // Snapshot affected nodes before mutation
@@ -194,14 +211,7 @@ export const useDocStore = defineStore('doc', () => {
     }
 
     applyOp(nodes.value, op)
-    // Replace affected nodes with new object references so child components
-    // (which receive node as a prop) detect the change and re-render.
-    // shallowRef + triggerRef alone won't help because the Map values are
-    // the same object references after in-place mutation.
-    for (const id of getAffectedIds(op)) {
-      const node = nodes.value.get(id)
-      if (node) nodes.value.set(id, { ...node })
-    }
+    replaceNodeRefs(getAffectedIds(op))
     triggerRef(nodes)
     lastSeq.value = op.seq
     opsSinceSnapshot.value++
@@ -242,6 +252,8 @@ export const useDocStore = defineStore('doc', () => {
       lastSeq.value = cop.seq
     }
 
+    schedulePersist()
+
     selection.current = entry.selectedBefore
     redoStack.push(entry)
   }
@@ -267,10 +279,12 @@ export const useDocStore = defineStore('doc', () => {
     })
 
     applyOp(nodes.value, reOp)
+    replaceNodeRefs(ids)
     triggerRef(nodes)
     lastSeq.value = reOp.seq
     opsSinceSnapshot.value++
     saveOp(reOp)
+    schedulePersist()
   }
 
   async function takeSnapshot() {
@@ -322,9 +336,10 @@ export const useDocStore = defineStore('doc', () => {
       _textBeforeSnapshots.set(id, { ...node })
     }
 
-    // Apply to memory immediately
+    // Apply to memory immediately, without triggering: the editing input already
+    // shows the new text, and a trigger would rebuild childrenMap, visibleRows
+    // and kanbanColumns on every keystroke. Other views refresh on commit.
     node.text = text
-    triggerRef(nodes)
 
     // Debounce the persistent op
     const existing = _textDebounceTimers.get(id)
@@ -340,6 +355,10 @@ export const useDocStore = defineStore('doc', () => {
   function _commitTextOp(id: string, text: string) {
     _textDebounceTimers.delete(id)
     const op = makeOp('updateText', { type: 'updateText', id, text })
+
+    // Publish the text to other views (kanban, search, breadcrumbs) once per pause
+    replaceNodeRefs([id])
+    triggerRef(nodes)
 
     // Push undo entry with the before-snapshot
     const beforeSnap = _textBeforeSnapshots.get(id)
