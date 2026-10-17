@@ -121,15 +121,8 @@ async function onSaveDraft(draftId: string) {
   const doc = docsStore.documents.find((d) => d.id === draftId)
   const defaultName = doc?.name || 'Untitled'
 
-  // Use Tauri dialog if available, otherwise browser prompt
-  let name: string | null = null
-  if (isTauri()) {
-    const { ask } = await import('@tauri-apps/plugin-dialog')
-    // Tauri's ask() is yes/no only; use a simple prompt approach
-    name = window.prompt('Save document as:', defaultName)
-  } else {
-    name = window.prompt('Save document as:', defaultName)
-  }
+  // Tauri's dialog plugin has no text prompt, so use the browser prompt everywhere
+  const name = window.prompt('Save document as:', defaultName)
 
   if (!name || !name.trim()) return
   const trimmed = name.trim()
