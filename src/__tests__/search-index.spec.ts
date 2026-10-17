@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   loadSearchIndex,
-  saveSearchIndex,
   updateIndexForDoc,
   removeDocFromIndex,
   searchAllDocs,
@@ -23,7 +22,8 @@ function makeNode(overrides: Partial<Node> = {}): Node {
   }
 }
 
-const STORAGE_KEY = 'strata-search-index'
+const KEY_PREFIX = 'strata-search-index:'
+const LEGACY_KEY = 'strata-search-index'
 
 describe('search-index', () => {
   beforeEach(() => {
@@ -32,43 +32,89 @@ describe('search-index', () => {
   })
 
   describe('loadSearchIndex', () => {
-    it('returns default index when nothing stored', () => {
+    it('returns an empty index when nothing stored', () => {
       const index = loadSearchIndex()
-      expect(index.version).toBe(1)
       expect(index.entries).toEqual([])
       expect(index.updatedAt).toEqual({})
     })
 
-    it('returns parsed index from localStorage', () => {
-      const stored = {
-        version: 1,
-        entries: [{ docId: 'd1', nodeId: 'n1', text: 'hello' }],
-        updatedAt: { d1: 100 },
-      }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+    it('reads per-document entries from localStorage', () => {
+      localStorage.setItem(
+        KEY_PREFIX + 'd1',
+        JSON.stringify({ updatedAt: 100, entries: [{ nodeId: 'n1', text: 'hello' }] }),
+      )
       const index = loadSearchIndex()
-      expect(index.entries).toHaveLength(1)
-      expect(index.entries[0]!.text).toBe('hello')
+      expect(index.entries).toEqual([{ docId: 'd1', nodeId: 'n1', text: 'hello' }])
+      expect(index.updatedAt).toEqual({ d1: 100 })
     })
 
-    it('returns default index on invalid JSON', () => {
-      localStorage.setItem(STORAGE_KEY, 'not json')
+    it('skips invalid per-document JSON', () => {
+      localStorage.setItem(KEY_PREFIX + 'd1', 'not json')
+      expect(loadSearchIndex().entries).toEqual([])
+    })
+
+    it('migrates the legacy single-key index to per-document keys', () => {
+      localStorage.setItem(
+        LEGACY_KEY,
+        JSON.stringify({
+          version: 1,
+          entries: [
+            { docId: 'd1', nodeId: 'n1', text: 'one' },
+            { docId: 'd2', nodeId: 'n2', text: 'two' },
+          ],
+          updatedAt: { d1: 100, d2: 200 },
+        }),
+      )
       const index = loadSearchIndex()
-      expect(index.entries).toEqual([])
+      expect(index.entries).toHaveLength(2)
+      expect(index.updatedAt).toEqual({ d1: 100, d2: 200 })
+      expect(localStorage.getItem(LEGACY_KEY)).toBeNull()
+      expect(JSON.parse(localStorage.getItem(KEY_PREFIX + 'd2')!).entries).toEqual([
+        { nodeId: 'n2', text: 'two' },
+      ])
+    })
+
+    it('drops invalid legacy JSON', () => {
+      localStorage.setItem(LEGACY_KEY, 'not json')
+      expect(loadSearchIndex().entries).toEqual([])
+      expect(localStorage.getItem(LEGACY_KEY)).toBeNull()
     })
   })
 
-  describe('saveSearchIndex', () => {
-    it('persists index to localStorage', () => {
-      const index = {
-        version: 1,
-        entries: [{ docId: 'd1', nodeId: 'n1', text: 'test' }],
-        updatedAt: { d1: 123 },
-      }
-      saveSearchIndex(index)
-      const raw = localStorage.getItem(STORAGE_KEY)
-      expect(raw).not.toBeNull()
-      expect(JSON.parse(raw!)).toEqual(index)
+  describe('storage writes', () => {
+    function docWith(text: string) {
+      const nodes = new Map<string, Node>()
+      nodes.set('root', makeNode({ id: 'root', parentId: null, text: 'Root' }))
+      nodes.set('a', makeNode({ id: 'a', parentId: 'root', text }))
+      return nodes
+    }
+
+    it('writes only the updated document key', () => {
+      updateIndexForDoc('doc1', docWith('one'))
+      updateIndexForDoc('doc2', docWith('two'))
+      const setItem = vi.spyOn(Storage.prototype, 'setItem')
+
+      updateIndexForDoc('doc2', docWith('two changed'))
+
+      expect(setItem).toHaveBeenCalledTimes(1)
+      expect(setItem.mock.calls[0]![0]).toBe(KEY_PREFIX + 'doc2')
+      setItem.mockRestore()
+    })
+
+    it('skips the write when entries did not change', () => {
+      updateIndexForDoc('doc1', docWith('same'))
+      const setItem = vi.spyOn(Storage.prototype, 'setItem')
+
+      updateIndexForDoc('doc1', docWith('same'))
+
+      expect(setItem).not.toHaveBeenCalled()
+      setItem.mockRestore()
+    })
+
+    it('survives a cache reset by reading back from storage', () => {
+      updateIndexForDoc('doc1', docWith('persisted'))
+      clearSearchIndexCache()
+      expect(searchAllDocs('persisted', new Map())).toHaveLength(1)
     })
   })
 
@@ -169,6 +215,7 @@ describe('search-index', () => {
       const index = loadSearchIndex()
       expect(index.entries).toHaveLength(0)
       expect(index.updatedAt['doc1']).toBeUndefined()
+      expect(localStorage.getItem(KEY_PREFIX + 'doc1')).toBeNull()
     })
 
     it('leaves other docs intact', () => {

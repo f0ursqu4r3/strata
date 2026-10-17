@@ -19,7 +19,7 @@ interface DocNavDeps {
   visibleRows: ComputedRef<{ node: Node; depth: number }[]>
   childrenMap: ComputedRef<Map<string | null, Node[]>>
   // Functions from doc core that nav needs to call:
-  dispatch: (op: Op, recordUndo?: boolean) => void
+  dispatchBatch: (ops: Op[], recordUndo?: boolean) => void
   createNode: (parentId: string | null, pos: string, text?: string, status?: Status) => Op
   moveNode: (id: string, parentId: string | null, pos: string) => void
   tombstone: (id: string) => void
@@ -84,10 +84,10 @@ export function useDocNav(deps: DocNavDeps) {
   }
 
   function bulkSetStatus(status: Status) {
-    for (const id of selection.ids) {
-      const op = makeOp('setStatus', { type: 'setStatus', id, status })
-      deps.dispatch(op)
-    }
+    const ops = [...selection.ids].map((id) =>
+      makeOp('setStatus', { type: 'setStatus', id, status }),
+    )
+    deps.dispatchBatch(ops)
   }
 
   function bulkTombstone() {
@@ -111,10 +111,7 @@ export function useDocNav(deps: DocNavDeps) {
     if (!nextId && firstSelectedIdx > 0) {
       nextId = rows[firstSelectedIdx - 1]!.node.id
     }
-    for (const id of ids) {
-      const op = makeOp('tombstone', { type: 'tombstone', id })
-      deps.dispatch(op)
-    }
+    deps.dispatchBatch([...ids].map((id) => makeOp('tombstone', { type: 'tombstone', id })))
     if (nextId) {
       selectNode(nextId)
     } else {
@@ -378,15 +375,16 @@ export function useDocNav(deps: DocNavDeps) {
   // ── Other ──
 
   function navigateToNode(nodeId: string) {
+    const ops: Op[] = []
     let cur = nodes.value.get(nodeId)
     while (cur && cur.parentId) {
       const parent = nodes.value.get(cur.parentId)
       if (parent && parent.collapsed) {
-        const op = makeOp('toggleCollapsed', { type: 'toggleCollapsed', id: parent.id })
-        deps.dispatch(op, false)
+        ops.push(makeOp('toggleCollapsed', { type: 'toggleCollapsed', id: parent.id }))
       }
       cur = parent
     }
+    deps.dispatchBatch(ops, false)
     zoomId.value = null
     selection.current = nodeId
   }

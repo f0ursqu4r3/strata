@@ -10,8 +10,14 @@ export function useVirtualScroll<T extends { node: { id: string }; depth: number
   const scrollTop = ref(0)
   const containerHeight = ref(600)
 
+  // Scroll events can fire several times per frame; recompute rows at most once per frame
+  let scrollFrame = 0
   function onScroll() {
-    scrollTop.value = containerRef.value?.scrollTop ?? 0
+    if (scrollFrame) return
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = 0
+      scrollTop.value = containerRef.value?.scrollTop ?? 0
+    })
   }
 
   const useVirtual = computed(() => visibleRows.value.length > VIRTUAL_SCROLL_THRESHOLD)
@@ -53,6 +59,7 @@ export function useVirtualScroll<T extends { node: { id: string }; depth: number
 
   onUnmounted(() => {
     resizeObserver?.disconnect()
+    if (scrollFrame) cancelAnimationFrame(scrollFrame)
   })
 
   return { useVirtual, virtualRows, topSpacer, bottomSpacer, onScroll }

@@ -102,10 +102,19 @@ export const useDocStore = defineStore('doc', () => {
   const lastSeq = ref(0)
 
   // ── Undo / Redo ──
-  interface UndoEntry {
+  interface UndoStep {
     op: Op
     beforeSnapshots: Node[] // deep copies of affected nodes before op
+  }
+  // One entry per user action; a batch (subtree delete, paste) holds several steps
+  interface UndoEntry {
+    steps: UndoStep[]
     selectedBefore: string
+  }
+
+  function pushUndo(entry: UndoEntry) {
+    undoStack.push(entry)
+    if (undoStack.length > MAX_UNDO) undoStack.shift()
   }
   const undoStack: UndoEntry[] = []
   const redoStack: UndoEntry[] = []
@@ -191,40 +200,52 @@ export const useDocStore = defineStore('doc', () => {
     sync.scheduleFileSave()
   }
 
-  async function dispatch(op: Op, recordUndo = true) {
+  function snapshotAffected(op: Op): Node[] {
+    const snaps: Node[] = []
+    for (const id of getAffectedIds(op)) {
+      const node = nodes.value.get(id)
+      if (node) snaps.push({ ...node })
+    }
+    return snaps
+  }
+
+  const INDEXED_OP_TYPES = new Set(['create', 'updateText', 'tombstone', 'restore'])
+
+  function dispatch(op: Op, recordUndo = true) {
+    return dispatchBatch([op], recordUndo)
+  }
+
+  /**
+   * Apply several ops as one action: one reactive trigger, one undo entry.
+   * Ops apply in order, so later ops can depend on earlier ones (create, then addTag).
+   */
+  async function dispatchBatch(ops: Op[], recordUndo = true) {
+    if (ops.length === 0) return
+    const steps: UndoStep[] = []
+    const affected = new Set<string>()
+
+    for (const op of ops) {
+      // Snapshot just before each op, so a node touched twice keeps the right state
+      if (recordUndo) steps.push({ op, beforeSnapshots: snapshotAffected(op) })
+      applyOp(nodes.value, op)
+      for (const id of getAffectedIds(op)) affected.add(id)
+    }
+
     if (recordUndo) {
-      // Snapshot affected nodes before mutation
-      const ids = getAffectedIds(op)
-      const beforeSnapshots: Node[] = []
-      for (const id of ids) {
-        const node = nodes.value.get(id)
-        if (node) beforeSnapshots.push({ ...node })
-      }
-      undoStack.push({
-        op,
-        beforeSnapshots,
-        selectedBefore: selection.current,
-      })
-      if (undoStack.length > MAX_UNDO) undoStack.shift()
+      pushUndo({ steps, selectedBefore: selection.current })
       // Clear redo on new action
       redoStack.length = 0
     }
 
-    applyOp(nodes.value, op)
-    replaceNodeRefs(getAffectedIds(op))
+    replaceNodeRefs([...affected])
     triggerRef(nodes)
-    lastSeq.value = op.seq
-    opsSinceSnapshot.value++
+    lastSeq.value = ops[ops.length - 1]!.seq
+    opsSinceSnapshot.value += ops.length
 
-    await saveOp(op)
+    for (const op of ops) await saveOp(op)
 
     // Update search index for content-changing ops
-    if (
-      op.type === 'create' ||
-      op.type === 'updateText' ||
-      op.type === 'tombstone' ||
-      op.type === 'restore'
-    ) {
+    if (ops.some((op) => INDEXED_OP_TYPES.has(op.type))) {
       sync.scheduleIndexUpdate()
     }
 
@@ -239,18 +260,23 @@ export const useDocStore = defineStore('doc', () => {
     const entry = undoStack.pop()
     if (!entry) return
 
-    // Restore node snapshots
-    for (const snap of entry.beforeSnapshots) {
-      nodes.value.set(snap.id, { ...snap })
+    const affected = new Set<string>()
+    // Reverse order: later steps may depend on earlier ones (e.g. tag on a created node)
+    for (let i = entry.steps.length - 1; i >= 0; i--) {
+      const step = entry.steps[i]!
+      // Restore node snapshots
+      for (const snap of step.beforeSnapshots) {
+        nodes.value.set(snap.id, { ...snap })
+      }
+      // Build and persist compensating ops (also mutates nodes for side-effect ops)
+      for (const cop of buildCompensatingOp(step, nodes.value)) {
+        saveOp(cop)
+        lastSeq.value = cop.seq
+      }
+      for (const id of getAffectedIds(step.op)) affected.add(id)
     }
-
-    // Build and persist compensating ops (also mutates nodes for side-effect ops)
-    const compensatingOps = buildCompensatingOp(entry, nodes.value)
+    replaceNodeRefs([...affected])
     triggerRef(nodes)
-    for (const cop of compensatingOps) {
-      saveOp(cop)
-      lastSeq.value = cop.seq
-    }
 
     schedulePersist()
 
@@ -262,28 +288,22 @@ export const useDocStore = defineStore('doc', () => {
     const entry = redoStack.pop()
     if (!entry) return
 
-    // Re-apply the original op
-    const reOp = makeOp(entry.op.type, entry.op.payload)
-
-    // Capture current state for undo
-    const ids = getAffectedIds(reOp)
-    const beforeSnapshots: Node[] = []
-    for (const id of ids) {
-      const node = nodes.value.get(id)
-      if (node) beforeSnapshots.push({ ...node })
+    const steps: UndoStep[] = []
+    const affected = new Set<string>()
+    for (const step of entry.steps) {
+      // Re-apply the original op, capturing current state for undo
+      const reOp = makeOp(step.op.type, step.op.payload)
+      steps.push({ op: reOp, beforeSnapshots: snapshotAffected(reOp) })
+      applyOp(nodes.value, reOp)
+      for (const id of getAffectedIds(reOp)) affected.add(id)
+      lastSeq.value = reOp.seq
+      opsSinceSnapshot.value++
+      saveOp(reOp)
     }
-    undoStack.push({
-      op: reOp,
-      beforeSnapshots,
-      selectedBefore: selection.current,
-    })
+    pushUndo({ steps, selectedBefore: selection.current })
 
-    applyOp(nodes.value, reOp)
-    replaceNodeRefs(ids)
+    replaceNodeRefs([...affected])
     triggerRef(nodes)
-    lastSeq.value = reOp.seq
-    opsSinceSnapshot.value++
-    saveOp(reOp)
     schedulePersist()
   }
 
@@ -302,21 +322,24 @@ export const useDocStore = defineStore('doc', () => {
 
   // ── Actions ──
 
-  function createNode(
+  function makeCreateOp(
     parentId: string | null,
     pos: string,
     text: string = '',
     status: Status = statusConfig.value[0]?.id ?? 'todo',
   ): Op {
-    const id = crypto.randomUUID()
-    const op = makeOp('create', {
+    return makeOp('create', {
       type: 'create',
-      id,
+      id: crypto.randomUUID(),
       parentId,
       pos,
       text,
       status,
     })
+  }
+
+  function createNode(parentId: string | null, pos: string, text?: string, status?: Status): Op {
+    const op = makeCreateOp(parentId, pos, text, status)
     dispatch(op)
     return op
   }
@@ -363,12 +386,10 @@ export const useDocStore = defineStore('doc', () => {
     // Push undo entry with the before-snapshot
     const beforeSnap = _textBeforeSnapshots.get(id)
     if (beforeSnap) {
-      undoStack.push({
-        op,
-        beforeSnapshots: [beforeSnap],
+      pushUndo({
+        steps: [{ op, beforeSnapshots: [beforeSnap] }],
         selectedBefore: selection.current,
       })
-      if (undoStack.length > MAX_UNDO) undoStack.shift()
       redoStack.length = 0
       _textBeforeSnapshots.delete(id)
     }
@@ -439,16 +460,16 @@ export const useDocStore = defineStore('doc', () => {
   }
 
   function tombstone(id: string) {
-    // Also tombstone descendants
+    // Also tombstone descendants, children first, as one undoable action
+    const ops: Op[] = []
     function deleteTree(nid: string) {
-      const children = getChildren(nid)
-      for (const child of children) {
+      for (const child of getChildren(nid)) {
         deleteTree(child.id)
       }
-      const op = makeOp('tombstone', { type: 'tombstone', id: nid })
-      dispatch(op)
+      ops.push(makeOp('tombstone', { type: 'tombstone', id: nid }))
     }
     deleteTree(id)
+    dispatchBatch(ops)
   }
 
   // ── Clipboard (cut/copy/paste) ──
@@ -466,7 +487,8 @@ export const useDocStore = defineStore('doc', () => {
   }
 
   function copyNodes() {
-    const ids = selection.ids.size > 1 ? [...selection.ids] : selection.current ? [selection.current] : []
+    const ids =
+      selection.ids.size > 1 ? [...selection.ids] : selection.current ? [selection.current] : []
     if (ids.length === 0) return
     clipboard = ids.map((id) => serializeSubtree(id))
   }
@@ -508,20 +530,20 @@ export const useDocStore = defineStore('doc', () => {
 
     const ranks = generateRanks(clipboard.length, afterPos)
     let firstPastedId: string | null = null
+    const ops: Op[] = []
 
     function insertTree(clip: ClipboardNode, pId: string | null, pos: string) {
-      const op = createNode(pId, pos, clip.text, clip.status)
+      const op = makeCreateOp(pId, pos, clip.text, clip.status)
+      ops.push(op)
       const newId = (op.payload as { id: string }).id
       if (!firstPastedId) firstPastedId = newId
 
       // Apply tags and due date
       for (const tag of clip.tags) {
-        const tagOp = makeOp('addTag', { type: 'addTag', id: newId, tag })
-        dispatch(tagOp)
+        ops.push(makeOp('addTag', { type: 'addTag', id: newId, tag }))
       }
       if (clip.dueDate) {
-        const dateOp = makeOp('setDueDate', { type: 'setDueDate', id: newId, dueDate: clip.dueDate })
-        dispatch(dateOp)
+        ops.push(makeOp('setDueDate', { type: 'setDueDate', id: newId, dueDate: clip.dueDate }))
       }
 
       // Recursively insert children
@@ -536,6 +558,7 @@ export const useDocStore = defineStore('doc', () => {
     for (let i = 0; i < clipboard.length; i++) {
       insertTree(clipboard[i]!, parentId, ranks[i]!)
     }
+    dispatchBatch(ops)
 
     if (firstPastedId) nav.selectNode(firstPastedId)
   }
@@ -562,17 +585,17 @@ export const useDocStore = defineStore('doc', () => {
   function restoreNode(id: string) {
     const node = nodes.value.get(id)
     if (!node || !node.deleted) return
+    const ops: Op[] = []
     // If parent is also deleted, reparent to root
     const parent = node.parentId ? nodes.value.get(node.parentId) : null
     if (parent && parent.deleted) {
       const children = getChildren(rootId.value)
       const pos =
         children.length > 0 ? rankAfter(children[children.length - 1]!.pos) : initialRank()
-      const moveOp = makeOp('move', { type: 'move', id, parentId: rootId.value, pos })
-      dispatch(moveOp, false)
+      ops.push(makeOp('move', { type: 'move', id, parentId: rootId.value, pos }))
     }
-    const op = makeOp('restore', { type: 'restore', id })
-    dispatch(op)
+    ops.push(makeOp('restore', { type: 'restore', id }))
+    dispatchBatch(ops)
   }
 
   function setDueDate(id: string, dueDate: number | null) {
@@ -590,12 +613,13 @@ export const useDocStore = defineStore('doc', () => {
 
   async function removeStatus(statusId: string, replacementId: string) {
     // Bulk-reassign nodes with the removed status
+    const ops: Op[] = []
     for (const node of nodes.value.values()) {
       if (!node.deleted && node.status === statusId) {
-        const op = makeOp('setStatus', { type: 'setStatus', id: node.id, status: replacementId })
-        dispatch(op, false)
+        ops.push(makeOp('setStatus', { type: 'setStatus', id: node.id, status: replacementId }))
       }
     }
+    dispatchBatch(ops, false)
     statusConfig.value = statusConfig.value.filter((s) => s.id !== statusId)
     if (!isFileSystemMode()) await saveStatusConfig(statusConfig.value)
     sync.scheduleFileSave()
@@ -640,7 +664,7 @@ export const useDocStore = defineStore('doc', () => {
     zoomId,
     visibleRows,
     childrenMap,
-    dispatch,
+    dispatchBatch,
     createNode,
     moveNode,
     tombstone,
@@ -1030,26 +1054,23 @@ export const useDocStore = defineStore('doc', () => {
       tags: string[]
     }>,
   ) {
+    const ops: Op[] = []
     for (const fn of flatNodes) {
-      const op = makeOp('create', {
-        type: 'create',
-        id: fn.id,
-        parentId: fn.parentId,
-        pos: fn.pos,
-        text: fn.text,
-        status: fn.status as Status,
-      })
-      await dispatch(op)
-
-      for (const tag of fn.tags) {
-        const tagOp = makeOp('addTag', {
-          type: 'addTag',
+      ops.push(
+        makeOp('create', {
+          type: 'create',
           id: fn.id,
-          tag,
-        })
-        await dispatch(tagOp)
+          parentId: fn.parentId,
+          pos: fn.pos,
+          text: fn.text,
+          status: fn.status as Status,
+        }),
+      )
+      for (const tag of fn.tags) {
+        ops.push(makeOp('addTag', { type: 'addTag', id: fn.id, tag }))
       }
     }
+    await dispatchBatch(ops)
   }
 
   async function importJSON(json: string) {

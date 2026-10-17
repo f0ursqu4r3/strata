@@ -58,6 +58,12 @@ function setupStore() {
   return store
 }
 
+function addChild(store: ReturnType<typeof useDocStore>, id: string, parentId: string) {
+  const map = new Map(store.nodes)
+  map.set(id, makeNode({ id, parentId, pos: id, text: id }))
+  store.nodes = map
+}
+
 function rowFor(store: ReturnType<typeof useDocStore>, id: string) {
   return store.visibleRows.find((r) => r.node.id === id)
 }
@@ -150,6 +156,69 @@ describe('doc store', () => {
 
       expect(store.nodes.get('a')).not.toBe(nodeBefore)
       expect(rowFor(store, 'a')!.node.status).toBe('done')
+    })
+
+    it('restores a deleted subtree with one undo', () => {
+      const store = setupStore()
+      addChild(store, 'a1', 'a')
+      addChild(store, 'a2', 'a')
+
+      store.tombstone('a')
+      expect(rowFor(store, 'a')).toBeUndefined()
+
+      store.undo()
+      expect(rowFor(store, 'a')).toBeDefined()
+      expect(rowFor(store, 'a1')).toBeDefined()
+      expect(rowFor(store, 'a2')).toBeDefined()
+    })
+
+    it('undoes and redoes a paste of a subtree with tags as one action', () => {
+      const store = setupStore()
+      addChild(store, 'a1', 'a')
+      store.addTag('a', 'work')
+      store.selectNode('a')
+      store.copyNodes()
+      const before = store.visibleRows.length
+
+      store.pasteNodes()
+      expect(store.visibleRows.length).toBe(before + 2)
+      const pasted = store.visibleRows.filter((r) => r.node.text === 'Alpha')
+      expect(pasted.every((r) => r.node.tags.includes('work'))).toBe(true)
+
+      store.undo()
+      expect(store.visibleRows.length).toBe(before)
+
+      store.redo()
+      expect(store.visibleRows.length).toBe(before + 2)
+      const redone = store.visibleRows.filter((r) => r.node.text === 'Alpha')
+      expect(redone.every((r) => r.node.tags.includes('work'))).toBe(true)
+    })
+
+    it('undoes a bulk status change with one undo', () => {
+      const store = setupStore()
+      store.selectNode('a')
+      store.toggleSelectNode('b')
+
+      store.bulkSetStatus('done')
+      expect(rowFor(store, 'a')!.node.status).toBe('done')
+      expect(rowFor(store, 'b')!.node.status).toBe('done')
+
+      store.undo()
+      expect(rowFor(store, 'a')!.node.status).toBe('todo')
+      expect(rowFor(store, 'b')!.node.status).toBe('todo')
+    })
+
+    it('undoes a restore that moved the node out of a deleted parent', () => {
+      const store = setupStore()
+      addChild(store, 'a1', 'a')
+      store.tombstone('a')
+
+      store.restoreNode('a1')
+      expect(rowFor(store, 'a1')!.depth).toBe(0)
+
+      store.undo()
+      expect(store.nodes.get('a1')!.deleted).toBe(true)
+      expect(store.nodes.get('a1')!.parentId).toBe('a')
     })
 
     it('restores text edits on undo and persists them', () => {

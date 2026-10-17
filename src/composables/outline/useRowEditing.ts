@@ -7,7 +7,6 @@ import { renderInlineMarkdown } from '@/lib/inline-markdown'
 import { getTitle, getBody, combineText } from '@/lib/text-utils'
 import type { Node, Status } from '@/types'
 
-
 export function useRowEditing(props: { node: Node; depth: number }, isEditing: () => boolean) {
   const store = useDocStore()
   const settings = useSettingsStore()
@@ -111,8 +110,11 @@ export function useRowEditing(props: { node: Node; depth: number }, isEditing: (
     }
   })
 
+  // Watch this row's node prop, not store.nodes: the store replaces a node object
+  // whenever its text changes outside this row (commit, undo, file refresh), and
+  // watching the map would re-run this getter in every row on every change.
   watch(
-    () => store.nodes.get(props.node.id)?.text,
+    () => props.node.text,
     (v) => {
       if (!isEditing() && v !== undefined) {
         localText.value = v
