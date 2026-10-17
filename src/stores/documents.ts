@@ -276,9 +276,7 @@ export const useDocumentsStore = defineStore('documents', () => {
 
     // Update documents list
     documents.value = documents.value.map((d) =>
-      d.id === draftId
-        ? { ...d, id: newRelPath, name: newRelPath.replace(/\.md$/, '') }
-        : d,
+      d.id === draftId ? { ...d, id: newRelPath, name: newRelPath.replace(/\.md$/, '') } : d,
     )
 
     // Update active ID if this was the active doc
@@ -311,7 +309,11 @@ export const useDocumentsStore = defineStore('documents', () => {
 
     // Update folders list
     folders.value = folders.value.map((f) =>
-      f === oldPath ? newPath : f.startsWith(oldPath + '/') ? newPath + f.substring(oldPath.length) : f,
+      f === oldPath
+        ? newPath
+        : f.startsWith(oldPath + '/')
+          ? newPath + f.substring(oldPath.length)
+          : f,
     )
     if (!folders.value.includes(newPath)) {
       folders.value = [...folders.value, newPath]

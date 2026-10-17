@@ -116,7 +116,8 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
   <div class="flex flex-col h-full bg-(--bg-primary)">
     <!-- Kanban header with gear button -->
     <div class="flex items-center justify-end gap-1 px-3 pt-2 pb-0 shrink-0">
-      <button type="button"
+      <button
+        type="button"
         class="p-1 rounded hover:bg-(--bg-hover) cursor-pointer"
         :class="
           settings.showBoardTags
@@ -130,7 +131,8 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
       >
         <Tag class="w-3.5 h-3.5" />
       </button>
-      <button type="button"
+      <button
+        type="button"
         class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
         title="Manage statuses"
         aria-label="Manage statuses"
@@ -188,188 +190,202 @@ function onDatePickerUpdate(nodeId: string, value: number | null) {
                   v-if="dragOverColumn === col.def.id && dropInsertIndex === nodeIdx"
                   class="border-2 border-dashed border-(--accent-400) rounded-md h-10 bg-(--accent-50) opacity-60 mb-1.5"
                 />
-              <div
-                :data-card-id="node.id"
-                class="group/card bg-(--bg-secondary) border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color,opacity] hover:border-(--border-hover) hover:shadow-sm active:cursor-grabbing select-none"
-                :class="{
-                  'border-(--accent-500) shadow-[0_0_0_1px_var(--accent-500)]':
-                    store.selection.current === node.id && dragNodeId !== node.id,
-                  'opacity-30! border-dashed! border-(--border-secondary)! shadow-none! cursor-grabbing!':
-                    dragNodeId === node.id,
-                  'border-(--border-primary)':
-                    store.selection.current !== node.id && dragNodeId !== node.id,
-                }"
-                :style="{ transition: 'background-color 300ms ease-out', backgroundColor: flashingCards.has(node.id) ? 'color-mix(in srgb, var(--status-done) 12%, transparent)' : undefined }"
-                @pointerdown="onCardPointerDown($event, node)"
-                @click="onCardClick(node)"
-                @dblclick="onCardDblClick(node)"
-                @contextmenu="onCardContextMenu($event, node)"
-              >
-                <div class="relative">
-                  <!-- eslint-disable vue/no-v-html -->
-                  <div
-                    class="text-(--text-secondary) leading-snug overflow-hidden text-ellipsis whitespace-nowrap strata-text"
-                    :class="{ invisible: editingCardId === node.id }"
-                    v-html="renderInlineMarkdown(getTitle(node.text) || '(empty)')"
-                  />
-                  <input
-                    v-if="editingCardId === node.id"
-                    ref="editInputRef"
-                    class="absolute inset-0 w-full text-(--text-secondary) leading-snug border-none outline-none bg-(--bg-secondary) p-0 font-[inherit] strata-text focus-visible:ring-1 focus-visible:ring-(--accent-400) focus-visible:rounded"
-                    :value="getTitle(node.text)"
-                    @input="onCardInput($event, node)"
-                    @blur="onCardEditBlur"
-                    @keydown="onCardEditKeydown"
-                    spellcheck="false"
-                  />
-                </div>
-                <div class="flex gap-2 mt-1 text-[11px] text-(--text-faint)">
-                  <span
-                    v-if="store.breadcrumb(node.id)"
-                    class="overflow-hidden text-ellipsis whitespace-nowrap"
-                  >
-                    {{ store.breadcrumb(node.id) }}
-                  </span>
-                  <span v-if="childCount(node) > 0"> {{ childCount(node) }} children </span>
-                </div>
-                <!-- Due date -->
-                <div class="relative mt-1" v-if="node.dueDate || editingDateCardId === node.id">
-                  <button
-                    v-if="node.dueDate && editingDateCardId !== node.id"
-                    type="button"
-                    class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:opacity-80"
-                    :class="{
-                      'bg-(--color-danger-bg) text-(--color-danger)': dueDateUrgency(node.dueDate) === 'overdue',
-                      'bg-(--color-warning-bg) text-(--color-warning)': dueDateUrgency(node.dueDate) === 'today',
-                      'bg-(--color-info-bg) text-(--color-info)': dueDateUrgency(node.dueDate) === 'soon',
-                      'bg-(--bg-active) text-(--text-muted)':
-                        dueDateUrgency(node.dueDate) === 'normal',
-                    }"
-                    :aria-label="'Due date: ' + formatDueDate(node.dueDate)"
-                    @click="onDateClick($event, node.id)"
-                  >
-                    <Calendar class="w-2.5 h-2.5" />
-                    {{ formatDueDate(node.dueDate) }}
-                  </button>
-                  <Teleport to="body">
-                    <div
-                      v-if="editingDateCardId === node.id"
-                      data-date-picker
-                      class="fixed z-50"
-                      :style="datePickerPos"
-                    >
-                      <DatePicker
-                        :model-value="node.dueDate ?? null"
-                        @update:model-value="onDatePickerUpdate(node.id, $event)"
-                      />
-                    </div>
-                  </Teleport>
-                </div>
-
-                <!-- Tags -->
                 <div
-                  v-if="
-                    settings.showBoardTags &&
-                    (node.tags?.length > 0 || editingTagsCardId === node.id)
-                  "
-                  class="relative mt-1.5"
+                  :data-card-id="node.id"
+                  class="group/card bg-(--bg-secondary) border rounded-md px-3 py-2.5 cursor-grab transition-[box-shadow,border-color,opacity] hover:border-(--border-hover) hover:shadow-sm active:cursor-grabbing select-none"
+                  :class="{
+                    'border-(--accent-500) shadow-[0_0_0_1px_var(--accent-500)]':
+                      store.selection.current === node.id && dragNodeId !== node.id,
+                    'opacity-30! border-dashed! border-(--border-secondary)! shadow-none! cursor-grabbing!':
+                      dragNodeId === node.id,
+                    'border-(--border-primary)':
+                      store.selection.current !== node.id && dragNodeId !== node.id,
+                  }"
+                  :style="{
+                    transition: 'background-color 300ms ease-out',
+                    backgroundColor: flashingCards.has(node.id)
+                      ? 'color-mix(in srgb, var(--status-done) 12%, transparent)'
+                      : undefined,
+                  }"
+                  @pointerdown="onCardPointerDown($event, node)"
+                  @click="onCardClick(node)"
+                  @dblclick="onCardDblClick(node)"
+                  @contextmenu="onCardContextMenu($event, node)"
                 >
-                  <div
-                    v-if="editingTagsCardId !== node.id"
-                    class="flex flex-wrap gap-1 cursor-pointer"
-                    role="button"
-                    tabindex="0"
-                    aria-label="Edit tags"
-                    @click="onTagsClick($event, node.id)"
-                    @keydown.enter.stop="onTagsClick($event, node.id)"
-                  >
-                    <span
-                      v-for="tag in node.tags?.slice(0, 3)"
-                      :key="tag"
-                      class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
-                      :class="
-                        tagStyle(tag, store.tagColors, settings.dark)
-                          ? ''
-                          : 'bg-(--accent-100) text-(--accent-700) hover:bg-(--accent-200)'
-                      "
-                      :style="tagStyle(tag, store.tagColors, settings.dark) ?? {}"
-                    >
-                      {{ tag }}
-                    </span>
-                    <span
-                      v-if="(node.tags?.length ?? 0) > 3"
-                      class="text-[10px] text-(--text-faint)"
-                    >
-                      +{{ node.tags!.length - 3 }}
-                    </span>
+                  <div class="relative">
+                    <!-- eslint-disable vue/no-v-html -->
+                    <div
+                      class="text-(--text-secondary) leading-snug overflow-hidden text-ellipsis whitespace-nowrap strata-text"
+                      :class="{ invisible: editingCardId === node.id }"
+                      v-html="renderInlineMarkdown(getTitle(node.text) || '(empty)')"
+                    />
+                    <input
+                      v-if="editingCardId === node.id"
+                      ref="editInputRef"
+                      class="absolute inset-0 w-full text-(--text-secondary) leading-snug border-none outline-none bg-(--bg-secondary) p-0 font-[inherit] strata-text focus-visible:ring-1 focus-visible:ring-(--accent-400) focus-visible:rounded"
+                      :value="getTitle(node.text)"
+                      @input="onCardInput($event, node)"
+                      @blur="onCardEditBlur"
+                      @keydown="onCardEditKeydown"
+                      spellcheck="false"
+                    />
                   </div>
-                  <Teleport to="body">
-                    <div
-                      v-if="editingTagsCardId === node.id"
-                      data-tag-picker
-                      class="strata-popup fixed z-50 p-2"
-                      :style="tagPickerPos"
+                  <div class="flex gap-2 mt-1 text-[11px] text-(--text-faint)">
+                    <span
+                      v-if="store.breadcrumb(node.id)"
+                      class="overflow-hidden text-ellipsis whitespace-nowrap"
                     >
-                      <TagPicker :node-id="node.id" :tags="node.tags ?? []" />
-                    </div>
-                  </Teleport>
-                </div>
+                      {{ store.breadcrumb(node.id) }}
+                    </span>
+                    <span v-if="childCount(node) > 0"> {{ childCount(node) }} children </span>
+                  </div>
+                  <!-- Due date -->
+                  <div class="relative mt-1" v-if="node.dueDate || editingDateCardId === node.id">
+                    <button
+                      v-if="node.dueDate && editingDateCardId !== node.id"
+                      type="button"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:opacity-80"
+                      :class="{
+                        'bg-(--color-danger-bg) text-(--color-danger)':
+                          dueDateUrgency(node.dueDate) === 'overdue',
+                        'bg-(--color-warning-bg) text-(--color-warning)':
+                          dueDateUrgency(node.dueDate) === 'today',
+                        'bg-(--color-info-bg) text-(--color-info)':
+                          dueDateUrgency(node.dueDate) === 'soon',
+                        'bg-(--bg-active) text-(--text-muted)':
+                          dueDateUrgency(node.dueDate) === 'normal',
+                      }"
+                      :aria-label="'Due date: ' + formatDueDate(node.dueDate)"
+                      @click="onDateClick($event, node.id)"
+                    >
+                      <Calendar class="w-2.5 h-2.5" />
+                      {{ formatDueDate(node.dueDate) }}
+                    </button>
+                    <Teleport to="body">
+                      <div
+                        v-if="editingDateCardId === node.id"
+                        data-date-picker
+                        class="fixed z-50"
+                        :style="datePickerPos"
+                      >
+                        <DatePicker
+                          :model-value="node.dueDate ?? null"
+                          @update:model-value="onDatePickerUpdate(node.id, $event)"
+                        />
+                      </div>
+                    </Teleport>
+                  </div>
 
-                <!-- Hover actions for adding tag/date -->
-                <div
-                  v-if="
-                    !node.dueDate &&
-                    editingDateCardId !== node.id &&
-                    !node.tags?.length &&
-                    editingTagsCardId !== node.id
-                  "
-                  class="flex gap-1 mt-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity touch-show"
-                >
-                  <button type="button"
-                    class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
-                    title="Set due date"
-                    @click.stop="onDateClick($event, node.id)"
-                  >
-                    <Calendar class="w-3 h-3" />
-                  </button>
-                  <button type="button"
-                    v-if="settings.showBoardTags"
-                    class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
-                    title="Add tag"
-                    @click.stop="onTagsClick($event, node.id)"
-                  >
-                    <Tag class="w-3 h-3" />
-                  </button>
-                </div>
-
-                <!-- Show add icons when only one of tag/date exists -->
-                <div
-                  v-else-if="
-                    (node.dueDate && !node.tags?.length && settings.showBoardTags) ||
-                    (!node.dueDate && node.tags?.length)
-                  "
-                  class="flex gap-1 mt-1 opacity-0 group-hover/card:opacity-100 transition-opacity touch-show"
-                >
-                  <button type="button"
-                    v-if="!node.dueDate && editingDateCardId !== node.id"
-                    class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
-                    title="Set due date"
-                    @click.stop="onDateClick($event, node.id)"
-                  >
-                    <Calendar class="w-3 h-3" />
-                  </button>
-                  <button type="button"
+                  <!-- Tags -->
+                  <div
                     v-if="
-                      settings.showBoardTags && !node.tags?.length && editingTagsCardId !== node.id
+                      settings.showBoardTags &&
+                      (node.tags?.length > 0 || editingTagsCardId === node.id)
                     "
-                    class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
-                    title="Add tag"
-                    @click.stop="onTagsClick($event, node.id)"
+                    class="relative mt-1.5"
                   >
-                    <Tag class="w-3 h-3" />
-                  </button>
+                    <div
+                      v-if="editingTagsCardId !== node.id"
+                      class="flex flex-wrap gap-1 cursor-pointer"
+                      role="button"
+                      tabindex="0"
+                      aria-label="Edit tags"
+                      @click="onTagsClick($event, node.id)"
+                      @keydown.enter.stop="onTagsClick($event, node.id)"
+                    >
+                      <span
+                        v-for="tag in node.tags?.slice(0, 3)"
+                        :key="tag"
+                        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
+                        :class="
+                          tagStyle(tag, store.tagColors, settings.dark)
+                            ? ''
+                            : 'bg-(--accent-100) text-(--accent-700) hover:bg-(--accent-200)'
+                        "
+                        :style="tagStyle(tag, store.tagColors, settings.dark) ?? {}"
+                      >
+                        {{ tag }}
+                      </span>
+                      <span
+                        v-if="(node.tags?.length ?? 0) > 3"
+                        class="text-[10px] text-(--text-faint)"
+                      >
+                        +{{ node.tags!.length - 3 }}
+                      </span>
+                    </div>
+                    <Teleport to="body">
+                      <div
+                        v-if="editingTagsCardId === node.id"
+                        data-tag-picker
+                        class="strata-popup fixed z-50 p-2"
+                        :style="tagPickerPos"
+                      >
+                        <TagPicker :node-id="node.id" :tags="node.tags ?? []" />
+                      </div>
+                    </Teleport>
+                  </div>
+
+                  <!-- Hover actions for adding tag/date -->
+                  <div
+                    v-if="
+                      !node.dueDate &&
+                      editingDateCardId !== node.id &&
+                      !node.tags?.length &&
+                      editingTagsCardId !== node.id
+                    "
+                    class="flex gap-1 mt-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity touch-show"
+                  >
+                    <button
+                      type="button"
+                      class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+                      title="Set due date"
+                      @click.stop="onDateClick($event, node.id)"
+                    >
+                      <Calendar class="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      v-if="settings.showBoardTags"
+                      class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+                      title="Add tag"
+                      @click.stop="onTagsClick($event, node.id)"
+                    >
+                      <Tag class="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  <!-- Show add icons when only one of tag/date exists -->
+                  <div
+                    v-else-if="
+                      (node.dueDate && !node.tags?.length && settings.showBoardTags) ||
+                      (!node.dueDate && node.tags?.length)
+                    "
+                    class="flex gap-1 mt-1 opacity-0 group-hover/card:opacity-100 transition-opacity touch-show"
+                  >
+                    <button
+                      type="button"
+                      v-if="!node.dueDate && editingDateCardId !== node.id"
+                      class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+                      title="Set due date"
+                      @click.stop="onDateClick($event, node.id)"
+                    >
+                      <Calendar class="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      v-if="
+                        settings.showBoardTags &&
+                        !node.tags?.length &&
+                        editingTagsCardId !== node.id
+                      "
+                      class="p-1 rounded hover:bg-(--bg-hover) text-(--text-faint) hover:text-(--text-muted) cursor-pointer"
+                      title="Add tag"
+                      @click.stop="onTagsClick($event, node.id)"
+                    >
+                      <Tag class="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-              </div>
               </div>
             </TransitionGroup>
 

@@ -126,7 +126,9 @@ export function useBoardDrag(editingCardId: Ref<string | null>) {
     }
 
     if (floatingEl && !prefersReducedMotion.value && dragOverColumn.value) {
-      const colEl = document.querySelector(`[data-status-id="${dragOverColumn.value}"]`) as HTMLElement | null
+      const colEl = document.querySelector(
+        `[data-status-id="${dragOverColumn.value}"]`,
+      ) as HTMLElement | null
       if (colEl) {
         const colRect = colEl.getBoundingClientRect()
         const currentLeft = parseFloat(floatingEl.style.left)

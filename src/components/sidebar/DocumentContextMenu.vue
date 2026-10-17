@@ -44,9 +44,15 @@ function onDelete() {
 
 <template>
   <BaseContextMenu :x="x" :y="y" aria-label="Document actions" @close="emit('close')">
-    <UiMenuItem v-if="docsStore.isDraft(docId)" :icon="Save" @click="onSave"> Save to Workspace </UiMenuItem>
-    <UiMenuItem v-if="!docsStore.isDraft(docId)" :icon="Pencil" @click="onRename"> Rename </UiMenuItem>
-    <UiMenuItem v-if="isTauri() && !docsStore.isDraft(docId)" :icon="FolderOpen" @click="onReveal"> Show in Finder </UiMenuItem>
+    <UiMenuItem v-if="docsStore.isDraft(docId)" :icon="Save" @click="onSave">
+      Save to Workspace
+    </UiMenuItem>
+    <UiMenuItem v-if="!docsStore.isDraft(docId)" :icon="Pencil" @click="onRename">
+      Rename
+    </UiMenuItem>
+    <UiMenuItem v-if="isTauri() && !docsStore.isDraft(docId)" :icon="FolderOpen" @click="onReveal">
+      Show in Finder
+    </UiMenuItem>
     <UiMenuDivider />
     <UiMenuItem :icon="Trash2" danger @click="onDelete">
       {{ docsStore.isDraft(docId) ? 'Discard' : 'Delete' }}

@@ -266,7 +266,9 @@ export function useDragReorder(
 
     if (floatingEl && !prefersReducedMotion.value) {
       const targetIdx = dropTargetIdx.value ?? store.visibleRows.length - 1
-      const targetEl = containerRef.value?.querySelector(`[data-row-idx="${targetIdx}"]`) as HTMLElement | null
+      const targetEl = containerRef.value?.querySelector(
+        `[data-row-idx="${targetIdx}"]`,
+      ) as HTMLElement | null
       if (targetEl) {
         const targetRect = targetEl.getBoundingClientRect()
         const currentLeft = parseFloat(floatingEl.style.left)
@@ -298,5 +300,12 @@ export function useDragReorder(
     destroyFloatingRow()
   })
 
-  return { dragNodeId, isDragging, dragSubtreeIds, shiftedRowIndices, onRowPointerDown, onSelectStart }
+  return {
+    dragNodeId,
+    isDragging,
+    dragSubtreeIds,
+    shiftedRowIndices,
+    onRowPointerDown,
+    onSelectStart,
+  }
 }

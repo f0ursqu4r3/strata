@@ -32,11 +32,7 @@ function persist(state: StoredState) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
 }
 
-export function saveViewState(
-  docId: string,
-  collapsed: string[],
-  zoomId: string | null,
-): void {
+export function saveViewState(docId: string, collapsed: string[], zoomId: string | null): void {
   const state = load()
   state.docs[docId] = { collapsed, zoomId, ts: Date.now() }
   persist(state)

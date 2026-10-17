@@ -11,7 +11,9 @@
 /* ── Outline row transitions (migrated from OutlineView.vue scoped) ── */
 .outline-row-enter-active,
 .outline-row-leave-active {
-  transition: opacity 120ms ease-out, transform 120ms ease-out;
+  transition:
+    opacity 120ms ease-out,
+    transform 120ms ease-out;
 }
 .outline-row-enter-from {
   opacity: 0;
@@ -45,7 +47,9 @@
 }
 .overlay-top-enter-active .overlay-panel,
 .overlay-top-leave-active .overlay-panel {
-  transition: opacity 100ms ease-out, transform 100ms ease-out;
+  transition:
+    opacity 100ms ease-out,
+    transform 100ms ease-out;
 }
 .overlay-top-enter-from,
 .overlay-top-leave-to {
@@ -64,7 +68,9 @@
 }
 .overlay-center-enter-active .modal-panel,
 .overlay-center-leave-active .modal-panel {
-  transition: opacity 100ms ease-out, transform 100ms ease-out;
+  transition:
+    opacity 100ms ease-out,
+    transform 100ms ease-out;
 }
 .overlay-center-enter-from,
 .overlay-center-leave-to {
@@ -83,7 +89,9 @@
 }
 .overlay-right-enter-active .overlay-panel,
 .overlay-right-leave-active .overlay-panel {
-  transition: opacity 100ms ease-out, transform 100ms ease-out;
+  transition:
+    opacity 100ms ease-out,
+    transform 100ms ease-out;
 }
 .overlay-right-enter-from,
 .overlay-right-leave-to {
@@ -101,7 +109,9 @@
 }
 .kanban-card-enter-active,
 .kanban-card-leave-active {
-  transition: opacity 100ms ease-out, transform 100ms ease-out;
+  transition:
+    opacity 100ms ease-out,
+    transform 100ms ease-out;
 }
 .kanban-card-enter-from,
 .kanban-card-leave-to {

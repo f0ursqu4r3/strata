@@ -73,11 +73,19 @@ function toggleExpand() {
       <!-- Folder rename input -->
       <div v-if="renamingId === node.path" class="flex-1 min-w-0 relative">
         <input
-          :ref="(el) => { if (el) renameInputRef = [el as HTMLInputElement] }"
+          :ref="
+            (el) => {
+              if (el) renameInputRef = [el as HTMLInputElement]
+            }
+          "
           :value="renameText"
           aria-label="Folder name"
           class="w-full bg-transparent border rounded px-1 py-0.5 text-sm text-(--text-primary) outline-none focus:ring-1"
-          :class="renameConflict ? 'border-(--color-danger) focus:ring-(--color-danger)' : 'border-(--border-secondary) focus:ring-(--accent-400)'"
+          :class="
+            renameConflict
+              ? 'border-(--color-danger) focus:ring-(--color-danger)'
+              : 'border-(--border-secondary) focus:ring-(--accent-400)'
+          "
           placeholder="Folder name..."
           @input="emit('update:renameText', ($event.target as HTMLInputElement).value)"
           @blur="emit('finish-rename')"
@@ -87,7 +95,8 @@ function toggleExpand() {
       </div>
       <span v-else class="flex-1 truncate">{{ node.name }}</span>
       <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 pr-2 touch-show">
-        <button type="button"
+        <button
+          type="button"
           class="p-1 rounded hover:bg-(--bg-active) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New document"
           aria-label="New document"
@@ -95,7 +104,8 @@ function toggleExpand() {
         >
           <Plus class="w-3 h-3" />
         </button>
-        <button type="button"
+        <button
+          type="button"
           class="p-1 rounded hover:bg-(--bg-active) text-(--text-faint) hover:text-(--text-tertiary) cursor-pointer"
           title="New folder"
           aria-label="New folder"
@@ -150,7 +160,11 @@ function toggleExpand() {
       <!-- Rename input -->
       <div v-if="renamingId === node.docId" class="flex-1 min-w-0 relative">
         <input
-          :ref="(el) => { if (el) renameInputRef = [el as HTMLInputElement] }"
+          :ref="
+            (el) => {
+              if (el) renameInputRef = [el as HTMLInputElement]
+            }
+          "
           :value="renameText"
           aria-label="Document name"
           class="w-full bg-transparent border rounded px-1 py-0.5 text-sm text-(--text-primary) outline-none focus:ring-1"
@@ -176,7 +190,8 @@ function toggleExpand() {
       <span v-else class="flex-1 truncate">{{ node.name }}</span>
 
       <!-- Delete button -->
-      <button type="button"
+      <button
+        type="button"
         v-if="renamingId !== node.docId"
         class="p-1 rounded opacity-0 group-hover:opacity-100 hover:text-(--color-danger) text-(--text-faint) cursor-pointer pr-2 touch-show"
         title="Delete document"

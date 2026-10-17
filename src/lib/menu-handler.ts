@@ -96,9 +96,7 @@ export async function setupMenuHandler(refs: MenuHandlerRefs) {
         break
       }
       case 'close-window': {
-        import('@tauri-apps/api/window').then(({ getCurrentWindow }) =>
-          getCurrentWindow().close(),
-        )
+        import('@tauri-apps/api/window').then(({ getCurrentWindow }) => getCurrentWindow().close())
         break
       }
       case 'settings':

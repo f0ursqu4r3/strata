@@ -156,14 +156,16 @@ onUnmounted(() => {
       :style="getTagStyle(tag) ?? {}"
     >
       <!-- Color dot (click to change color) -->
-      <button type="button"
+      <button
+        type="button"
         class="w-2 h-2 rounded-full border border-current opacity-50 hover:opacity-100 cursor-pointer shrink-0"
         title="Change tag color"
         aria-label="Change tag color"
         @click="toggleColorPicker(tag, $event)"
       />
       {{ tag }}
-      <button type="button"
+      <button
+        type="button"
         class="ml-0.5 hover:text-(--color-danger) cursor-pointer"
         :aria-label="'Remove tag ' + tag"
         @click.stop="removeTag(tag)"
@@ -182,7 +184,8 @@ onUnmounted(() => {
       >
         <div class="flex gap-1">
           <!-- Default (no color) -->
-          <button type="button"
+          <button
+            type="button"
             class="w-5 h-5 rounded-full border-2 cursor-pointer bg-(--accent-100)"
             :class="
               !store.tagColors[colorPickerTag]
@@ -193,7 +196,8 @@ onUnmounted(() => {
             aria-label="Default color"
             @click="pickColor(colorPickerTag!, null)"
           />
-          <button type="button"
+          <button
+            type="button"
             v-for="key in TAG_COLOR_KEYS"
             :key="key"
             class="w-5 h-5 rounded-full border-2 cursor-pointer"
@@ -237,7 +241,8 @@ onUnmounted(() => {
         aria-label="Tag suggestions"
         :style="dropdownStyle"
       >
-        <button type="button"
+        <button
+          type="button"
           v-for="(s, i) in suggestions"
           :key="s"
           role="option"

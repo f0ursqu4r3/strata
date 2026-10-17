@@ -26,13 +26,17 @@ function render() {
       />
       ${!expanded ? '<span class="capture-hint">Tab to expand</span>' : ''}
     </div>
-    ${expanded ? `
+    ${
+      expanded
+        ? `
       <div class="capture-expanded">
         <button class="status-pill ${selectedStatus === 'todo' ? 'active' : ''}" data-status="todo">Todo</button>
         <button class="status-pill ${selectedStatus === 'in_progress' ? 'active' : ''}" data-status="in_progress">In Progress</button>
         <button class="status-pill ${selectedStatus === 'blocked' ? 'active' : ''}" data-status="blocked">Blocked</button>
       </div>
-    ` : ''}
+    `
+        : ''
+    }
   `
 
   const input = document.getElementById('capture-input') as HTMLInputElement
