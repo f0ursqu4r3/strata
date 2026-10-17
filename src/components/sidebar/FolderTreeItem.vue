@@ -150,7 +150,7 @@ function toggleExpand() {
       <!-- Rename input -->
       <div v-if="renamingId === node.docId" class="flex-1 min-w-0 relative">
         <input
-          ref="renameInputRef"
+          :ref="(el) => { if (el) renameInputRef = [el as HTMLInputElement] }"
           :value="renameText"
           aria-label="Document name"
           class="w-full bg-transparent border rounded px-1 py-0.5 text-sm text-(--text-primary) outline-none focus:ring-1"
